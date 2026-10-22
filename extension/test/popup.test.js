@@ -54,7 +54,7 @@ assert.doesNotMatch(popupSource, /getManifest\(\)\.version/);
 assert.match(html, /id="settingsAbout"/);
 assert.match(html, /id="aboutAppVersion"/);
 assert.match(html, /id="aboutBridgeVersion"/);
-assert.match(environmentSource, /enter\("about", "downkit"\)/);
+assert.match(environmentSource, /enter\("about", "vidotter"\)/);
 assert.match(environmentSource, /frame\.type === "about"/);
 assert.match(environmentSource, /api\.send\("ui\.about"\)/);
 

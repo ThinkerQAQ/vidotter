@@ -1,4 +1,4 @@
-package downkit
+package vidotter
 
 import (
 	"context"
@@ -213,7 +213,7 @@ func downloadWhisperModel(ctx context.Context, client *http.Client, model whispe
 	if err != nil {
 		return err
 	}
-	request.Header.Set("User-Agent", "DownKit/"+bridgeVersion)
+	request.Header.Set("User-Agent", "VidOtter/"+bridgeVersion)
 	if resumeAt > 0 {
 		request.Header.Set("Range", fmt.Sprintf("bytes=%d-", resumeAt))
 	}

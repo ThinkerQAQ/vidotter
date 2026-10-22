@@ -4,11 +4,11 @@ This guide follows the order that errors appear during [first run](../tutorial/f
 
 ## Native Messaging host not found
 
-The browser extension connects through the registered native host \`com.downkit.bridge\`, **not** by finding an arbitrary \`downkit\` process.
+The browser extension connects through the registered native host \`com.vidotter.bridge\`, **not** by finding an arbitrary \`vidotter\` process.
 
-1. Open the **extracted package root** and run \`.\bin\downkitdev.exe install\` in Windows PowerShell or \`./bin/downkitdev install\` on Linux/macOS.
+1. Open the **extracted package root** and run \`.\bin\vidotterdev.exe install\` in Windows PowerShell or \`./bin/vidotterdev install\` on Linux/macOS.
 2. Confirm that the installer prints the executable path and the host manifest path under \`Data/native-host/\`.
-3. In \`chrome://extensions\` or \`edge://extensions\`, inspect DownKit's extension ID. If it differs from \`hfjpenjlamneepmigemmmiibebpokmik\`, re-run \`downkitdev install --extension-id ACTUAL_EXTENSION_ID\`.
+3. In \`chrome://extensions\` or \`edge://extensions\`, inspect VidOtter's extension ID. If it differs from \`hfjpenjlamneepmigemmmiibebpokmik\`, re-run \`vidotterdev install --extension-id ACTUAL_EXTENSION_ID\`.
 4. Click **Reload** on the unpacked extension, then open it again. If the package was moved, re-run install from its **new** root.
 
 ## Bridge indicator remains Checking environment

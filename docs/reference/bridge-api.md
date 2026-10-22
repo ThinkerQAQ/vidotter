@@ -1,6 +1,6 @@
 # Bridge HTTP API
 
-Desktop Bridge binds to `127.0.0.1:17891`. Privileged endpoints require `X-DownKit-Token`, delivered to the browser extension through Native Messaging.
+Desktop Bridge binds to `127.0.0.1:17891`. Privileged endpoints require `X-VidOtter-Token`, delivered to the browser extension through Native Messaging.
 
 | Endpoint | Purpose |
 | --- | --- |

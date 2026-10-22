@@ -1,4 +1,4 @@
-package com.downkit.mobile
+package com.vidotter.mobile
 
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue

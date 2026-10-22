@@ -1,7 +1,7 @@
 "use strict";
 
 const assert = require("node:assert/strict");
-global.DownKitPopup = {};
+global.VidOtterPopup = {};
 const downloads = require("../popup/downloads.js");
 
 function controls(values) {
@@ -65,6 +65,6 @@ assert.match(source, /activateTab\("jobs"\)/);
 assert.match(source, /media\.playlist\.probe/);
 assert.match(source, /playlist,\s*\n\s*subtitles/);
 assert.match(source, /navigator\.clipboard\.writeText/);
-assert.match(source, /DownKitMedia\.resourceName/);
+assert.match(source, /VidOtterMedia\.resourceName/);
 
 console.log("extension downloads tests passed");

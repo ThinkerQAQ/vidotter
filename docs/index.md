@@ -1,12 +1,12 @@
-# DownKit documentation
+# VidOtter documentation
 
 [简体中文](zh-CN/index.md)
 
-DownKit detects media in the browser and downloads it using a local Go Bridge. The browser extension owns page access; the Bridge owns jobs, files and optional media tools.
+VidOtter detects media in the browser and downloads it using a local Go Bridge. The browser extension owns page access; the Bridge owns jobs, files and optional media tools.
 
 | Goal | Start here |
 | --- | --- |
-| Install and try DownKit | [Quick Start](quick-start.md) |
+| Install and try VidOtter | [Quick Start](quick-start.md) |
 | First-time setup with actual UI screenshots | [First run on a new machine](tutorial/first-run-on-new-machine.md) |
 | Complete your first download | [Tutorial](tutorial/first-download.md) |
 | Understand the components | [System concepts](concepts/system.md) |

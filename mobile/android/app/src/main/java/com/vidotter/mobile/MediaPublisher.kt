@@ -1,4 +1,4 @@
-package com.downkit.mobile
+package com.vidotter.mobile
 
 import android.content.ContentValues
 import android.content.Context
@@ -42,7 +42,7 @@ class MediaPublisher(private val context: Context) {
             put(MediaStore.MediaColumns.MIME_TYPE, "video/mp4")
             put(
                 MediaStore.MediaColumns.RELATIVE_PATH,
-                "${Environment.DIRECTORY_DOWNLOADS}/DownKit"
+                "${Environment.DIRECTORY_DOWNLOADS}/VidOtter"
             )
             put(MediaStore.MediaColumns.IS_PENDING, 1)
         }
@@ -78,7 +78,7 @@ class MediaPublisher(private val context: Context) {
                 SystemClock.elapsedRealtime() - operationStartedAt,
                 "fileName" to source.name,
             )
-            return "下载/DownKit/${source.name}"
+            return "下载/VidOtter/${source.name}"
         } catch (error: Throwable) {
             val deleted = resolver.delete(uri, null, null)
             MobileLog.error(

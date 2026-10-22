@@ -1,4 +1,4 @@
-package downkit
+package vidotter
 
 import (
 	"context"
@@ -52,7 +52,7 @@ func TestInstallTranslationModelRequiresLicenseAcceptance(t *testing.T) {
 func TestHandleInstallTranslationModelRejectsMissingAcceptance(t *testing.T) {
 	server := &bridgeServer{state: bridgeState{Token: "secret"}, config: defaultBridgeConfig()}
 	request := httptest.NewRequest(http.MethodPost, "/v1/tools/llama/models/install", strings.NewReader(`{"model":"translategemma-4b-q4-k-m"}`))
-	request.Header.Set("X-DownKit-Token", "secret")
+	request.Header.Set("X-VidOtter-Token", "secret")
 	response := httptest.NewRecorder()
 	server.handleInstallTranslationModel(response, request)
 	if response.Code != http.StatusBadGateway || !strings.Contains(response.Body.String(), "接受 Gemma") {

@@ -1,4 +1,4 @@
-package downkit
+package vidotter
 
 import (
 	"bytes"
@@ -87,7 +87,7 @@ func TestJobProgressPauseAndDelete(t *testing.T) {
 	call := func(path, body string) *httptest.ResponseRecorder {
 		t.Helper()
 		request := httptest.NewRequest(http.MethodPost, path, bytes.NewBufferString(body))
-		request.Header.Set("X-DownKit-Token", "test-token")
+		request.Header.Set("X-VidOtter-Token", "test-token")
 		request.Header.Set("Content-Type", "application/json")
 		response := httptest.NewRecorder()
 		server.handleJobs(response, request)
@@ -145,7 +145,7 @@ func TestDeleteJobCanDeleteAllRegisteredOutputFiles(t *testing.T) {
 		},
 	}
 	request := httptest.NewRequest(http.MethodPost, "/v1/jobs/job-1/delete", bytes.NewBufferString(`{"deleteFiles":true}`))
-	request.Header.Set("X-DownKit-Token", "test-token")
+	request.Header.Set("X-VidOtter-Token", "test-token")
 	request.Header.Set("Content-Type", "application/json")
 	response := httptest.NewRecorder()
 	server.handleJobs(response, request)

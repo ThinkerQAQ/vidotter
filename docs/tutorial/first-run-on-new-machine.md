@@ -2,11 +2,11 @@
 
 **Goal:** install the desktop Bridge, connect the browser extension, identify a media file and find the finished download. You do not need Go, Node.js, an account, or speech-recognition models to use a packaged release.
 
-This walkthrough is for **DownKit v1.2.0**. The screenshots were captured from the real v1.2.0 extension in an isolated Chromium profile, in English. That profile did **not** connect to Native Messaging, so they illustrate the initial screens and navigation—not a successful connection, detected video, or completed download.
+This walkthrough applies to **VidOtter v1.3.0**. The illustration shows the real extension loaded in an isolated Edge profile, in Chinese. It shows an empty detection state, not a verified Bridge connection or download.
 
 ## 1. Download the desktop package
 
-Open [DownKit Releases](https://github.com/ThinkerQAQ/downkit/releases), choose the archive for **your operating system and CPU**, and extract it to a directory you intend to keep.
+Open [VidOtter Releases](https://github.com/ThinkerQAQ/vidotter/releases), choose the archive for **your operating system and CPU**, and extract it to a directory you intend to keep.
 
 A desktop release has this layout:
 
@@ -24,16 +24,16 @@ Open a terminal **in the extracted directory**:
 **Windows — PowerShell**
 
 ~~~powershell
-.\bin\downkitdev.exe install
+.\bin\vidotterdev.exe install
 ~~~
 
 **Linux/macOS — Terminal**
 
 ~~~sh
-./bin/downkitdev install
+./bin/vidotterdev install
 ~~~
 
-The command registers the native messaging host \`com.downkit.bridge\` with supported browsers. It does **not** start a permanently running server. The extension starts the Bridge as needed.
+The command registers the native messaging host \`com.vidotter.bridge\` with supported browsers. It does **not** start a permanently running server. The extension starts the Bridge as needed.
 
 You should see a **Native Messaging installed** line naming the executable and a **Host manifest** location under \`Data/native-host/\`. If the command fails, stop here and consult [Connection troubleshooting](../how-to/troubleshoot.md). For an extension installed under a different ID, re-run install with \`--extension-id YOUR_32_CHARACTER_ID\`.
 
@@ -42,28 +42,24 @@ You should see a **Native Messaging installed** line naming the executable and a
 1. Open \`edge://extensions\` or \`chrome://extensions\`.
 2. Turn on **Developer mode**.
 3. Choose **Load unpacked** and select the extracted **\`extension/\` directory**, the one containing \`manifest.json\`.
-4. Pin DownKit to the browser toolbar, then click its icon.
+4. Pin VidOtter to the browser toolbar, then click its icon.
 
-DownKit provides three destinations: **Detect**, **Downloads**, and **Settings**. The upper-right indicator should eventually report a healthy environment. If it remains **Checking environment** or shows **Environment issue**, the Bridge has not been verified. Do not proceed assuming downloads will work.
+VidOtter provides three destinations: **Detect**, **Downloads**, and **Settings**. The upper-right indicator should eventually report a healthy environment. If it remains **Checking environment** or shows **Environment issue**, the Bridge has not been verified. Do not proceed assuming downloads will work.
 
-![DownKit v1.2.0 Detect screen before any media is found](../images/first-run-detect-en.png)
+![VidOtter v1.3.0 Detect screen before any media is found](../images/first-run-detect-zh.png)
 
-*Real extension UI in a fresh, isolated Chromium profile. “No media found” is an empty state; the screenshot does not demonstrate a working Native Messaging connection.*
+*Real v1.3.0 extension UI in an isolated Edge profile, with an empty media list.*
 
 ## 4. Choose language and inspect settings
 
 Open **Settings → Appearance & interaction → Interface language**. Select **English** or **中文**. This controls the interface only; it does not translate videos or change the subtitle language. The same settings surface also controls the popup/side-panel opening preference.
-
-![Current Settings navigation in DownKit v1.2.0](../images/first-run-settings-en.png)
-
-*Real English Settings navigation in the isolated profile. Check the environment indicator independently on your installed browser.*
 
 Under **Settings → Connection & runtime**, check the browser/Bridge status. Download-related tools appear under **Download capabilities**. For a first download, leave subtitles set to **No subtitles**; neither whisper.cpp nor llama.cpp needs a model for that path.
 
 ## 5. Find a permitted video
 
 1. Open a website with a video you are authorized to save, and **start playback**.
-2. While keeping that tab open, click DownKit and choose **Detect**.
+2. While keeping that tab open, click VidOtter and choose **Detect**.
 3. In **Detected resources**, select the matching HLS (\`.m3u8\`), DASH (\`.mpd\`), or MP4 resource. Pages may expose multiple qualities, audio tracks, segments, or playlists. Prefer the playable manifest or complete media file over a single segment.
 4. Set **Subtitles → No subtitles** for your first attempt, then click **Download** on the resource.
 
@@ -89,4 +85,4 @@ See [Troubleshooting](../how-to/troubleshoot.md) and [Configuration](../referenc
 
 ## Reproduction notes
 
-On 2026-10-11, the Linux Bridge was built using the development tooling available at that time (now replaced by the native Go maintainer). The packaged-layout installer was exercised with a **temporary HOME and Data directory**, and Chromium loaded the real v1.2.0 extension. Its isolated Native Messaging connection could not be established; the screenshots therefore show initial/disconnected states and **no fabricated resources, jobs, or successful downloads**. A complete browser-to-download run on a new machine is **not claimed** here.
+On 2026-10-22, the v1.3.0 extension was loaded in an isolated Edge profile to capture its initial Detect screen. The screenshot does not show a completed browser-to-download test; verify the connection and perform a real download on your installation.

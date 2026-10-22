@@ -46,7 +46,7 @@ func InstallTool(root, name, provided string) error {
 			if err != nil {
 				return err
 			}
-			request.Header.Set("User-Agent", "DownKit-Go-Maintenance")
+			request.Header.Set("User-Agent", "VidOtter-Go-Maintenance")
 			response, err := client.Do(request)
 			if err != nil {
 				return err

@@ -1,6 +1,6 @@
 //go:build darwin
 
-package downkit
+package vidotter
 
 import "os/exec"
 

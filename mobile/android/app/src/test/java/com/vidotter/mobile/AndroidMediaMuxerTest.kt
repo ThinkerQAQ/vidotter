@@ -1,4 +1,4 @@
-package com.downkit.mobile
+package com.vidotter.mobile
 
 import android.media.MediaCodec
 import android.media.MediaExtractor
@@ -35,7 +35,7 @@ class AndroidMediaMuxerTest {
 
     @Test
     fun resolvesLocalHlsPartsInPlaybackOrder() {
-        val root = Files.createTempDirectory("downkit-hls-test").toFile()
+        val root = Files.createTempDirectory("vidotter-hls-test").toFile()
         try {
             val segments = File(root, "segments").apply { mkdirs() }
             val init = File(segments, "init000.mp4").apply { writeBytes(byteArrayOf(1)) }
@@ -60,7 +60,7 @@ class AndroidMediaMuxerTest {
 
     @Test
     fun rejectsLocalHlsPathTraversal() {
-        val root = Files.createTempDirectory("downkit-hls-test").toFile()
+        val root = Files.createTempDirectory("vidotter-hls-test").toFile()
         try {
             val outside = File(root.parentFile, "outside-${root.name}.ts").apply { writeBytes(byteArrayOf(1)) }
             try {

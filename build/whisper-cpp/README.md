@@ -1,13 +1,13 @@
 # whisper.cpp Windows client
 
-DownKit keeps the Windows x64 CPU client as a separate sidecar under
+VidOtter keeps the Windows x64 CPU client as a separate sidecar under
 `dist/tools/whisper/`. The standard release package copies that directory
 without embedding it into the Bridge executable.
 
 Provision the pinned official client with:
 
 ```powershell
-go -C tools/downkitdev run . tool-install whisper
+go -C tools/vidotterdev run . tool-install whisper
 ```
 
 The Go maintainer downloads `whisper-bin-x64.zip` from the official whisper.cpp

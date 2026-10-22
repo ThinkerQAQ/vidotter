@@ -9,23 +9,23 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/ThinkerQAQ/downkit/tools/downkitdev/internal/maint"
+	"github.com/ThinkerQAQ/vidotter/tools/vidotterdev/internal/maint"
 )
 
 func main() {
 	if err := execute(os.Args[1:]); err != nil {
-		fmt.Fprintln(os.Stderr, "downkitdev:", err)
+		fmt.Fprintln(os.Stderr, "vidotterdev:", err)
 		os.Exit(1)
 	}
 }
 
 func execute(args []string) error {
 	if len(args) == 0 {
-		return errors.New("usage: downkitdev <verify|build|package|deploy|install|uninstall|components|tool-install|android-bind|android-build|ffmpeg-native|ffmpeg-android|icons> [flags]")
+		return errors.New("usage: vidotterdev <verify|build|package|deploy|install|uninstall|components|tool-install|android-bind|android-build|ffmpeg-native|ffmpeg-android|icons> [flags]")
 	}
 	command := args[0]
 	flags := flag.NewFlagSet(command, flag.ContinueOnError)
-	rootFlag := flags.String("root", "", "repository or installed DownKit root")
+	rootFlag := flags.String("root", "", "repository or installed VidOtter root")
 	output := flags.String("output", "", "output path or destination directory")
 	version := flags.String("version", "", "release version (defaults to extension manifest)")
 	platform := flags.String("os", runtime.GOOS, "target operating system")

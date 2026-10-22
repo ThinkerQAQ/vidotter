@@ -16,7 +16,7 @@
     root.location?.pathname.startsWith("/console/") ? "web" : detectSurface(root.chrome, root);
   if (root.document && root.document.documentElement) {
     root.document.documentElement.dataset.surface = surface;
-    root.console.debug("DownKit UI surface detected", {
+    root.console.debug("VidOtter UI surface detected", {
       timestamp: new Date().toISOString(),
       operation: "ui.surface.detect",
       result: surface,

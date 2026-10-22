@@ -1,6 +1,6 @@
 (function (root, factory) {
   const api = factory();
-  root.DownKitCookies = api;
+  root.VidOtterCookies = api;
   if (typeof module !== "undefined" && module.exports) module.exports = api;
 })(typeof globalThis !== "undefined" ? globalThis : this, function () {
   "use strict";

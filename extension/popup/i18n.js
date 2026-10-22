@@ -5,7 +5,7 @@
 // and user download-language preferences stay independent of UI locale.
 (function (root) {
   const dictionary = {
-    "DownKit 助手": "DownKit Assistant", "媒体下载助手": "Media downloader",
+    "VidOtter 助手": "VidOtter Assistant", "媒体下载助手": "Media downloader",
     "环境检测中": "Checking environment", "当前页面资源": "Resources on this page",
     "资源嗅探": "Detect", "下载任务": "Downloads", "工具与配置": "Tools & Settings",
     "清空": "Clear", "字幕": "Subtitles", "不下载字幕": "No subtitles",
@@ -219,11 +219,11 @@
   "编辑 Go 下载引擎": "Edit Go downloader"
 });
 
-  Object.assign(dictionary, {"下载选项":"Download options","检测结果":"Detected resources","暂无媒体资源":"No media found","播放网页中的视频后，DownKit 会自动显示可下载资源。":"Play a video in the browser to see downloadable media.","等待打开视频页面":"Waiting for a video page"});
+  Object.assign(dictionary, {"下载选项":"Download options","检测结果":"Detected resources","暂无媒体资源":"No media found","播放网页中的视频后，VidOtter 会自动显示可下载资源。":"Play a video in the browser to see downloadable media.","等待打开视频页面":"Waiting for a video page"});
 
   Object.assign(dictionary, {
     "本地服务": "Local service",
-    "浏览器原生连接与 DownKit 下载服务。": "Browser connection and local download service.",
+    "浏览器原生连接与 VidOtter 下载服务。": "Browser connection and local download service.",
     "浏览器与下载服务连接正常": "Browser and download service connected",
     "本地服务不可用": "Local service unavailable",
     "Native Messaging 已连接": "Native Messaging connected"
@@ -232,7 +232,7 @@
   Object.assign(dictionary, {
   "日志": "Logs",
   "运行日志": "Runtime logs",
-  "查看 DownKit Bridge 与下载 Worker 的本地运行记录。": "View local Bridge and worker events.",
+  "查看 VidOtter Bridge 与下载 Worker 的本地运行记录。": "View local Bridge and worker events.",
   "显示日志入口": "Show logs tab",
   "仅隐藏导航入口，不影响日志写入": "Hides navigation only; logging continues",
   "日志入口设置已保存。": "Log tab preference saved.",
@@ -260,11 +260,11 @@
     "关于": "About",
     "其他": "Other",
     "版本与应用信息": "Versions and application information",
-    "DownKit 版本与应用信息": "DownKit version and application information",
+    "VidOtter 版本与应用信息": "VidOtter version and application information",
     "应用版本": "App version",
     "浏览器扩展版本": "Browser extension version",
     "本地服务版本": "Local service version",
-    "DownKit Bridge 运行版本": "DownKit Bridge runtime version",
+    "VidOtter Bridge 运行版本": "VidOtter Bridge runtime version",
     "读取中…": "Loading…",
     "未连接": "Not connected",
     "未知": "Unknown"
@@ -350,14 +350,14 @@
   async function init() {
     const selector = document.getElementById("uiLanguage");
     try {
-      const result = await root.DownKitPopup.send("ui.language.get");
+      const result = await root.VidOtterPopup.send("ui.language.get");
       setLocale(result.locale);
     } catch { setLocale("zh-CN"); }
     selector.addEventListener("change", async () => {
       const selected = selector.value;
       setLocale(selected);
-      try { await root.DownKitPopup.send("ui.language.set", { locale: selected }); }
-      catch (error) { root.DownKitPopup.setMessage("environmentMessage", error.message, "error"); }
+      try { await root.VidOtterPopup.send("ui.language.set", { locale: selected }); }
+      catch (error) { root.VidOtterPopup.setMessage("environmentMessage", error.message, "error"); }
     });
     observer = new MutationObserver(mutations => {
       if (mutations.some(item => item.type === "childList" || item.type === "characterData")) apply();
@@ -365,5 +365,5 @@
     observer.observe(document.body, { subtree: true, childList: true, characterData: true });
   }
 
-  root.DownKitI18n = { init, t: translate, apply, get locale() { return locale; } };
+  root.VidOtterI18n = { init, t: translate, apply, get locale() { return locale; } };
 })(globalThis);

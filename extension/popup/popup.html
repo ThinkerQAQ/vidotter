@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <link rel="icon" href="../icons/icon-32.png">
-  <title>DownKit 助手</title>
+  <title>VidOtter 助手</title>
   <script src="surface.js"></script>
   <link rel="stylesheet" href="popup.css">
 </head>
@@ -28,7 +28,7 @@
     <div class="brand">
       <img src="../icons/icon-32.png" alt="" width="24" height="24">
       <div>
-        <h1>DownKit</h1>
+        <h1>VidOtter</h1>
         <p>媒体下载助手</p>
       </div>
     </div>
@@ -45,7 +45,7 @@
   </header>
 
   <div class="workspace-shell">
-  <nav class="tabs" role="tablist" aria-label="DownKit 功能导航">
+  <nav class="tabs" role="tablist" aria-label="VidOtter 功能导航">
     <button id="snifferTab" class="tab active" data-tab="sniffer" title="资源嗅探" aria-label="资源嗅探" role="tab" aria-controls="snifferPanel" aria-selected="true" tabindex="0"><svg class="ui-icon" aria-hidden="true"><use href="#i-detect"></use></svg><span>资源嗅探</span></button>
     <button id="jobsTab" class="tab" data-tab="jobs" title="下载任务" aria-label="下载任务" role="tab" aria-controls="jobsPanel" aria-selected="false" tabindex="-1"><svg class="ui-icon" aria-hidden="true"><use href="#i-download"></use></svg><span>下载任务</span></button>
     <button id="logsTab" class="tab" data-tab="logs" title="日志" aria-label="日志" role="tab" aria-controls="logsPanel" aria-selected="false" tabindex="-1"><svg class="ui-icon" aria-hidden="true"><use href="#i-logs"></use></svg><span>日志</span></button>
@@ -111,7 +111,7 @@
     <div id="emptyMedia" class="empty-state" hidden>
       <svg class="ui-icon" aria-hidden="true"><use href="#i-detect"></use></svg>
       <strong>暂无媒体资源</strong>
-      <p>播放网页中的视频后，DownKit 会自动显示可下载资源。</p>
+      <p>播放网页中的视频后，VidOtter 会自动显示可下载资源。</p>
     </div>
     <p id="downloadMessage" class="message" role="status"></p>
     </div>
@@ -141,7 +141,7 @@
   <section id="logsPanel" class="panel" data-panel="logs" role="tabpanel" aria-labelledby="logsTab">
     <div class="content-card logs-card">
       <div class="section-heading">
-        <div><h2>运行日志</h2><p>查看 DownKit Bridge 与下载 Worker 的本地运行记录。</p></div>
+        <div><h2>运行日志</h2><p>查看 VidOtter Bridge 与下载 Worker 的本地运行记录。</p></div>
         <strong id="logsStatus" class="log-status checking">读取中</strong>
       </div>
       <div class="log-toolbar">
@@ -186,7 +186,7 @@
           <div class="settings-about-brand">
             <img src="../icons/icon-32.png" width="40" height="40" alt="">
             <div>
-              <strong id="aboutProductName">DownKit</strong>
+              <strong id="aboutProductName">VidOtter</strong>
               <small>媒体下载助手</small>
             </div>
           </div>
@@ -196,7 +196,7 @@
               <span id="aboutAppVersion" class="settings-about-version">读取中…</span>
             </div>
             <div class="settings-preference-row">
-              <div><strong>本地服务版本</strong><small>DownKit Bridge 运行版本</small></div>
+              <div><strong>本地服务版本</strong><small>VidOtter Bridge 运行版本</small></div>
               <span id="aboutBridgeVersion" class="settings-about-version">读取中…</span>
             </div>
           </div>

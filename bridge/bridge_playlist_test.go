@@ -1,4 +1,4 @@
-package downkit
+package vidotter
 
 import (
 	"bytes"
@@ -22,7 +22,7 @@ func TestHandlePlaylistProbeReturnsSingleForDirectMedia(t *testing.T) {
 		t.Fatal(err)
 	}
 	request := httptest.NewRequest(http.MethodPost, "/v1/playlist/probe", bytes.NewReader(body))
-	request.Header.Set("X-DownKit-Token", "secret")
+	request.Header.Set("X-VidOtter-Token", "secret")
 	response := httptest.NewRecorder()
 
 	server.handlePlaylistProbe(response, request)

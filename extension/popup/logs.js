@@ -1,6 +1,6 @@
 "use strict";
 
-const DownKitLogs = (() => {
+const VidOtterLogs = (() => {
   const state = {
     initialized: false,
     active: false,
@@ -42,7 +42,7 @@ const DownKitLogs = (() => {
 
   function formatEntry(entry) {
     if (entry?.raw) return String(entry.raw);
-    const time = entry?.time ? DownKitPopup.formatTime(entry.time) : "--:--:--";
+    const time = entry?.time ? VidOtterPopup.formatTime(entry.time) : "--:--:--";
     const level = String(entry?.level || "INFO").toUpperCase().padEnd(5, " ");
     const text = String(entry?.message || "");
     const attributes = Object.entries(entry?.attributes || {})
@@ -86,7 +86,7 @@ const DownKitLogs = (() => {
 
     const time = document.createElement("span");
     time.className = "log-time";
-    time.textContent = raw?.time || `[${entry?.time ? DownKitPopup.formatTime(entry.time) : "--:--:--"}]`;
+    time.textContent = raw?.time || `[${entry?.time ? VidOtterPopup.formatTime(entry.time) : "--:--:--"}]`;
 
     const levelToken = document.createElement("span");
     levelToken.className = "log-level";
@@ -158,15 +158,15 @@ const DownKitLogs = (() => {
     state.refreshing = true;
     if (!quiet) refreshButton.disabled = true;
     try {
-      const response = await DownKitPopup.send("bridge.logs.list", { limit: 1000 });
+      const response = await VidOtterPopup.send("bridge.logs.list", { limit: 1000 });
       state.entries = Array.isArray(response.entries) ? response.entries : [];
       state.path = String(response.path || "");
       state.configuredLevel = String(response.level || "info");
       render({ preserveSelection: quiet });
-      if (!quiet) DownKitPopup.setMessage("logsMessage", "日志已刷新。", "ok");
+      if (!quiet) VidOtterPopup.setMessage("logsMessage", "日志已刷新。", "ok");
     } catch (error) {
       setStatus(status, "error", "读取失败", String(error?.message || error));
-      if (!quiet) DownKitPopup.setMessage("logsMessage", String(error?.message || error), "error");
+      if (!quiet) VidOtterPopup.setMessage("logsMessage", String(error?.message || error), "error");
     } finally {
       state.refreshing = false;
       refreshButton.disabled = false;
@@ -200,7 +200,7 @@ const DownKitLogs = (() => {
     range.selectNodeContents(output);
     selection.removeAllRanges();
     selection.addRange(range);
-    DownKitPopup.setMessage("logsMessage", "已选中当前可见日志；自动刷新已暂停。", "ok");
+    VidOtterPopup.setMessage("logsMessage", "已选中当前可见日志；自动刷新已暂停。", "ok");
   }
 
   async function writeClipboard(text) {
@@ -223,15 +223,15 @@ const DownKitLogs = (() => {
     const selected = selectedLogText();
     const text = selected || (output?.textContent === "暂无日志" ? "" : output?.textContent || "");
     if (!text) {
-      DownKitPopup.setMessage("logsMessage", "没有可复制的日志。", "error");
+      VidOtterPopup.setMessage("logsMessage", "没有可复制的日志。", "error");
       return;
     }
     copyButton.disabled = true;
     try {
       await writeClipboard(text);
-      DownKitPopup.setMessage("logsMessage", selected ? "已复制选中的日志。" : "已复制当前可见日志。", "ok");
+      VidOtterPopup.setMessage("logsMessage", selected ? "已复制选中的日志。" : "已复制当前可见日志。", "ok");
     } catch (error) {
-      DownKitPopup.setMessage("logsMessage", String(error?.message || error), "error");
+      VidOtterPopup.setMessage("logsMessage", String(error?.message || error), "error");
     } finally {
       copyButton.disabled = false;
     }
@@ -239,13 +239,13 @@ const DownKitLogs = (() => {
 
   async function clearLogs() {
     clearButton.disabled = true;
-    DownKitPopup.setMessage("logsMessage", "正在清空日志…");
+    VidOtterPopup.setMessage("logsMessage", "正在清空日志…");
     try {
-      await DownKitPopup.send("bridge.logs.clear");
+      await VidOtterPopup.send("bridge.logs.clear");
       await refresh({ quiet: true });
-      DownKitPopup.setMessage("logsMessage", "日志已清空。", "ok");
+      VidOtterPopup.setMessage("logsMessage", "日志已清空。", "ok");
     } catch (error) {
-      DownKitPopup.setMessage("logsMessage", String(error?.message || error), "error");
+      VidOtterPopup.setMessage("logsMessage", String(error?.message || error), "error");
     } finally {
       clearButton.disabled = false;
     }

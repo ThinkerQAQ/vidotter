@@ -7,7 +7,7 @@ const tabQueues = new Map();
 const DEFAULT_OPEN_MODE = "popup";
 const POPUP_PATH = "popup/popup.html";
 let currentOpenMode = DEFAULT_OPEN_MODE;
-let currentMediaSnifferConfig = DownKitMedia.normalizeSnifferConfig();
+let currentMediaSnifferConfig = VidOtterMedia.normalizeSnifferConfig();
 
 function hasEnabledMediaType(config) {
   return Boolean(config.detectHls || config.detectDash || config.detectMp4);
@@ -19,7 +19,7 @@ const preferencesReady = bridgeFetch("/v1/preferences").then(result => result.pr
 
 const mediaSnifferConfigReady = preferencesReady
   .then(preferences => {
-    currentMediaSnifferConfig = DownKitMedia.normalizeSnifferConfig(preferences);
+    currentMediaSnifferConfig = VidOtterMedia.normalizeSnifferConfig(preferences);
     return currentMediaSnifferConfig;
   })
   .catch(error => {
@@ -59,7 +59,7 @@ function headersToContext(headers) {
     if (name === "origin") context.origin = value;
     if (name === "user-agent") context.userAgent = value;
   }
-  context.requestHeaders = DownKitMedia.sanitizeRequestHeaders(requestHeaders);
+  context.requestHeaders = VidOtterMedia.sanitizeRequestHeaders(requestHeaders);
   return context;
 }
 
@@ -67,14 +67,14 @@ let bridgeSession = null;
 
 function requestNativeBridge() {
   return new Promise((resolve, reject) => {
-    chrome.runtime.sendNativeMessage("com.downkit.bridge", { command: "ensure_bridge" }, response => {
+    chrome.runtime.sendNativeMessage("com.vidotter.bridge", { command: "ensure_bridge" }, response => {
       const error = chrome.runtime.lastError;
       if (error) {
-        reject(new Error(`无法连接 DownKit Bridge：${error.message}`));
+        reject(new Error(`无法连接 VidOtter Bridge：${error.message}`));
         return;
       }
       if (!response || !response.ok || !response.baseUrl || !response.token) {
-        reject(new Error(response && response.error || "DownKit Bridge 返回无效结果"));
+        reject(new Error(response && response.error || "VidOtter Bridge 返回无效结果"));
         return;
       }
       resolve(response);
@@ -93,7 +93,7 @@ async function bridgeFetch(path, options = {}, retry = true) {
   const bridge = await ensureBridge(false);
   const headers = {
     ...(options.body ? { "Content-Type": "application/json" } : {}),
-    "X-DownKit-Token": bridge.token,
+    "X-VidOtter-Token": bridge.token,
     ...(options.headers || {})
   };
   const response = await fetch(`${bridge.baseUrl}${path}`, { ...options, headers });
@@ -138,12 +138,12 @@ async function buildBridgeTask(resource, page, quality, playlist, subtitles) {
   const resolveFromPage = resource.kind === "resolved-media-page" || resource.kind === "dash";
   const mediaURL = resolveFromPage ? String(page && page.url || resource.url) : resource.url;
   const pageURL = String(page && page.url || "");
-  const cookieStoreId = await DownKitCookies.storeIDForTab(chrome.cookies, resource.tabId);
+  const cookieStoreId = await VidOtterCookies.storeIDForTab(chrome.cookies, resource.tabId);
   const [mediaCookies, pageCookies] = await Promise.all([
-    DownKitCookies.forURL(chrome.cookies, mediaURL, resource.tabId, resource.frameId, cookieStoreId),
-    pageURL && pageURL !== mediaURL ? DownKitCookies.forURL(chrome.cookies, pageURL, resource.tabId, 0, cookieStoreId) : Promise.resolve([])
+    VidOtterCookies.forURL(chrome.cookies, mediaURL, resource.tabId, resource.frameId, cookieStoreId),
+    pageURL && pageURL !== mediaURL ? VidOtterCookies.forURL(chrome.cookies, pageURL, resource.tabId, 0, cookieStoreId) : Promise.resolve([])
   ]);
-  return DownKitLauncher.buildTask(
+  return VidOtterLauncher.buildTask(
     resource,
     page,
     quality || "",
@@ -164,9 +164,9 @@ async function refreshedJobCredentials(job) {
     : undefined;
   const frameId = Number.isInteger(job && job.sourceFrameId) && job.sourceFrameId >= 0 ? job.sourceFrameId : undefined;
   const [mediaCookies, pageCookies] = await Promise.all([
-    DownKitCookies.forURL(chrome.cookies, sourceURL, tabId, frameId, cookieStoreId),
+    VidOtterCookies.forURL(chrome.cookies, sourceURL, tabId, frameId, cookieStoreId),
     pageURL && pageURL !== sourceURL
-      ? DownKitCookies.forURL(chrome.cookies, pageURL, tabId, 0, cookieStoreId)
+      ? VidOtterCookies.forURL(chrome.cookies, pageURL, tabId, 0, cookieStoreId)
       : Promise.resolve([])
   ]);
   return {
@@ -196,7 +196,7 @@ async function submitBridgeTask(resource, page, quality, playlist, subtitles) {
 }
 
 function mediaSnifferTool() {
-  const config = DownKitMedia.normalizeSnifferConfig(currentMediaSnifferConfig);
+  const config = VidOtterMedia.normalizeSnifferConfig(currentMediaSnifferConfig);
   const enabledLabels = [
     config.detectHls && "HLS",
     config.detectDash && "DASH",
@@ -238,7 +238,7 @@ function offlineBridgeTool(layer, detail) {
     name: "bridge",
     displayName: "本地服务",
     kind: "runtime",
-    description: "浏览器原生连接与 DownKit 下载服务。",
+    description: "浏览器原生连接与 VidOtter 下载服务。",
     platforms: ["windows", "linux", "darwin"],
     delivery: "bundled",
     required: true,
@@ -259,7 +259,7 @@ function localServiceTool(bridge) {
   return {
     ...bridge,
     displayName: "本地服务",
-    description: "浏览器原生连接与 DownKit 下载服务。",
+    description: "浏览器原生连接与 VidOtter 下载服务。",
     health: {
       ...health,
       summary: health.ok ? "浏览器与下载服务连接正常" : (health.summary || "本地服务不可用"),
@@ -317,10 +317,10 @@ function enqueue(tabId, work) {
 async function record(input) {
   if (!Number.isInteger(input.tabId) || input.tabId < 0) return;
   await mediaSnifferConfigReady;
-  const resource = DownKitMedia.makeResource(input, currentMediaSnifferConfig);
+  const resource = VidOtterMedia.makeResource(input, currentMediaSnifferConfig);
   if (!resource) return;
-  const items = await enqueue(resource.tabId, () => DownKitStore.put(resource));
-  const visibleItems = items.filter(item => DownKitMedia.configAllowsKind(item.kind, currentMediaSnifferConfig));
+  const items = await enqueue(resource.tabId, () => VidOtterStore.put(resource));
+  const visibleItems = items.filter(item => VidOtterMedia.configAllowsKind(item.kind, currentMediaSnifferConfig));
   await chrome.action.setBadgeBackgroundColor({ tabId: resource.tabId, color: "#2563eb" });
   await chrome.action.setBadgeText({ tabId: resource.tabId, text: String(Math.min(visibleItems.length, 99)) });
 }
@@ -329,8 +329,8 @@ async function refreshMediaBadges() {
   const tabs = await chrome.tabs.query({});
   await Promise.all(tabs.filter(tab => Number.isInteger(tab.id)).map(async tab => {
     try {
-      const items = await DownKitStore.get(tab.id);
-      const visibleItems = items.filter(item => DownKitMedia.configAllowsKind(item.kind, currentMediaSnifferConfig));
+      const items = await VidOtterStore.get(tab.id);
+      const visibleItems = items.filter(item => VidOtterMedia.configAllowsKind(item.kind, currentMediaSnifferConfig));
       await chrome.action.setBadgeText({
         tabId: tab.id,
         text: visibleItems.length ? String(Math.min(visibleItems.length, 99)) : ""
@@ -349,7 +349,7 @@ chrome.webRequest.onBeforeRequest.addListener(details => {
     initiator: details.initiator || "",
     detectedAt: Date.now()
   };
-  if (!DownKitMedia.classify(current, currentMediaSnifferConfig)) return;
+  if (!VidOtterMedia.classify(current, currentMediaSnifferConfig)) return;
   requestMeta.set(details.requestId, current);
   record(current).catch(console.warn);
 }, { urls: ["<all_urls>"] });
@@ -383,13 +383,13 @@ chrome.webRequest.onCompleted.addListener(forget, { urls: ["<all_urls>"] });
 chrome.webRequest.onErrorOccurred.addListener(forget, { urls: ["<all_urls>"] });
 
 chrome.tabs.onRemoved.addListener(tabId => {
-  DownKitStore.clear(tabId).catch(() => {});
+  VidOtterStore.clear(tabId).catch(() => {});
   tabQueues.delete(tabId);
 });
 
 chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
   if (!changeInfo.url) return;
-  DownKitStore.clear(tabId).catch(() => {});
+  VidOtterStore.clear(tabId).catch(() => {});
   chrome.action.setBadgeText({ tabId, text: "" }).catch(() => {});
 });
 
@@ -492,16 +492,16 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   if (message.action === "media.list") {
-    Promise.all([mediaSnifferConfigReady, DownKitStore.get(message.tabId), chrome.tabs.get(message.tabId)])
+    Promise.all([mediaSnifferConfigReady, VidOtterStore.get(message.tabId), chrome.tabs.get(message.tabId)])
       .then(([, items, tab]) => {
         const page = { url: tab.url || "", title: tab.title || "", userAgent: navigator.userAgent };
-        sendResponse({ ok: true, page, items: DownKitMedia.displayList(items, page, currentMediaSnifferConfig) });
+        sendResponse({ ok: true, page, items: VidOtterMedia.displayList(items, page, currentMediaSnifferConfig) });
       }, error => sendResponse({ ok: false, error: String(error) }));
     return true;
   }
 
   if (message.action === "media.clear") {
-    DownKitStore.clear(message.tabId)
+    VidOtterStore.clear(message.tabId)
       .then(() => chrome.action.setBadgeText({ tabId: message.tabId, text: "" }))
       .then(() => sendResponse({ ok: true }), error => sendResponse({ ok: false, error: String(error) }));
     return true;
@@ -585,7 +585,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         .then(result => sendResponse(result), error => sendResponse({ ok: false, error: error.message || String(error) }));
       return true;
     }
-    const next = DownKitMedia.normalizeSnifferConfig(message.config);
+    const next = VidOtterMedia.normalizeSnifferConfig(message.config);
     if (!hasEnabledMediaType(next)) {
       sendResponse({ ok: false, error: "至少保留一种媒体检测类型" });
       return;

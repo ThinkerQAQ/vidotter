@@ -6,7 +6,7 @@
 
 Choose a video you have permission to save. Prefer a straightforward MP4 or non-DRM HLS video for the first attempt. Leave the original tab **open and playing**: many pages only request the video after playback begins.
 
-Click the DownKit toolbar icon. The navigation rail contains **Detect**, **Downloads**, and **Settings**. If the top-right status is not healthy, follow [connection troubleshooting](../how-to/troubleshoot.md) first.
+Click the VidOtter toolbar icon. The navigation rail contains **Detect**, **Downloads**, and **Settings**. If the top-right status is not healthy, follow [connection troubleshooting](../how-to/troubleshoot.md) first.
 
 ## Find the correct resource
 

@@ -4,15 +4,15 @@ plugins {
 }
 
 android {
-    namespace = "com.downkit.mobile"
+    namespace = "com.vidotter.mobile"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.downkit.mobile"
+        applicationId = "com.vidotter.mobile"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = 2
+        versionName = "0.2.0"
     }
 
     buildTypes {
@@ -33,6 +33,6 @@ android {
 }
 
 dependencies {
-    implementation(files("libs/downkit.aar"))
+    implementation(files("libs/vidotter.aar"))
     testImplementation("junit:junit:4.13.2")
 }

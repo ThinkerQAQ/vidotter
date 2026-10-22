@@ -1,17 +1,17 @@
-# DownKit — Agent Contract
+# VidOtter — Agent Contract
 
-DownKit is a browser-integrated media downloader. The browser extension owns page detection, cookies and authorization. The local Go Bridge owns desktop jobs, downloads, persistence and media tools. Android is an independent native client.
+VidOtter is a browser-integrated media downloader. The browser extension owns page detection, cookies and authorization. The local Go Bridge owns desktop jobs, downloads, persistence and media tools. Android is an independent native client.
 
 ## Start here
 
 Run from the repository root:
 
 ```sh
-go -C tools/downkitdev run . verify
-go -C tools/downkitdev run . build
+go -C tools/vidotterdev run . verify
+go -C tools/vidotterdev run . build
 ```
 
-The Go maintenance tool in `tools/downkitdev/` is the **only** implementation of project build, verification, packaging, deployment and tool installation. Inspect `docs/architecture/maintenance.md` for all commands and platform requirements; do not add a second build wrapper.
+The Go maintenance tool in `tools/vidotterdev/` is the **only** implementation of project build, verification, packaging, deployment and tool installation. Inspect `docs/architecture/maintenance.md` for all commands and platform requirements; do not add a second build wrapper.
 
 ## Code intelligence and direct tools
 
@@ -19,7 +19,7 @@ Prefer native LSP capabilities when your editor or Agent exposes an LSP client:
 
 | Language | Server | Scope and useful operations |
 | --- | --- | --- |
-| Go | `gopls serve` | `bridge/`, `tools/downkitdev/` (separate Go modules); symbols, definitions, references, implementations, rename and diagnostics |
+| Go | `gopls serve` | `bridge/`, `tools/vidotterdev/` (separate Go modules); symbols, definitions, references, implementations, rename and diagnostics |
 | JavaScript/HTML/CSS | Editor's installed language servers, if available | `extension/`; navigation, references and diagnostics (check which languages and features the client supports) |
 | Markdown | `marksman server` | `README*.md`, `AGENTS.md`, `docs/`; headings, links, definitions and references |
 
@@ -42,28 +42,28 @@ Use standard `git status/diff/log`, `rg`, and file reads/edits for repository wo
 - Desktop Bridge/API and downloader: `bridge/`
 - Browser host, UI and tests: `extension/background.js`, `extension/popup/`, `extension/test/`
 - Android: `mobile/android/`
-- Native Go maintenance and release logic: `tools/downkitdev/`
+- Native Go maintenance and release logic: `tools/vidotterdev/`
 - Entry documentation: [English](docs/index.md) · [中文](docs/zh-CN/index.md)
 - API reference: [Bridge API](docs/reference/bridge-api.md)
 
 ## Build, verification and deployment
 
 ```sh
-go -C tools/downkitdev run . verify
-go -C tools/downkitdev run . build --os windows --arch amd64
-go -C tools/downkitdev run . package
+go -C tools/vidotterdev run . verify
+go -C tools/vidotterdev run . build --os windows --arch amd64
+go -C tools/vidotterdev run . package
 # Explicitly incomplete development release only:
-go -C tools/downkitdev run . package --allow-missing-tools
+go -C tools/vidotterdev run . package --allow-missing-tools
 ```
 
 `verify` runs Go tests, browser JavaScript syntax checks and the extension's JS tests. It is not a substitute for browser UI or Android-device acceptance. Formal release packaging requires verified third-party sidecars and source/licence assets; never silently switch to `--allow-missing-tools` for publishing.
 
-Android uses the official Gradle Wrapper, Go mobile toolchain and Android SDK/NDK. FFmpeg uses upstream configure/make and native toolchains. Deploying to Windows is an explicit side effect: stop the running Bridge before `go -C tools/downkitdev run . deploy --os windows --arch amd64 --target /mnt/c/software/Coding/downkit`; never overwrite `Data/`. Reload the unpacked browser extension after HTML, JS, CSS, manifest or locale changes; a Bridge restart alone does not reload those assets.
+Android uses the official Gradle Wrapper, Go mobile toolchain and Android SDK/NDK. FFmpeg uses upstream configure/make and native toolchains. Deploying to Windows is an explicit side effect: stop the running Bridge before `go -C tools/vidotterdev run . deploy --os windows --arch amd64 --target /mnt/c/software/Coding/vidotter`; never overwrite `Data/`. Reload the unpacked browser extension after HTML, JS, CSS, manifest or locale changes; a Bridge restart alone does not reload those assets.
 
 Keep changes small, inspect the diff, commit/push coherent work when requested, and verify before delivery. Do not merge without explicit approval.
 
 ## Local configuration and data
 
-Installed binaries are under `bin/`. `Data/config.toml` is the durable product configuration; `Data/jobs.json`, `Data/bridge.json`, `Data/logs/`, `Data/models/`, `Data/tools/` and `Data/work/` hold persistent or generated runtime data. `Data/native-host/com.downkit.bridge.json` is browser protocol metadata, not user configuration. Build outputs and caches live under ignored `.build/`; these must never be confused with installed `Data/`.
+Installed binaries are under `bin/`. `Data/config.toml` is the durable product configuration; `Data/jobs.json`, `Data/bridge.json`, `Data/logs/`, `Data/models/`, `Data/tools/` and `Data/work/` hold persistent or generated runtime data. `Data/native-host/com.vidotter.bridge.json` is browser protocol metadata, not user configuration. Build outputs and caches live under ignored `.build/`; these must never be confused with installed `Data/`.
 
 The Go installer registers Native Messaging and the URL protocol. Installing, deploying, or uninstalling program registrations must not erase existing downloads or user data.

@@ -1,4 +1,4 @@
-package downkit
+package vidotter
 
 import (
 	"net/http"
@@ -108,7 +108,7 @@ func TestHLSResumeRefreshesSessionAndDownloadsOnlyMissingSegment(t *testing.T) {
 	defer server.Close()
 
 	outputDir := t.TempDir()
-	workDir := filepath.Join(outputDir, ".downkit-work", "job_resume-test")
+	workDir := filepath.Join(outputDir, ".vidotter-work", "job_resume-test")
 	segmentDir := filepath.Join(workDir, "segments")
 	if err := os.MkdirAll(segmentDir, 0o755); err != nil {
 		t.Fatal(err)

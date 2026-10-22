@@ -1,4 +1,4 @@
-package downkit
+package vidotter
 
 import (
 	"bytes"
@@ -127,7 +127,7 @@ func TestIsNativeMessagingInvocation(t *testing.T) {
 		{name: "chromium origin", args: []string{"chrome-extension://hfjpenjlamneepmigemmmiibebpokmik/"}, want: true},
 		{name: "explicit debug flag", args: []string{"--native-host"}, want: true},
 		{name: "bridge", args: []string{"--bridge"}, want: false},
-		{name: "download URL", args: []string{"downkit://download?url=test"}, want: false},
+		{name: "download URL", args: []string{"vidotter://download?url=test"}, want: false},
 		{name: "no arguments", args: nil, want: false},
 	}
 	for _, test := range tests {
@@ -188,7 +188,7 @@ func TestBridgeConfigProvidesDefaultQuality(t *testing.T) {
 
 func TestProtocolRejectsCookieRequestHeader(t *testing.T) {
 	rawHeaders := `{"cookie":"session=secret","authorization":"Bearer test"}`
-	raw := "downkit://download?url=" + url.QueryEscape("https://cdn.test/master.m3u8") + "&headers=" + url.QueryEscape(rawHeaders)
+	raw := "vidotter://download?url=" + url.QueryEscape("https://cdn.test/master.m3u8") + "&headers=" + url.QueryEscape(rawHeaders)
 	var opts options
 	if err := applyProtocolURI(&opts, raw); err != nil {
 		t.Fatal(err)
@@ -280,8 +280,8 @@ func TestRecordedMediaOutputsKeepsExistingRetryCheckpoint(t *testing.T) {
 		t.Fatal(err)
 	}
 	recordPath := filepath.Join(root, "yt-dlp-outputs.txt")
-	record := "downkit-output:1|lesson|" + mediaPath + "\n" +
-		"downkit-output:2|missing|" + filepath.Join(root, "missing.mp4") + "\n"
+	record := "vidotter-output:1|lesson|" + mediaPath + "\n" +
+		"vidotter-output:2|missing|" + filepath.Join(root, "missing.mp4") + "\n"
 	if err := os.WriteFile(recordPath, []byte(record), 0o600); err != nil {
 		t.Fatal(err)
 	}

@@ -1,22 +1,22 @@
-# DownKit
+# VidOtter
 
-[简体中文](README_ZH.md) · [Documentation](docs/index.md) · [Releases](https://github.com/ThinkerQAQ/downkit/releases)
+[简体中文](README_ZH.md) · [Documentation](docs/index.md) · [Releases](https://github.com/ThinkerQAQ/vidotter/releases)
 
-DownKit discovers HLS, DASH, MP4 and split media tracks in Chrome/Edge and downloads them using a local Go Bridge. Desktop downloads support optional subtitle extraction, speech recognition and translation. An independent Android app accepts shared media URLs.
+VidOtter discovers HLS, DASH, MP4 and split media tracks in Chrome/Edge and downloads them using a local Go Bridge. Desktop downloads support optional subtitle extraction, speech recognition and translation. An independent Android app accepts shared media URLs.
 
 ## Quick Start
 
-**New to DownKit?** Follow the [illustrated first-run guide](docs/tutorial/first-run-on-new-machine.md) for the release installation, browser extension, Bridge connection, and first download. The [troubleshooting guide](docs/how-to/troubleshoot.md) covers connection and media-detection failures.
+**New to VidOtter?** Follow the [illustrated first-run guide](docs/tutorial/first-run-on-new-machine.md) for the release installation, browser extension, Bridge connection, and first download. The [troubleshooting guide](docs/how-to/troubleshoot.md) covers connection and media-detection failures.
 
-Download a [desktop release](https://github.com/ThinkerQAQ/downkit/releases) and extract the complete archive. On Windows run `bin\downkitdev.exe install`; on Linux/macOS run `./bin/downkitdev install`. All installer and release logic is Go-owned. Linux and macOS also require FFmpeg in PATH.
+Download a [desktop release](https://github.com/ThinkerQAQ/vidotter/releases) and extract the complete archive. On Windows run `bin\vidotterdev.exe install`; on Linux/macOS run `./bin/vidotterdev install`. All installer and release logic is Go-owned. Linux and macOS also require FFmpeg in PATH.
 
-Open `chrome://extensions` or `edge://extensions`, enable Developer mode and load the unpacked `extension/` folder. Play a video, click DownKit, detect its media and download it. The installed extension starts the Bridge automatically through Native Messaging.
+Open `chrome://extensions` or `edge://extensions`, enable Developer mode and load the unpacked `extension/` folder. Play a video, click VidOtter, detect its media and download it. The installed extension starts the Bridge automatically through Native Messaging.
 
 ## Interface preview
 
-![DownKit v1.2.0 Detect interface](docs/images/first-run-detect-en.png)
+![VidOtter v1.3.0 media detection empty state](docs/images/first-run-detect-zh.png)
 
-This is a genuine initial screen from an isolated Chromium profile. It has no detected media, and does not demonstrate a completed download. See the [first-run walkthrough](docs/tutorial/first-run-on-new-machine.md) for a second Settings screenshot and the exact steps.
+Screenshot of the v1.3.0 extension loaded in an isolated Microsoft Edge profile (Chinese UI). This is an empty detection state, not evidence of a connected Bridge or a successful download. See the [first-run walkthrough](docs/tutorial/first-run-on-new-machine.md) for setup steps.
 
 ## Control surfaces
 
@@ -33,12 +33,12 @@ See [Quick Start](docs/quick-start.md), [Tutorial](docs/tutorial/first-download.
 
 ## Development
 
-DownKit uses the native Go maintainer in `tools/downkitdev/` for engineering tasks. Start with [AGENTS.md](AGENTS.md) and run `go -C tools/downkitdev run . verify` or `go -C tools/downkitdev run . build`. See the [maintenance guide](docs/architecture/maintenance.md) for packaging, toolchains and deployment.
+VidOtter uses the native Go maintainer in `tools/vidotterdev/` for engineering tasks. Start with [AGENTS.md](AGENTS.md) and run `go -C tools/vidotterdev run . verify` or `go -C tools/vidotterdev run . build`. See the [maintenance guide](docs/architecture/maintenance.md) for packaging, toolchains and deployment.
 
 Project code and documentation are Apache-2.0 licensed. Bundled third-party tools carry their own licence terms; see [NOTICE](NOTICE) and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
 ## Local configuration and data
 
-Installed binaries reside in `bin/`; local runtime files are stored in the sibling `Data/` directory. Edit `Data/config.toml` for the download, proxy, tools, interface, sniffer and logging settings. Job state (`jobs.json`), Bridge runtime state (`bridge.json`), logs, models, downloaded tool components and staging checkpoints live under `Data/`. Native Messaging requires a JSON registration manifest at `Data/native-host/com.downkit.bridge.json`; it is generated protocol metadata, not a user config file. Existing download destinations remain unchanged when migrating legacy configuration.
+Installed binaries reside in `bin/`; local runtime files are stored in the sibling `Data/` directory. Edit `Data/config.toml` for the download, proxy, tools, interface, sniffer and logging settings. Job state (`jobs.json`), Bridge runtime state (`bridge.json`), logs, models, downloaded tool components and staging checkpoints live under `Data/`. Native Messaging requires a JSON registration manifest at `Data/native-host/com.vidotter.bridge.json`; it is generated protocol metadata, not a user config file. Existing download destinations remain unchanged when migrating legacy configuration.
 
-The [Go maintainer](docs/architecture/maintenance.md) in `tools/downkitdev/` owns release packaging, installation and cross-platform builds. Media and Android SDKs retain their upstream build tools.
+The [Go maintainer](docs/architecture/maintenance.md) in `tools/vidotterdev/` owns release packaging, installation and cross-platform builds. Media and Android SDKs retain their upstream build tools.

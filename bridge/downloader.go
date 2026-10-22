@@ -1,4 +1,4 @@
-package downkit
+package vidotter
 
 import (
 	"context"
@@ -893,11 +893,11 @@ func removeDirectParts(outputPath string, parts int) {
 }
 
 func directMetaPath(outputPath string) string {
-	return outputPath + ".downkit.json"
+	return outputPath + ".vidotter.json"
 }
 
 func directPartPath(outputPath string, index int) string {
-	return fmt.Sprintf("%s.downkit.part%02d", outputPath, index)
+	return fmt.Sprintf("%s.vidotter.part%02d", outputPath, index)
 }
 
 func parseContentRange(value string) (start, end, total int64, totalKnown bool, err error) {

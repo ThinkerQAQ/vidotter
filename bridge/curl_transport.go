@@ -1,4 +1,4 @@
-package downkit
+package vidotter
 
 import (
 	"bytes"
@@ -50,7 +50,7 @@ func (a *app) curlBaseArgs(sourceURL, outputPath string, updateCookies bool) ([]
 	if a.opts.proxy != "" {
 		args = append(args, "--proxy", a.opts.proxy)
 	} else {
-		// Respect DownKit's explicit direct mode even if curl inherits proxy
+		// Respect VidOtter's explicit direct mode even if curl inherits proxy
 		// environment variables from the desktop session.
 		args = append(args, "--noproxy", "*")
 	}

@@ -1,8 +1,8 @@
-# DownKit
+# VidOtter
 
 [English](README.md) · [中文文档](docs/zh-CN/index.md) · [Documentation](docs/index.md)
 
-DownKit 是一个通过 Chrome 或 Edge 扩展发现网页中的 M3U8、DASH 和 MP4 媒体，并交给本机 Bridge 下载和封装的跨平台工具。
+VidOtter 是一个通过 Chrome 或 Edge 扩展发现网页中的 M3U8、DASH 和 MP4 媒体，并交给本机 Bridge 下载和封装的跨平台工具。
 
 ## 字幕能力
 
@@ -17,11 +17,9 @@ Whisper 和 TranslateGemma 模型权重不包含在发行包内。请在扩展�
 
 ## 界面预览
 
-![DownKit v1.2.0 资源嗅探初始界面](docs/images/first-run-detect-en.png)
+![VidOtter v1.3.0 资源嗅探初始界面](docs/images/first-run-detect-zh.png)
 
-![DownKit v1.2.0 设置导航](docs/images/first-run-settings-en.png)
-
-以上为当前 v1.2.0 在隔离 Chromium 中的真实英文界面，尚未连接 Bridge 或开始下载，**不是下载成功截图**。新用户请先看[带截图的首次使用教程](docs/zh-CN/tutorial/first-run-on-new-machine.md)，连接异常看[故障排查](docs/zh-CN/how-to/troubleshoot.md)。
+上图为 v1.3.0 在隔离 Microsoft Edge 环境中加载真实扩展后截取的中文初始界面，**不代表 Bridge 已连接或下载已成功**。新用户请先看[带截图的首次使用教程](docs/zh-CN/tutorial/first-run-on-new-machine.md)，连接异常看[故障排查](docs/zh-CN/how-to/troubleshoot.md)。
 
 ## 安装与使用
 
@@ -29,29 +27,29 @@ Windows、Linux 和 macOS 的整体流程相同：加载浏览器扩展、注册
 
 ### Windows
 
-1. 从 [GitHub Releases](https://github.com/ThinkerQAQ/downkit/releases) 下载 Windows 发行包并解压到固定目录，不要单独移动 Bridge、`extension` 或 `tools` 目录。
-2. 在 PowerShell/终端运行 `./bin/downkitdev.exe install`。Go 安装器注册 Native Messaging Host，支持 Chrome 和 Edge。
+1. 从 [GitHub Releases](https://github.com/ThinkerQAQ/vidotter/releases) 下载 Windows 发行包并解压到固定目录，不要单独移动 Bridge、`extension` 或 `tools` 目录。
+2. 在 PowerShell/终端运行 `./bin/vidotterdev.exe install`。Go 安装器注册 Native Messaging Host，支持 Chrome 和 Edge。
 3. 打开 `edge://extensions` 或 `chrome://extensions`，启用“开发人员模式”，选择“加载解压缩的扩展”，然后选择发行包中的 `extension` 目录。
-4. 打开包含媒体的网页并开始播放，点击 DownKit 扩展图标，在检测到的资源中选择需要的项目并开始下载。
-5. 如果移动了解压目录或替换了 Bridge，请重新运行 `./bin/downkitdev.exe install`。需要卸载时，运行 `./bin/downkitdev.exe uninstall`，再从浏览器中移除扩展。
+4. 打开包含媒体的网页并开始播放，点击 VidOtter 扩展图标，在检测到的资源中选择需要的项目并开始下载。
+5. 如果移动了解压目录或替换了 Bridge，请重新运行 `./bin/vidotterdev.exe install`。需要卸载时，运行 `./bin/vidotterdev.exe uninstall`，再从浏览器中移除扩展。
 
 ### Linux 和 macOS
 
-1. 从 [GitHub Releases](https://github.com/ThinkerQAQ/downkit/releases) 下载与系统和 CPU 架构匹配的发行包并解压到固定目录。
-2. Linux/macOS 在解压目录运行 `./bin/downkitdev install`。Go 维护程序按照运行平台注册 Chrome、Chromium 和 Edge。
+1. 从 [GitHub Releases](https://github.com/ThinkerQAQ/vidotter/releases) 下载与系统和 CPU 架构匹配的发行包并解压到固定目录。
+2. Linux/macOS 在解压目录运行 `./bin/vidotterdev install`。Go 维护程序按照运行平台注册 Chrome、Chromium 和 Edge。
 3. Linux/macOS 发布包不携带 FFmpeg，请先通过系统包管理器安装 `ffmpeg` 并确保它在 `PATH` 中，以便完成媒体合并和封装。
 4. 打开 `edge://extensions` 或 `chrome://extensions`，启用“开发人员模式”，选择“加载解压缩的扩展”，然后选择发行包中的 `extension` 目录。
-5. 打开包含媒体的网页并开始播放，点击 DownKit 扩展图标，在检测到的资源中选择需要的项目并开始下载。
+5. 打开包含媒体的网页并开始播放，点击 VidOtter 扩展图标，在检测到的资源中选择需要的项目并开始下载。
 
-如果移动了解压目录，请重新运行 Go 安装程序。卸载时运行 `./bin/downkitdev uninstall`，再从浏览器中移除扩展。
+如果移动了解压目录，请重新运行 Go 安装程序。卸载时运行 `./bin/vidotterdev uninstall`，再从浏览器中移除扩展。
 
 ## 许可证
 
-DownKit 自有代码和文档采用 [Apache License 2.0](LICENSE)；随项目分发的第三方组件仍遵循各自的许可证，详情见 [NOTICE](NOTICE) 和 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+VidOtter 自有代码和文档采用 [Apache License 2.0](LICENSE)；随项目分发的第三方组件仍遵循各自的许可证，详情见 [NOTICE](NOTICE) 和 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
 
 ## 开发与构建
 
-项目使用 `tools/downkitdev/` 原生 Go 维护程序，不依赖额外的开发网关。进入仓库根目录后运行 `go -C tools/downkitdev run . verify` 和 `go -C tools/downkitdev run . build`；发行打包、部署及平台依赖参阅[工程维护指南](docs/zh-CN/architecture/maintenance.md)。Agent 规范见 [AGENTS.md](AGENTS.md)。
+项目使用 `tools/vidotterdev/` 原生 Go 维护程序，不依赖额外的开发网关。进入仓库根目录后运行 `go -C tools/vidotterdev run . verify` 和 `go -C tools/vidotterdev run . build`；发行打包、部署及平台依赖参阅[工程维护指南](docs/zh-CN/architecture/maintenance.md)。Agent 规范见 [AGENTS.md](AGENTS.md)。
 
 ## 本地配置与数据
 

@@ -1,6 +1,6 @@
 # Bridge API
 
-Bridge 监听 `127.0.0.1:17891`。受保护接口要求 `X-DownKit-Token`，由 Native Messaging 交给浏览器扩展后台。
+Bridge 监听 `127.0.0.1:17891`。受保护接口要求 `X-VidOtter-Token`，由 Native Messaging 交给浏览器扩展后台。
 
 | 路径 | 用途 |
 | --- | --- |

@@ -1,4 +1,4 @@
-package downkit
+package vidotter
 
 import (
 	"context"
@@ -14,7 +14,7 @@ import (
 	"github.com/pelletier/go-toml/v2"
 )
 
-const bridgeVersion = "1.2.1"
+const bridgeVersion = "1.3.0"
 
 type bridgeConfig struct {
 	OutputDir        string `json:"outputDir"`

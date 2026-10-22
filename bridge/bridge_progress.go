@@ -1,4 +1,4 @@
-package downkit
+package vidotter
 
 import (
 	"bytes"
@@ -45,7 +45,7 @@ func reportJobProgress(jobID, phase string, progress int, detail string, downloa
 	})
 	request, _ := http.NewRequest(http.MethodPost, state.BaseURL+"/v1/jobs/"+jobID+"/progress", bytes.NewReader(body))
 	request.Header.Set("Content-Type", "application/json")
-	request.Header.Set("X-DownKit-Token", state.Token)
+	request.Header.Set("X-VidOtter-Token", state.Token)
 	client := &http.Client{Timeout: 3 * time.Second}
 	response, err := client.Do(request)
 	if err == nil {
@@ -71,7 +71,7 @@ func publishJobFiles(files []bridgeJobFile) {
 	body, _ := json.Marshal(map[string]any{"files": files})
 	request, _ := http.NewRequest(http.MethodPost, state.BaseURL+"/v1/jobs/"+jobID+"/files", bytes.NewReader(body))
 	request.Header.Set("Content-Type", "application/json")
-	request.Header.Set("X-DownKit-Token", state.Token)
+	request.Header.Set("X-VidOtter-Token", state.Token)
 	client := &http.Client{Timeout: 3 * time.Second}
 	response, err := client.Do(request)
 	if err == nil {
@@ -93,7 +93,7 @@ func publishJobOutputFile(path string, index int, itemID string) {
 	body, _ := json.Marshal(map[string]any{"path": path, "index": index, "id": itemID})
 	request, _ := http.NewRequest(http.MethodPost, state.BaseURL+"/v1/jobs/"+jobID+"/output", bytes.NewReader(body))
 	request.Header.Set("Content-Type", "application/json")
-	request.Header.Set("X-DownKit-Token", state.Token)
+	request.Header.Set("X-VidOtter-Token", state.Token)
 	client := &http.Client{Timeout: 3 * time.Second}
 	response, err := client.Do(request)
 	if err == nil {

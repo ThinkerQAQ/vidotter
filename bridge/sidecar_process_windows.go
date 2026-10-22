@@ -1,6 +1,6 @@
 //go:build windows
 
-package downkit
+package vidotter
 
 import (
 	"os/exec"

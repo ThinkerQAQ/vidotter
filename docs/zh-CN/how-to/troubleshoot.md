@@ -4,11 +4,11 @@
 
 ## 找不到 Native Messaging host
 
-浏览器通过名称为 \`com.downkit.bridge\` 的注册项启动 Bridge，**不是**直接查找任意运行中的 downkit 进程。
+浏览器通过名称为 \`com.vidotter.bridge\` 的注册项启动 Bridge，**不是**直接查找任意运行中的 vidotter 进程。
 
-1. 在**解压后的根目录**用 PowerShell 执行 \`.\bin\downkitdev.exe install\`，或在 Linux/macOS 执行 \`./bin/downkitdev install\`。
+1. 在**解压后的根目录**用 PowerShell 执行 \`.\bin\vidotterdev.exe install\`，或在 Linux/macOS 执行 \`./bin/vidotterdev install\`。
 2. 检查安装器是否输出了 Bridge 可执行文件路径和 \`Data/native-host/\` 下的 manifest 路径。
-3. 在 \`chrome://extensions\` 或 \`edge://extensions\` 查看 DownKit 的扩展 ID。如果不等于 \`hfjpenjlamneepmigemmmiibebpokmik\`，重新执行安装命令并加上 \`--extension-id 实际的32位ID\`。
+3. 在 \`chrome://extensions\` 或 \`edge://extensions\` 查看 VidOtter 的扩展 ID。如果不等于 \`hfjpenjlamneepmigemmmiibebpokmik\`，重新执行安装命令并加上 \`--extension-id 实际的32位ID\`。
 4. 在浏览器的扩展页点击「重新加载」。如果后来移动过程序目录，必须在新目录重新安装。
 
 ## 环境状态一直显示 Checking environment

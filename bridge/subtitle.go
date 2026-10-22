@@ -1,4 +1,4 @@
-package downkit
+package vidotter
 
 import (
 	"context"
@@ -11,7 +11,7 @@ import (
 	"strings"
 )
 
-const ytDLPSubtitleRecordPrefix = "downkit-subtitle:"
+const ytDLPSubtitleRecordPrefix = "vidotter-subtitle:"
 
 // SubtitleRequest is part of the Bridge task protocol. Source-site and local
 // ASR modes stay explicit so selecting a subtitle never silently starts a

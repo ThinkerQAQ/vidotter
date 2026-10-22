@@ -12,22 +12,22 @@ function activateTab(name) {
     panel.classList.toggle("active", active);
     panel.hidden = !active;
   });
-  DownKitDownloads.deactivate();
-  DownKitJobs.deactivate();
-  DownKitLogs.deactivate();
-  if (name === "logs") return DownKitLogs.activate();
-	if (name === "environment") return DownKitEnvironment.activate();
-	if (name === "sniffer") return DownKitDownloads.activate();
-	if (name === "jobs") return DownKitJobs.activate();
+  VidOtterDownloads.deactivate();
+  VidOtterJobs.deactivate();
+  VidOtterLogs.deactivate();
+  if (name === "logs") return VidOtterLogs.activate();
+	if (name === "environment") return VidOtterEnvironment.activate();
+	if (name === "sniffer") return VidOtterDownloads.activate();
+	if (name === "jobs") return VidOtterJobs.activate();
 }
 
-DownKitPopup.activateTab = activateTab;
+VidOtterPopup.activateTab = activateTab;
 
 async function initOpenMode() {
   const select = document.getElementById("openMode");
   const hint = document.getElementById("openModeHint");
   try {
-    const result = await DownKitPopup.send("ui.open-mode.get");
+    const result = await VidOtterPopup.send("ui.open-mode.get");
     select.value = result.mode;
     if (!result.supportsSidePanel) {
       select.querySelector('[value="sidePanel"]').disabled = true;
@@ -41,7 +41,7 @@ async function initOpenMode() {
     select.disabled = true;
     hint.textContent = "正在保存…";
     try {
-      const result = await DownKitPopup.send("ui.open-mode.set", { mode: select.value });
+      const result = await VidOtterPopup.send("ui.open-mode.set", { mode: select.value });
       select.value = result.mode;
       hint.textContent = "已保存，下次点击扩展图标时生效";
     } catch (error) {
@@ -61,10 +61,10 @@ function setLogsVisible(visible) {
 
 async function refreshLogsVisibility() {
   try {
-    const result = await DownKitPopup.send("ui.logs.get");
+    const result = await VidOtterPopup.send("ui.logs.get");
     setLogsVisible(result.showLogs !== false);
   } catch (error) {
-    DownKitPopup.setMessage("environmentMessage", error.message || String(error), "error");
+    VidOtterPopup.setMessage("environmentMessage", error.message || String(error), "error");
   }
 }
 
@@ -74,12 +74,12 @@ function initLogsVisibility() {
     const wanted = control.checked;
     control.disabled = true;
     try {
-      const result = await DownKitPopup.send("ui.logs.set", { showLogs: wanted });
+      const result = await VidOtterPopup.send("ui.logs.set", { showLogs: wanted });
       setLogsVisible(result.showLogs !== false);
-      DownKitPopup.setMessage("environmentMessage", "日志入口设置已保存。", "ok");
+      VidOtterPopup.setMessage("environmentMessage", "日志入口设置已保存。", "ok");
     } catch (error) {
       control.checked = !wanted;
-      DownKitPopup.setMessage("environmentMessage", error.message || String(error), "error");
+      VidOtterPopup.setMessage("environmentMessage", error.message || String(error), "error");
     } finally {
       control.disabled = false;
     }
@@ -92,23 +92,23 @@ function initLogsVisibility() {
 
 document.addEventListener("DOMContentLoaded", () => {
   const open = document.getElementById("openWorkspace");
-  if (DownKitPopup.host === "web") open.hidden = true;
+  if (VidOtterPopup.host === "web") open.hidden = true;
   open.addEventListener("click", async () => {
     try {
-      await DownKitPopup.send("bridge.environment");
+      await VidOtterPopup.send("bridge.environment");
       await chrome.tabs.create({ url: "http://127.0.0.1:17891/console/" });
     } catch (error) {
-      DownKitPopup.setMessage("environmentMessage", error.message || String(error), "error");
+      VidOtterPopup.setMessage("environmentMessage", error.message || String(error), "error");
     }
   });
   document.getElementById("refreshWorkspace").addEventListener("click", () => activateTab(
     document.querySelector(".tab.active")?.dataset.tab || "sniffer"));
-  DownKitI18n.init();
-  DownKitEnvironment.init();
-  DownKitJobs.init();
-  DownKitLogs.init();
+  VidOtterI18n.init();
+  VidOtterEnvironment.init();
+  VidOtterJobs.init();
+  VidOtterLogs.init();
   initLogsVisibility();
-  DownKitDownloads.init();
+  VidOtterDownloads.init();
   initOpenMode();
   const tabs = [...document.querySelectorAll("[data-tab]")];
   for (const tab of tabs) {
@@ -125,12 +125,12 @@ document.addEventListener("DOMContentLoaded", () => {
       activateTab(visible[next].dataset.tab);
     });
   }
-  if (DownKitPopup.host === "web") activateTab("jobs");
+  if (VidOtterPopup.host === "web") activateTab("jobs");
   else activateTab("sniffer");
 });
 
 window.addEventListener("unload", () => {
-  DownKitDownloads.deactivate();
-  DownKitJobs.deactivate();
-  DownKitLogs.deactivate();
+  VidOtterDownloads.deactivate();
+  VidOtterJobs.deactivate();
+  VidOtterLogs.deactivate();
 });

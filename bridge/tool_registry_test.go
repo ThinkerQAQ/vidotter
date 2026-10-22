@@ -1,4 +1,4 @@
-package downkit
+package vidotter
 
 import (
 	"context"
@@ -146,7 +146,7 @@ func TestHandleToolsReturnsRegistrySnapshot(t *testing.T) {
 		}}),
 	}
 	request := httptest.NewRequest(http.MethodGet, "/v1/tools", nil)
-	request.Header.Set("X-DownKit-Token", "secret")
+	request.Header.Set("X-VidOtter-Token", "secret")
 	response := httptest.NewRecorder()
 	server.handleTools(response, request)
 	if response.Code != http.StatusOK {
@@ -182,7 +182,7 @@ func TestHandleRestartRejectsUnfinishedJob(t *testing.T) {
 		},
 	}
 	request := httptest.NewRequest(http.MethodPost, "/v1/restart", nil)
-	request.Header.Set("X-DownKit-Token", "secret")
+	request.Header.Set("X-VidOtter-Token", "secret")
 	response := httptest.NewRecorder()
 	server.handleRestart(response, request)
 	if response.Code != http.StatusConflict {
@@ -193,7 +193,7 @@ func TestHandleRestartRejectsUnfinishedJob(t *testing.T) {
 func TestHandleRestartRejectsUnavailableRestart(t *testing.T) {
 	server := &bridgeServer{state: bridgeState{Token: "secret"}, jobs: make(map[string]*bridgeJob)}
 	request := httptest.NewRequest(http.MethodPost, "/v1/restart", nil)
-	request.Header.Set("X-DownKit-Token", "secret")
+	request.Header.Set("X-VidOtter-Token", "secret")
 	response := httptest.NewRecorder()
 	server.handleRestart(response, request)
 	if response.Code != http.StatusServiceUnavailable {

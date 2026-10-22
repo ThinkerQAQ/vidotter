@@ -1,4 +1,4 @@
-package downkit
+package vidotter
 
 import (
 	"bytes"
@@ -234,7 +234,7 @@ func llamaServerArgs(modelPath string, port int) []string {
 		"--ctx-size", "2048", "--parallel", "1", "--n-gpu-layers", "0", "--no-webui",
 		// TranslateGemma's typed-content Jinja template cannot pass the
 		// automatic parser verification introduced in llama.cpp b7981.
-		// DownKit builds the equivalent text prompt and uses /completion.
+		// VidOtter builds the equivalent text prompt and uses /completion.
 		"--no-jinja",
 	}
 }

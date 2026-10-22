@@ -1,7 +1,7 @@
 "use strict";
 
 const assert = require("node:assert/strict");
-global.DownKitPopup = {};
+global.VidOtterPopup = {};
 const jobs = require("../popup/jobs.js");
 
 assert.equal(jobs.formatBytes(1024), "1.0 KB");

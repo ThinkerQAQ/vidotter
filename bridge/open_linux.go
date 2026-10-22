@@ -1,6 +1,6 @@
 //go:build linux
 
-package downkit
+package vidotter
 
 import (
 	"os/exec"

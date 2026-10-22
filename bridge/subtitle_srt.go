@@ -1,4 +1,4 @@
-package downkit
+package vidotter
 
 import (
 	"errors"
@@ -12,8 +12,8 @@ import (
 
 var srtTimingRE = regexp.MustCompile(`^\s*(\d{1,6}:\d{2}:\d{2}[,.]\d{3})\s*-->\s*(\d{1,6}:\d{2}:\d{2}[,.]\d{3})(?:\s+(.*?))?\s*$`)
 
-// SubtitleDocument is DownKit's model-independent subtitle representation.
-// Timing is parsed and written by DownKit; translation engines only receive a
+// SubtitleDocument is VidOtter's model-independent subtitle representation.
+// Timing is parsed and written by VidOtter; translation engines only receive a
 // cue ID and its text, so a model cannot alter synchronization metadata.
 type SubtitleDocument struct {
 	Cues []SubtitleCue

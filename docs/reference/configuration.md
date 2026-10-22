@@ -1,6 +1,6 @@
 # Configuration
 
-DownKit keeps all editable desktop and browser preferences in **Data/config.toml**, next to the installed **bin/** directory. This file is TOML, not JSON. Bridge state, jobs, logs, models, downloaded tools and desktop work checkpoints also live under **Data/**.
+VidOtter keeps all editable desktop and browser preferences in **Data/config.toml**, next to the installed **bin/** directory. This file is TOML, not JSON. Bridge state, jobs, logs, models, downloaded tools and desktop work checkpoints also live under **Data/**.
 
 | TOML section | Keys | Purpose |
 | --- | --- | --- |

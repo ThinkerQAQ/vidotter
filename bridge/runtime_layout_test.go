@@ -1,4 +1,4 @@
-package downkit
+package vidotter
 
 import (
 	"path/filepath"
@@ -10,9 +10,9 @@ import (
 
 func TestDataRootForExecutable(t *testing.T) {
 	cases := []struct{ executable, root string }{
-		{filepath.Join("C:", "software", "Coding", "downkit", "bin", "downkit.exe"),
-			filepath.Join("C:", "software", "Coding", "downkit", "Data")},
-		{filepath.Join("workspace", "downkit.exe"), filepath.Join("workspace", "Data")},
+		{filepath.Join("C:", "software", "Coding", "vidotter", "bin", "vidotter.exe"),
+			filepath.Join("C:", "software", "Coding", "vidotter", "Data")},
+		{filepath.Join("workspace", "vidotter.exe"), filepath.Join("workspace", "Data")},
 	}
 	for _, c := range cases {
 		if got := dataRootForExecutable(c.executable); got != c.root {

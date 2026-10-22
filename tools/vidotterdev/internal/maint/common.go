@@ -34,7 +34,7 @@ func FindRoot() (string, error) {
 			return root, nil
 		}
 	}
-	return "", errors.New("DownKit root not found (expected extension/manifest.json); use --root")
+	return "", errors.New("VidOtter root not found (expected extension/manifest.json); use --root")
 }
 func findRootFrom(dir string) (string, bool) {
 	for {
@@ -182,7 +182,7 @@ func Verify(root string) error {
 	if err := run(filepath.Join(root, "bridge"), nil, "go", "test", "./..."); err != nil {
 		return err
 	}
-	if err := run(filepath.Join(root, "tools", "downkitdev"), nil, "go", "test", "./..."); err != nil {
+	if err := run(filepath.Join(root, "tools", "vidotterdev"), nil, "go", "test", "./..."); err != nil {
 		return err
 	}
 	scripts, err := verificationTargets(root)
@@ -222,7 +222,7 @@ func Build(root, targetOS, targetArch, output string) error {
 		if targetOS == "windows" {
 			suffix = ".exe"
 		}
-		output = filepath.Join(root, ".build", "out", fmt.Sprintf("downkit-%s-%s%s", targetOS, targetArch, suffix))
+		output = filepath.Join(root, ".build", "out", fmt.Sprintf("vidotter-%s-%s%s", targetOS, targetArch, suffix))
 	}
 	absolute, err := filepath.Abs(output)
 	if err != nil {
@@ -232,7 +232,7 @@ func Build(root, targetOS, targetArch, output string) error {
 		return err
 	}
 	env := []string{"CGO_ENABLED=0", "GOOS=" + targetOS, "GOARCH=" + targetArch}
-	if err := run(filepath.Join(root, "bridge"), env, "go", "build", "-buildvcs=false", "-trimpath", "-o", absolute, "./cmd/downkit"); err != nil {
+	if err := run(filepath.Join(root, "bridge"), env, "go", "build", "-buildvcs=false", "-trimpath", "-o", absolute, "./cmd/vidotter"); err != nil {
 		return err
 	}
 	fmt.Println("Bridge:", absolute)

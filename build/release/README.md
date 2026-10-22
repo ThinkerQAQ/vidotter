@@ -1,6 +1,6 @@
 # Release 组件清单
 
-DownKit 的桌面发布包保留独立 sidecar，不把第三方可执行文件嵌入主程序：
+VidOtter 的桌面发布包保留独立 sidecar，不把第三方可执行文件嵌入主程序：
 
 - `tools/ffmpeg-slim[.exe]` 随标准发布包提供；
 - Windows 包在 `tools/whisper/` 中提供官方 CPU 版 `whisper-cli.exe` 及其运行时 DLL；模型文件不随包提供；
@@ -11,9 +11,9 @@ DownKit 的桌面发布包保留独立 sidecar，不把第三方可执行文件�
 Windows 组件需要准备好后才能创建正式发行包：
 
 ```powershell
-go -C tools/downkitdev run . tool-install whisper
-go -C tools/downkitdev run . tool-install llama
-go -C tools/downkitdev run . components --root .build/out/release-stage/downkit-v1.2.1-windows-amd64 --os windows --arch amd64
+go -C tools/vidotterdev run . tool-install whisper
+go -C tools/vidotterdev run . tool-install llama
+go -C tools/vidotterdev run . components --root .build/out/release-stage/vidotter-v1.2.1-windows-amd64 --os windows --arch amd64
 ```
 
 Linux/macOS 由 Go 维护工具自动选择平台与架构，并保持同样的目录布局。
@@ -25,7 +25,7 @@ Android/iOS 不使用该下载机制；原生库必须随 APK/AAB 或应用包�
 # 首先将官方 FFmpeg-n8.1.2-source.tar.gz 下载到
 # .build/cache/source/FFmpeg-n8.1.2-source.tar.gz
 # 并验证仓库记录的固定 SHA256
-go -C tools/downkitdev run . package
+go -C tools/vidotterdev run . package
 ```
 
 Go 维护程序会重新编译五个桌面目标，生成一个 Windows ZIP、四个 Linux/macOS TAR.GZ、FFmpeg 对应源码包和 `SHA256SUMS.txt`。
