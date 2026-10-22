@@ -1,4 +1,4 @@
-package downkit
+package vidotter
 
 import (
 	"bufio"
@@ -192,7 +192,7 @@ func isInteractiveInvocation() bool {
 
 func isProtocolInvocation() bool {
 	for _, arg := range os.Args[1:] {
-		if strings.HasPrefix(strings.ToLower(arg), "downkit:") {
+		if strings.HasPrefix(strings.ToLower(arg), "vidotter:") {
 			return true
 		}
 	}
@@ -267,7 +267,7 @@ func runWithOptions(opts options, platformMuxer mediaMuxer) error {
 	}
 	// Desktop staging lives under Data/work. Existing job checkpoints may
 	// still be resumed from their pre-migration output directory.
-	workRoot := filepath.Join(opts.outputDir, ".downkit-work")
+	workRoot := filepath.Join(opts.outputDir, ".vidotter-work")
 	if platformMuxer == nil {
 		if dataWork, err := bridgeDataPath("work"); err == nil {
 			if _, err := os.Stat(filepath.Join(workRoot, workName)); err != nil {
@@ -519,7 +519,7 @@ func parseOptions() (options, error) {
 
 	if o.sourceURL == "" && flag.NArg() > 0 {
 		arg := flag.Arg(0)
-		if strings.HasPrefix(strings.ToLower(arg), "downkit:") {
+		if strings.HasPrefix(strings.ToLower(arg), "vidotter:") {
 			if err := applyProtocolURI(&o, arg); err != nil {
 				return o, err
 			}
@@ -532,7 +532,7 @@ func parseOptions() (options, error) {
 
 func normalizeOptions(o options) (options, error) {
 	if o.sourceURL == "" {
-		return o, errors.New("缺少 -url 或 downkit: 参数")
+		return o, errors.New("缺少 -url 或 vidotter: 参数")
 	}
 	o.sourceURL = cleanURL(o.sourceURL)
 	proxy, _, _, proxyErr := normalizeProxyAddress(o.proxy, "", 0)
@@ -891,7 +891,7 @@ func checkFFmpegMinimum(version ffmpegVersion) error {
 		return nil
 	}
 	if version.major < 4 || version.major == 4 && version.minor < 4 {
-		return fmt.Errorf("FFmpeg 版本过低：%s；DownKit 最低要求 FFmpeg 4.4", version.label)
+		return fmt.Errorf("FFmpeg 版本过低：%s；VidOtter 最低要求 FFmpeg 4.4", version.label)
 	}
 	return nil
 }
@@ -1212,7 +1212,7 @@ func describeYTDLPFailure(err error, detail string) error {
 	}
 	lower := strings.ToLower(detail)
 	if strings.Contains(lower, "[bilibili]") && (strings.Contains(lower, "http error 412") || strings.Contains(lower, "precondition failed")) {
-		return fmt.Errorf("B站拒绝了页面解析请求（HTTP 412），可能是当前代理出口或匿名会话触发风控；DownKit 已尝试当前线路，若仍失败请稍后重试：%w", err)
+		return fmt.Errorf("B站拒绝了页面解析请求（HTTP 412），可能是当前代理出口或匿名会话触发风控；VidOtter 已尝试当前线路，若仍失败请稍后重试：%w", err)
 	}
 	message := strings.TrimSpace(detail)
 	if len(message) > 500 {
@@ -1303,16 +1303,16 @@ func (a *app) ytDLPDownloadArgs(pageURL, outputTemplate, outputRecord, subtitleR
 		"--no-color", "--newline", "--progress", "--windows-filenames",
 		"--continue", "--download-archive", archive,
 		"--progress-delta", "1",
-		"--progress-template", "download:downkit-progress:%(progress.downloaded_bytes)s|%(progress.total_bytes)s|%(progress.total_bytes_estimate)s|%(progress.speed)s|%(progress._percent_str)s",
-		"--progress-template", "postprocess:downkit-postprocess:%(info.id)s",
+		"--progress-template", "download:vidotter-progress:%(progress.downloaded_bytes)s|%(progress.total_bytes)s|%(progress.total_bytes_estimate)s|%(progress.speed)s|%(progress._percent_str)s",
+		"--progress-template", "postprocess:vidotter-postprocess:%(info.id)s",
 		"--no-mtime", "--retries", "5", "--fragment-retries", "5",
 		"--extractor-retries", "3", "--socket-timeout", "20",
 		"--concurrent-fragments", strconv.Itoa(a.opts.concurrent),
 		"--format", "bv*+ba/b", "--merge-output-format", "mp4",
 		"--ffmpeg-location", a.opts.ffmpegPath,
 		"--paths", a.opts.outputDir, "--output", outputTemplate,
-		"--print", "after_move:downkit-output:%(playlist_index)s|%(id)s|%(filepath)s",
-		"--print-to-file", "after_move:downkit-output:%(playlist_index)s|%(id)s|%(filepath)s", strings.ReplaceAll(outputRecord, "%", "%%"),
+		"--print", "after_move:vidotter-output:%(playlist_index)s|%(id)s|%(filepath)s",
+		"--print-to-file", "after_move:vidotter-output:%(playlist_index)s|%(id)s|%(filepath)s", strings.ReplaceAll(outputRecord, "%", "%%"),
 	}
 	if a.opts.subtitleRequest.usesSiteSubtitles() {
 		args = append(args,

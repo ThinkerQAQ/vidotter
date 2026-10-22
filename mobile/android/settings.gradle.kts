@@ -14,5 +14,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "DownKit-Mobile"
+rootProject.name = "VidOtter-Mobile"
 include(":app")

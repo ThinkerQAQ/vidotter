@@ -1,4 +1,4 @@
-package downkit
+package vidotter
 
 import (
 	"context"
@@ -24,7 +24,7 @@ type proxyConnectivityResult struct {
 }
 
 // normalizeProxyAddress accepts the legacy full proxy value as well as the
-// host/port fields exposed by the proxy tool. DownKit currently supports HTTP
+// host/port fields exposed by the proxy tool. VidOtter currently supports HTTP
 // proxies; HTTPS destinations are carried through them with CONNECT.
 func normalizeProxyAddress(raw, host string, port int) (string, string, int, error) {
 	raw = strings.TrimSpace(raw)
@@ -87,7 +87,7 @@ func probeProxyConnectivity(ctx context.Context, proxy, target string) (time.Dur
 	if err != nil {
 		return 0, err
 	}
-	request.Header.Set("User-Agent", "DownKit/"+bridgeVersion)
+	request.Header.Set("User-Agent", "VidOtter/"+bridgeVersion)
 	started := time.Now()
 	response, err := client.Do(request)
 	latency := time.Since(started)

@@ -1,4 +1,4 @@
-package downkit
+package vidotter
 
 import (
 	"bufio"
@@ -55,7 +55,7 @@ func fetchLimited(ctx context.Context, client *http.Client, rawURL string, limit
 	if err != nil {
 		return nil, err
 	}
-	request.Header.Set("User-Agent", "DownKit/"+bridgeVersion)
+	request.Header.Set("User-Agent", "VidOtter/"+bridgeVersion)
 	response, err := client.Do(request)
 	if err != nil {
 		return nil, err

@@ -1,4 +1,4 @@
-package downkit
+package vidotter
 
 import (
 	"context"
@@ -133,7 +133,7 @@ func (bridgeRuntimeTool) Name() string { return "bridge" }
 func (bridgeRuntimeTool) Snapshot(_ context.Context, _ bridgeConfig) toolSnapshot {
 	executable, _ := currentExecutable()
 	return toolSnapshot{
-		Name: "bridge", DisplayName: "DownKit Bridge", Kind: "runtime",
+		Name: "bridge", DisplayName: "VidOtter Bridge", Kind: "runtime",
 		Description: "连接浏览器与本地下载引擎的服务。",
 		Platforms:   []string{"windows", "linux", "darwin"}, Delivery: "bundled", Required: true,
 		Capabilities: []string{"task.submit", "job.manage", "config.persist"}, SortOrder: 20,
@@ -248,7 +248,7 @@ func (whisperTool) Snapshot(ctx context.Context, config bridgeConfig) toolSnapsh
 		health.Detail = pathErr.Error()
 		if runtime.GOOS == "windows" {
 			health.Summary = "随包组件缺失"
-			health.Detail = "whisper.cpp 客户端应由 Windows 安装包提供；请修复或重新安装 DownKit，也可在下方指定可信的 whisper-cli 程序。"
+			health.Detail = "whisper.cpp 客户端应由 Windows 安装包提供；请修复或重新安装 VidOtter，也可在下方指定可信的 whisper-cli 程序。"
 		}
 	} else {
 		health.Path = path
@@ -277,7 +277,7 @@ func (whisperTool) Snapshot(ctx context.Context, config bridgeConfig) toolSnapsh
 		Models: whisperModelViews(config),
 		Config: toolConfigView{
 			Schema: []toolConfigField{
-				{Key: "whisperPath", Label: "whisper-cli 程序路径", Type: "file", Advanced: true, Placeholder: "whisper-cli.exe 的完整路径", Description: "可留空并从 PATH 或 DownKit tools 目录自动查找。"},
+				{Key: "whisperPath", Label: "whisper-cli 程序路径", Type: "file", Advanced: true, Placeholder: "whisper-cli.exe 的完整路径", Description: "可留空并从 PATH 或 VidOtter tools 目录自动查找。"},
 				{Key: "whisperModel", Label: "GGML 模型路径", Type: "file", Placeholder: "例如 ggml-small.bin", Description: "中文或多语言识别请勿选择名称以 .en 结尾的英语专用模型。"},
 			},
 			Values: map[string]any{"whisperPath": config.WhisperPath, "whisperModel": config.WhisperModel},
@@ -303,7 +303,7 @@ func (llamaTool) Snapshot(ctx context.Context, config bridgeConfig) toolSnapshot
 		health.Detail = pathErr.Error()
 		if runtime.GOOS == "windows" {
 			health.Summary = "翻译组件尚未安装"
-			health.Detail = "llama-server 将放在 DownKit tools/llama 目录；也可以在下方指定可信程序。"
+			health.Detail = "llama-server 将放在 VidOtter tools/llama 目录；也可以在下方指定可信程序。"
 		}
 	} else {
 		health.Path = path
@@ -332,7 +332,7 @@ func (llamaTool) Snapshot(ctx context.Context, config bridgeConfig) toolSnapshot
 		Models: translationModelViews(config),
 		Config: toolConfigView{
 			Schema: []toolConfigField{
-				{Key: "llamaPath", Label: "llama-server 程序路径", Type: "file", Advanced: true, Placeholder: "llama-server.exe 的完整路径", Description: "可留空并从 PATH 或 DownKit tools/llama 目录自动查找。"},
+				{Key: "llamaPath", Label: "llama-server 程序路径", Type: "file", Advanced: true, Placeholder: "llama-server.exe 的完整路径", Description: "可留空并从 PATH 或 VidOtter tools/llama 目录自动查找。"},
 				{Key: "translationModel", Label: "翻译 GGUF 模型路径", Type: "file", Placeholder: "例如 translategemma-4b-Q4_K_M.gguf", Description: "当前建议使用 TranslateGemma 4B Q4_K_M；模型许可需由用户自行确认。"},
 			},
 			Values: map[string]any{"llamaPath": config.LlamaPath, "translationModel": config.TranslationModel},
@@ -369,7 +369,7 @@ func (t executableTool) Snapshot(ctx context.Context, config bridgeConfig) toolS
 	}
 	if t.name == "ffmpeg" && health.Status == "missing" {
 		health.Summary = "随包组件缺失"
-		health.Detail = "FFmpeg Slim 应由 DownKit 安装包提供；请修复或重新安装 DownKit，也可在下方指定可信的 FFmpeg 程序。"
+		health.Detail = "FFmpeg Slim 应由 VidOtter 安装包提供；请修复或重新安装 VidOtter，也可在下方指定可信的 FFmpeg 程序。"
 	}
 	item := toolSnapshot{
 		Name: t.name, DisplayName: t.displayName, Kind: "dependency", Description: t.description,
@@ -426,7 +426,7 @@ func (t mobileStaticTool) Snapshot(_ context.Context, _ bridgeConfig) toolSnapsh
 func newMobileToolRegistry() *toolRegistry {
 	return newToolRegistry(
 		mobileStaticTool{toolSnapshot{
-			Name: "downkit-core", DisplayName: "DownKit Core", Kind: "core",
+			Name: "vidotter-core", DisplayName: "VidOtter Core", Kind: "core",
 			Description: "通过 gomobile 嵌入的 Go 下载引擎。", Platforms: []string{"android", "ios"},
 			Delivery: "bundled", Required: true, Capabilities: []string{"http.direct", "hls.download", "aes128.decrypt"},
 			Config: toolConfigView{Schema: []toolConfigField{}, Values: map[string]any{}},

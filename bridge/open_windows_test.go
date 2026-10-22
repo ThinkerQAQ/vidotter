@@ -1,6 +1,6 @@
 //go:build windows
 
-package downkit
+package vidotter
 
 import (
 	"os"
@@ -17,9 +17,9 @@ func TestWindowsRevealFileCommandKeepsPathInSeparateArgument(t *testing.T) {
 }
 
 func TestWindowsOpenActionsIntegration(t *testing.T) {
-	path := os.Getenv("DOWNKIT_TEST_OPEN_FILE")
+	path := os.Getenv("VIDOTTER_TEST_OPEN_FILE")
 	if path == "" {
-		t.Skip("set DOWNKIT_TEST_OPEN_FILE to run the shell integration test")
+		t.Skip("set VIDOTTER_TEST_OPEN_FILE to run the shell integration test")
 	}
 	if _, err := os.Stat(path); err != nil {
 		t.Fatal(err)

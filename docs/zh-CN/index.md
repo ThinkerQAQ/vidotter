@@ -1,8 +1,8 @@
-# DownKit 文档
+# VidOtter 文档
 
 [English](../index.md)
 
-DownKit 使用浏览器扩展检测网页媒体，由本地 Go Bridge 执行下载。
+VidOtter 使用浏览器扩展检测网页媒体，由本地 Go Bridge 执行下载。
 
 | 目标 | 入口 |
 | --- | --- |

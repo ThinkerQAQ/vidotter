@@ -1,4 +1,4 @@
-module downkit
+module vidotter
 
 go 1.24
 

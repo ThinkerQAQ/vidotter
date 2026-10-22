@@ -1,4 +1,4 @@
-package downkit
+package vidotter
 
 import (
 	"net"
@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-// The console serves the same extension UI shipped with DownKit.
+// The console serves the same extension UI shipped with VidOtter.
 // Privileged API calls MUST go through the browser extension relay; the HTTP
 // server never exposes the Native Messaging token or privileged endpoints.
 func extensionAssetsDir() (string, error) {

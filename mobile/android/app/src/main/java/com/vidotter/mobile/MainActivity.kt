@@ -1,4 +1,4 @@
-package com.downkit.mobile
+package com.vidotter.mobile
 
 import android.Manifest
 import android.app.Activity
@@ -18,7 +18,7 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
-import downkit.Downkit
+import vidotter.Vidotter
 import org.json.JSONObject
 import java.util.UUID
 
@@ -48,11 +48,11 @@ class MainActivity : Activity() {
             setPadding(24.dp, 32.dp, 24.dp, 32.dp)
         }
         content.addView(ImageView(this).apply {
-            setImageResource(R.drawable.ic_downkit_logo)
-            contentDescription = "DownKit"
+            setImageResource(R.drawable.ic_vidotter_logo)
+            contentDescription = "VidOtter"
         }, LinearLayout.LayoutParams(88.dp, 88.dp))
         content.addView(TextView(this).apply {
-            text = "DownKit"
+            text = "VidOtter"
             textSize = 28f
             gravity = Gravity.CENTER
             setPadding(0, 8.dp, 0, 20.dp)
@@ -107,7 +107,7 @@ class MainActivity : Activity() {
             return
         }
         val uri = intent.data ?: return
-        if (uri.scheme != "downkit" || uri.host != "download") return
+        if (uri.scheme != "vidotter" || uri.host != "download") return
         val source = normalizeHttpUrl(uri.getQueryParameter("url").orEmpty())
         if (source == null) {
             rejectInput("deep-link", getString(R.string.invalid_link))
@@ -240,7 +240,7 @@ class MainActivity : Activity() {
     }
 
     private fun mobileToolSummary(): String = runCatching {
-        val tools = JSONObject(Downkit.mobileToolsJSON()).getJSONArray("tools")
+        val tools = JSONObject(Vidotter.mobileToolsJSON()).getJSONArray("tools")
         buildString {
             appendLine(getString(R.string.tools_status))
             for (index in 0 until tools.length()) {

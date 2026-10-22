@@ -12,8 +12,7 @@ import (
 	"strings"
 )
 
-const hostName = "com.downkit.bridge"
-const oldHost = "com.catchhls.go"
+const hostName = "com.vidotter.bridge"
 
 type nativeHost struct {
 	Name           string   `json:"name"`
@@ -25,12 +24,12 @@ type nativeHost struct {
 
 func exeForRoot(root string) (string, error) {
 	candidates := []string{
-		filepath.Join(root, "bin", "downkit-windows-amd64.exe"),
-		filepath.Join(root, "bin", "downkit-linux-amd64"),
-		filepath.Join(root, "bin", "downkit-linux-arm64"),
-		filepath.Join(root, "bin", "downkit-macos-amd64"),
-		filepath.Join(root, "bin", "downkit-macos-arm64"),
-		filepath.Join(root, "downkit-"+runtime.GOOS+"-"+runtime.GOARCH),
+		filepath.Join(root, "bin", "vidotter-windows-amd64.exe"),
+		filepath.Join(root, "bin", "vidotter-linux-amd64"),
+		filepath.Join(root, "bin", "vidotter-linux-arm64"),
+		filepath.Join(root, "bin", "vidotter-macos-amd64"),
+		filepath.Join(root, "bin", "vidotter-macos-arm64"),
+		filepath.Join(root, "vidotter-"+runtime.GOOS+"-"+runtime.GOARCH),
 	}
 	for _, candidate := range candidates {
 		if info, err := os.Stat(candidate); err == nil && !info.IsDir() {
@@ -96,20 +95,20 @@ func Install(root, extensionID string) error {
 		allowed = append(allowed, origin)
 	}
 	sort.Strings(allowed)
-	config := nativeHost{hostName, "DownKit local bridge", binary, "stdio", allowed}
+	config := nativeHost{hostName, "VidOtter local bridge", binary, "stdio", allowed}
 	if err := writeJSON(manifest, config); err != nil {
 		return err
 	}
 	switch runtime.GOOS {
 	case "windows":
-		if err := regKey(`HKCU\Software\Classes\downkit`, "URL:DownKit Protocol"); err != nil {
+		if err := regKey(`HKCU\Software\Classes\vidotter`, "URL:VidOtter Protocol"); err != nil {
 			return err
 		}
-		if err := regKey(`HKCU\Software\Classes\downkit\shell\open\command`, fmt.Sprintf(`"%s" "%%1"`, binary)); err != nil {
+		if err := regKey(`HKCU\Software\Classes\vidotter\shell\open\command`, fmt.Sprintf(`"%s" "%%1"`, binary)); err != nil {
 			return err
 		}
 		// A string-valued URL Protocol property is required for Windows URL registration.
-		cmd := exec.Command("reg.exe", "add", `HKCU\Software\Classes\downkit`, "/v", "URL Protocol", "/t", "REG_SZ", "/d", "", "/f")
+		cmd := exec.Command("reg.exe", "add", `HKCU\Software\Classes\vidotter`, "/v", "URL Protocol", "/t", "REG_SZ", "/d", "", "/f")
 		if out, err := cmd.CombinedOutput(); err != nil {
 			return fmt.Errorf("URL protocol: %w %s", err, string(out))
 		}
@@ -117,9 +116,7 @@ func Install(root, extensionID string) error {
 			if err := regKey(`HKCU\Software\`+browser+`\NativeMessagingHosts\`+hostName, manifest); err != nil {
 				return err
 			}
-			_ = removeReg(`HKCU\Software\` + browser + `\NativeMessagingHosts\` + oldHost)
 		}
-		_ = removeReg(`HKCU\Software\Classes\catchhlsgo`)
 	case "linux", "darwin":
 		home, err := os.UserHomeDir()
 		if err != nil {
@@ -164,7 +161,7 @@ func nativeDirs(home string) []string {
 func Uninstall(root string) error {
 	switch runtime.GOOS {
 	case "windows":
-		if err := removeReg(`HKCU\Software\Classes\downkit`); err != nil {
+		if err := removeReg(`HKCU\Software\Classes\vidotter`); err != nil {
 			return err
 		}
 		for _, browser := range []string{`Google\Chrome`, `Microsoft\Edge`} {
@@ -217,17 +214,17 @@ func Deploy(root, target, targetOS, targetArch string) error {
 	if platform == "darwin" {
 		platform = "macos"
 	}
-	buildBridge := filepath.Join(root, ".build", "out", "downkit-"+platform+"-"+targetArch+ext)
+	buildBridge := filepath.Join(root, ".build", "out", "vidotter-"+platform+"-"+targetArch+ext)
 	if err := Build(root, targetOS, targetArch, buildBridge); err != nil {
 		return err
 	}
 	// A running Windows executable is locked. Stage it rather than overwriting
 	// an active Bridge or risking a partially deployed installation.
-	binPath := filepath.Join(destination, "bin", "downkit-"+platform+"-"+targetArch+ext)
+	binPath := filepath.Join(destination, "bin", "vidotter-"+platform+"-"+targetArch+ext)
 	if err := copyFile(buildBridge, binPath); err != nil {
 		return fmt.Errorf("cannot replace running binary (%s); stop Bridge, then retry: %w", binPath, err)
 	}
-	if err := run(filepath.Join(root, "tools", "downkitdev"), []string{"CGO_ENABLED=0", "GOOS=" + targetOS, "GOARCH=" + targetArch}, "go", "build", "-trimpath", "-o", filepath.Join(destination, "bin", "downkitdev"+ext), "."); err != nil {
+	if err := run(filepath.Join(root, "tools", "vidotterdev"), []string{"CGO_ENABLED=0", "GOOS=" + targetOS, "GOARCH=" + targetArch}, "go", "build", "-trimpath", "-o", filepath.Join(destination, "bin", "vidotterdev"+ext), "."); err != nil {
 		return err
 	}
 	for _, dir := range []string{"extension", "docs"} {

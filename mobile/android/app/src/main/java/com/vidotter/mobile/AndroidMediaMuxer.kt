@@ -1,4 +1,4 @@
-package com.downkit.mobile
+package com.vidotter.mobile
 
 import android.media.MediaCodec
 import android.media.MediaDataSource
@@ -6,7 +6,7 @@ import android.media.MediaExtractor
 import android.media.MediaFormat
 import android.media.MediaMuxer
 import android.os.SystemClock
-import downkit.PlatformMuxer
+import vidotter.PlatformMuxer
 import java.io.File
 import java.io.RandomAccessFile
 import java.nio.ByteBuffer

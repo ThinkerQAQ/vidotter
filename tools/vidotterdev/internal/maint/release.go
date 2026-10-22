@@ -39,7 +39,7 @@ func Package(root, requested string, allowMissing bool, source string) error {
 		return err
 	}
 	for _, t := range targets() {
-		name := fmt.Sprintf("downkit-v%s-%s-%s", current, t.Name, t.Arch)
+		name := fmt.Sprintf("vidotter-v%s-%s-%s", current, t.Name, t.Arch)
 		stage := filepath.Join(root, ".build", "out", "release-stage", name)
 		if err := os.RemoveAll(stage); err != nil {
 			return err
@@ -51,11 +51,11 @@ func Package(root, requested string, allowMissing bool, source string) error {
 		if t.OS == "windows" {
 			ext = ".exe"
 		}
-		if err := Build(root, t.OS, t.Arch, filepath.Join(stage, "bin", "downkit-"+t.Name+"-"+t.Arch+ext)); err != nil {
+		if err := Build(root, t.OS, t.Arch, filepath.Join(stage, "bin", "vidotter-"+t.Name+"-"+t.Arch+ext)); err != nil {
 			return err
 		}
-		maintOutput := filepath.Join(stage, "bin", "downkitdev"+ext)
-		if err := run(filepath.Join(root, "tools", "downkitdev"), []string{"CGO_ENABLED=0", "GOOS=" + t.OS, "GOARCH=" + t.Arch},
+		maintOutput := filepath.Join(stage, "bin", "vidotterdev"+ext)
+		if err := run(filepath.Join(root, "tools", "vidotterdev"), []string{"CGO_ENABLED=0", "GOOS=" + t.OS, "GOARCH=" + t.Arch},
 			"go", "build", "-trimpath", "-o", maintOutput, "."); err != nil {
 			return err
 		}

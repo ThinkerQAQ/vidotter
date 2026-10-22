@@ -2,7 +2,7 @@
 
 const assert = require("assert");
 
-global.DownKitPopup = {};
+global.VidOtterPopup = {};
 const environment = require("../popup/environment.js");
 
 assert.equal(environment.cardState({ status: "ready", ok: true }), "ok");

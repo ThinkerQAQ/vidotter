@@ -1,7 +1,7 @@
 (function (root) {
   "use strict";
 
-  const api = root.DownKitPopup;
+  const api = root.VidOtterPopup;
   let tools = [];
   const navigation = [];
 
@@ -515,13 +515,13 @@
       addSection(list, "其他");
       list.appendChild(settingsRow({
         title: "关于", subtitle: "版本与应用信息",
-        icon: "about", action: () => enter("about", "downkit")
+        icon: "about", action: () => enter("about", "vidotter")
       }));
       return;
     }
 
     if (frame.type === "about") {
-      settingsHeading("关于", "DownKit 版本与应用信息");
+      settingsHeading("关于", "VidOtter 版本与应用信息");
       list.hidden = true;
       about.hidden = false;
       refreshAbout();
@@ -582,7 +582,7 @@
     document.getElementById("settingsBack").addEventListener("click", goBack);
   }
 
-  root.DownKitEnvironment = { init, activate: refresh, renderTools };
+  root.VidOtterEnvironment = { init, activate: refresh, renderTools };
 
   if (typeof module !== "undefined" && module.exports) {
     module.exports = { cardState, normalizedKind, visibleConfigFields, editorValue, toggleMetadata, formatModelSize, modelOptionLabel, modelActionLabel };

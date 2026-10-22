@@ -22,6 +22,6 @@
     });
   }
 
-  root.DownKitPlaylistDialog = { choose };
+  root.VidOtterPlaylistDialog = { choose };
   if (typeof module !== "undefined" && module.exports) module.exports = { choose };
 })(globalThis);

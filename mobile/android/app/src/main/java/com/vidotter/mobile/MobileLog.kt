@@ -1,9 +1,9 @@
-package com.downkit.mobile
+package com.vidotter.mobile
 
 import android.util.Log
 
 internal object MobileLog {
-    private const val TAG = "DownKitMobile"
+    private const val TAG = "VidOtterMobile"
     private val urlPattern = Regex("""(?i)https?://[^\s\"']+""")
     private val secretPattern = Regex("""(?i)(token|signature|sig|key|auth|cookie)=([^\s&]+)""")
 

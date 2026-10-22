@@ -1,4 +1,4 @@
-package downkit
+package vidotter
 
 import (
 	"bytes"
@@ -24,7 +24,7 @@ import (
 const (
 	bridgeAddress  = "127.0.0.1:17891"
 	bridgeBaseURL  = "http://" + bridgeAddress
-	nativeHostName = "com.downkit.bridge"
+	nativeHostName = "com.vidotter.bridge"
 	maxBridgeBody  = 256 << 10
 )
 
@@ -215,7 +215,7 @@ func runBridge() error {
 }
 
 func (s *bridgeServer) authorized(request *http.Request) bool {
-	provided := request.Header.Get("X-DownKit-Token")
+	provided := request.Header.Get("X-VidOtter-Token")
 	return len(provided) == len(s.state.Token) && subtle.ConstantTimeCompare([]byte(provided), []byte(s.state.Token)) == 1
 }
 
@@ -225,7 +225,7 @@ func (s *bridgeServer) allowExtension(response http.ResponseWriter, request *htt
 		response.Header().Set("Access-Control-Allow-Origin", origin)
 		response.Header().Set("Vary", "Origin")
 	}
-	response.Header().Set("Access-Control-Allow-Headers", "Content-Type, X-DownKit-Token")
+	response.Header().Set("Access-Control-Allow-Headers", "Content-Type, X-VidOtter-Token")
 	response.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 }
 
@@ -457,7 +457,7 @@ func reportJobState(jobID, status, message string) {
 	body, _ := json.Marshal(map[string]string{"status": status, "error": message})
 	request, _ := http.NewRequest(http.MethodPost, state.BaseURL+"/v1/jobs/"+jobID+"/state", bytes.NewReader(body))
 	request.Header.Set("Content-Type", "application/json")
-	request.Header.Set("X-DownKit-Token", state.Token)
+	request.Header.Set("X-VidOtter-Token", state.Token)
 	client := &http.Client{Timeout: 3 * time.Second}
 	response, err := client.Do(request)
 	if err == nil {
@@ -700,12 +700,12 @@ func ensureBridge() (bridgeState, error) {
 			return state, nil
 		}
 	}
-	return bridgeState{}, errors.New("DownKit Bridge did not start")
+	return bridgeState{}, errors.New("VidOtter Bridge did not start")
 }
 
 func pingBridge(state bridgeState) error {
 	request, _ := http.NewRequest(http.MethodGet, state.BaseURL+"/v1/ping", nil)
-	request.Header.Set("X-DownKit-Token", state.Token)
+	request.Header.Set("X-VidOtter-Token", state.Token)
 	client := &http.Client{Timeout: time.Second}
 	response, err := client.Do(request)
 	if err != nil {

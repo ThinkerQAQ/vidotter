@@ -1,6 +1,6 @@
 # Third-party notices
 
-The Apache-2.0 license in `LICENSE` covers DownKit's original source code and documentation. It does not replace the licenses of the components listed below.
+The Apache-2.0 license in `LICENSE` covers VidOtter's original source code and documentation. It does not replace the licenses of the components listed below.
 
 ## FFmpeg
 
@@ -10,26 +10,26 @@ Each release that bundles FFmpeg must also include:
 
 - the LGPL 2.1 license text;
 - the exact corresponding FFmpeg source archive;
-- the build configuration and any DownKit-specific changes;
+- the build configuration and any VidOtter-specific changes;
 - a source and license notice next to the download.
 
 FFmpeg source and license information: <https://ffmpeg.org/legal.html>
 
 ## yt-dlp
 
-yt-dlp is an optional external tool. DownKit does not bundle it in standard releases; the user can request an authenticated download from the official yt-dlp release page. The upstream source is published under the Unlicense, while some packaged executables include components under additional licenses, including GPL-3.0-or-later for PyInstaller-based executables.
+yt-dlp is an optional external tool. VidOtter does not bundle it in standard releases; the user can request an authenticated download from the official yt-dlp release page. The upstream source is published under the Unlicense, while some packaged executables include components under additional licenses, including GPL-3.0-or-later for PyInstaller-based executables.
 
 Upstream project and licensing information: <https://github.com/yt-dlp/yt-dlp>
 
 ## whisper.cpp
 
-Windows desktop release packages include the separate CPU build of `whisper-cli` and its runtime libraries from whisper.cpp. The client is licensed under the MIT License. Speech-recognition model files are not bundled by DownKit and retain the terms published by their respective distributors.
+Windows desktop release packages include the separate CPU build of `whisper-cli` and its runtime libraries from whisper.cpp. The client is licensed under the MIT License. Speech-recognition model files are not bundled by VidOtter and retain the terms published by their respective distributors.
 
 Upstream project and licensing information: <https://github.com/ggml-org/whisper.cpp>
 
 ## llama.cpp
 
-Windows desktop release packages include the separate CPU build of `llama-server` and its runtime libraries from llama.cpp. llama.cpp is licensed under the MIT License; the bundled LLVM OpenMP runtime retains its upstream license. Translation model files are not bundled by DownKit and retain their own terms, including the Gemma license where applicable.
+Windows desktop release packages include the separate CPU build of `llama-server` and its runtime libraries from llama.cpp. llama.cpp is licensed under the MIT License; the bundled LLVM OpenMP runtime retains its upstream license. Translation model files are not bundled by VidOtter and retain their own terms, including the Gemma license where applicable.
 
 Upstream project and licensing information: <https://github.com/ggml-org/llama.cpp>
 
@@ -41,4 +41,4 @@ Upstream license: <https://github.com/golang/mobile/blob/master/LICENSE>
 
 ## Gradle Wrapper and JUnit
 
-The Android project includes the Gradle Wrapper under Apache-2.0 and uses JUnit 4.13.2 for tests under Eclipse Public License 1.0. These tools do not change the license of DownKit's original code.
+The Android project includes the Gradle Wrapper under Apache-2.0 and uses JUnit 4.13.2 for tests under Eclipse Public License 1.0. These tools do not change the license of VidOtter's original code.

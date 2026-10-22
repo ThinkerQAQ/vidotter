@@ -1,4 +1,4 @@
-package downkit
+package vidotter
 
 import (
 	"bytes"
@@ -10,9 +10,9 @@ import (
 )
 
 const (
-	ytDLPProgressPrefix    = "downkit-progress:"
-	ytDLPPostprocessPrefix = "downkit-postprocess:"
-	ytDLPOutputPrefix      = "downkit-output:"
+	ytDLPProgressPrefix    = "vidotter-progress:"
+	ytDLPPostprocessPrefix = "vidotter-postprocess:"
+	ytDLPOutputPrefix      = "vidotter-output:"
 )
 
 // ytDLPProgressWriter keeps yt-dlp's ordinary console output visible while

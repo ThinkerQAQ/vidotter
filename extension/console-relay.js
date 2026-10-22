@@ -17,14 +17,14 @@
   window.addEventListener("message", event => {
     if (event.source !== window || event.origin !== ORIGIN) return;
     const request = event.data;
-    if (request?.channel !== "downkit:console:request:v1" ||
+    if (request?.channel !== "vidotter:console:request:v1" ||
         typeof request.id !== "string" || request.id.length > 96 ||
         !allowed.has(request.action) ||
         !request.payload || typeof request.payload !== "object" || Array.isArray(request.payload)) return;
     chrome.runtime.sendMessage({ ...request.payload, action: request.action }, response => {
       const error = chrome.runtime.lastError;
       window.postMessage({
-        channel: "downkit:console:response:v1",
+        channel: "vidotter:console:response:v1",
         id: request.id,
         response: error ? { ok: false, error: error.message } : (response || { ok: false, error: "Bridge unavailable" })
       }, ORIGIN);

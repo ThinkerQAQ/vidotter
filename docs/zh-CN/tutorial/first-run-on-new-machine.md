@@ -1,12 +1,12 @@
-# 在新电脑上首次使用 DownKit
+# 在新电脑上首次使用 VidOtter
 
 **目标：** 从下载发行包开始，安装本地 Bridge、加载浏览器扩展、找到视频资源，并确认下载文件的位置。使用发行包不需要安装 Go、Node.js，也不需要账号或语音识别模型。
 
-本文对应 **DownKit v1.2.0**。图片来自隔离 Chromium 环境中实际运行的 v1.2.0 英文扩展。该隔离环境 **未成功连接 Native Messaging**，因此图片用于说明导航与初始界面，并非已连接、已嗅探或下载成功的证据。
+本文对应 **VidOtter v1.3.0**。截图来自隔离 Microsoft Edge 环境中加载的真实扩展，显示中文资源嗅探初始界面，不代表 Bridge 已连接或已完成下载。
 
 ## 第一步：下载并解压
 
-打开 [GitHub Releases](https://github.com/ThinkerQAQ/downkit/releases)，选择与电脑操作系统及处理器匹配的压缩包，解压到准备长期使用的目录。
+打开 [GitHub Releases](https://github.com/ThinkerQAQ/vidotter/releases)，选择与电脑操作系统及处理器匹配的压缩包，解压到准备长期使用的目录。
 
 - \`bin/\`：Bridge 和 Go 安装工具
 - \`extension/\`：供 Chrome / Edge 加载的扩展
@@ -22,16 +22,16 @@
 Windows PowerShell：
 
 ~~~powershell
-.\bin\downkitdev.exe install
+.\bin\vidotterdev.exe install
 ~~~
 
 Linux/macOS：
 
 ~~~sh
-./bin/downkitdev install
+./bin/vidotterdev install
 ~~~
 
-正常情况下会输出 \`Native Messaging installed\` 和 \`Host manifest\` 的路径。安装过程用于注册 \`com.downkit.bridge\`，无需常驻打开一个终端；扩展在需要时启动 Bridge。
+正常情况下会输出 \`Native Messaging installed\` 和 \`Host manifest\` 的路径。安装过程用于注册 \`com.vidotter.bridge\`，无需常驻打开一个终端；扩展在需要时启动 Bridge。
 
 如果实际加载的扩展 ID 与内置 ID 不同，可通过 \`--extension-id YOUR_32_CHARACTER_ID\` 重新注册。安装报错时先阅读[连接排查](../how-to/troubleshoot.md)，不要继续尝试下载。
 
@@ -40,28 +40,24 @@ Linux/macOS：
 1. 打开 \`edge://extensions\` 或 \`chrome://extensions\`。
 2. 打开「开发者模式」。
 3. 点击「加载已解压的扩展程序」，选择**包含 \`manifest.json\` 的 \`extension/\` 文件夹**。
-4. 将 DownKit 固定到工具栏，点击图标。
+4. 将 VidOtter 固定到工具栏，点击图标。
 
 扩展主要有三个入口：**Detect（资源嗅探）、Downloads（下载任务）、Settings（设置）**。右上角环境状态应最终变为正常。如果持续显示 **Checking environment** 或 **Environment issue**，先检查 Bridge，不要将它视为安装成功。
 
-![DownKit v1.2.0 首次打开资源嗅探页面](../../images/first-run-detect-en.png)
+![VidOtter v1.3.0 首次打开资源嗅探页面](../../images/first-run-detect-zh.png)
 
-*真实 v1.2.0 英文界面；此处「No media found」是空状态，截图本身不代表 Bridge 已连接。*
+*真实 v1.3.0 中文界面；「暂无媒体资源」是空状态，不代表 Bridge 已连接。*
 
 ## 第四步：检查语言、连接与工具
 
 打开 **Settings → Appearance & interaction → Interface language**，可以选「中文」或「English」。这里修改的是软件界面语言，**不等于视频语音语言或字幕翻译目标语言**；同一页面也可以选择弹窗或侧边栏打开方式。
-
-![v1.2.0 设置页面导航](../../images/first-run-settings-en.png)
-
-*真实英文设置导航，环境连接状态需在实际安装后的浏览器中另行确认。*
 
 在 **Settings → Connection & runtime** 检查本地连接；下载工具在 **Download capabilities** 中。第一次下载推荐将字幕设置为 **No subtitles（不下载字幕）**，这样不依赖 whisper.cpp / llama.cpp 模型。
 
 ## 第五步：嗅探并下载一个有保存权限的视频
 
 1. 打开自己有权保存的视频网页，**先播放视频**。
-2. 不要关闭原视频标签页，打开 DownKit，进入「资源嗅探」。
+2. 不要关闭原视频标签页，打开 VidOtter，进入「资源嗅探」。
 3. 在检测结果里找到完整的 MP4、HLS（\`.m3u8\`）或 DASH（\`.mpd\`）资源；同一网页可能列出多个清晰度、音轨或分片，优先选择完整媒体或播放清单，而不是单个分片。
 4. 字幕选择「不下载字幕」，点击对应资源的「下载」。
 
@@ -85,4 +81,4 @@ Linux/macOS：
 
 ## 复现记录
 
-2026-10-11 曾使用当时的开发工具完成源码检查和 Linux Bridge 构建（现已切换为原生 Go 维护程序）；在临时 HOME 与 Data 目录下验证了安装命令，并用隔离 Chromium 加载 v1.2.0 英文扩展。由于这个隔离浏览器的 Native Messaging 未接通，图片记录的是**真实初始/未连接界面**，没有伪造媒体资源或任务，也**没有宣称完整下载链路通过**。
+2026-10-22 使用隔离 Microsoft Edge 环境加载 VidOtter v1.3.0 扩展并截取资源嗅探初始页面。截图不用于证明浏览器与 Bridge 已完成端到端连接；请在实际安装环境中验证。

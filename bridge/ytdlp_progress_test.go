@@ -1,4 +1,4 @@
-package downkit
+package vidotter
 
 import (
 	"errors"
@@ -9,7 +9,7 @@ import (
 )
 
 func TestParseYTDLPProgress(t *testing.T) {
-	progress, ok := parseYTDLPProgress("downkit-progress:5242880|10485760|NA|2621440.5| 50.0%")
+	progress, ok := parseYTDLPProgress("vidotter-progress:5242880|10485760|NA|2621440.5| 50.0%")
 	if !ok {
 		t.Fatal("progress line was not recognized")
 	}
@@ -22,7 +22,7 @@ func TestParseYTDLPProgress(t *testing.T) {
 }
 
 func TestParseYTDLPProgressUsesEstimatedTotal(t *testing.T) {
-	progress, ok := parseYTDLPProgress("downkit-progress:1024|NA|4096|512|25.0%")
+	progress, ok := parseYTDLPProgress("vidotter-progress:1024|NA|4096|512|25.0%")
 	if !ok || progress.total != 4096 || progress.percent != 25 {
 		t.Fatalf("unexpected estimated-total progress: %+v, ok=%v", progress, ok)
 	}
@@ -35,7 +35,7 @@ func TestParseYTDLPProgressRejectsOrdinaryOutput(t *testing.T) {
 }
 
 func TestParseYTDLPOutputIncludesPlaylistIdentity(t *testing.T) {
-	output, ok := parseYTDLPOutput(`downkit-output:12|episode-id|C:\Downloads\Course\012 - lesson.mp4`)
+	output, ok := parseYTDLPOutput(`vidotter-output:12|episode-id|C:\Downloads\Course\012 - lesson.mp4`)
 	if !ok || output.index != 12 || output.id != "episode-id" || !strings.HasSuffix(output.path, "012 - lesson.mp4") {
 		t.Fatalf("unexpected output: %#v, ok=%v", output, ok)
 	}
@@ -50,7 +50,7 @@ func TestYTDLPDownloadArgsForceProgressWithPrint(t *testing.T) {
 	if !slices.Contains(args, "--progress") {
 		t.Fatal("--progress is required to override --print's implicit quiet mode")
 	}
-	if !slices.Contains(args, "after_move:downkit-output:%(playlist_index)s|%(id)s|%(filepath)s") {
+	if !slices.Contains(args, "after_move:vidotter-output:%(playlist_index)s|%(id)s|%(filepath)s") {
 		t.Fatalf("missing per-file output report: %#v", args)
 	}
 	if !slices.Contains(args, "--continue") {

@@ -1,7 +1,7 @@
 (function (root) {
   "use strict";
 
-  const api = root.DownKitPopup;
+  const api = root.VidOtterPopup;
   let polling = null;
   let active = false;
   let renderDeferredForSelection = false;
@@ -174,7 +174,7 @@
     const selection = typeof root.getSelection === "function" ? root.getSelection() : null;
     if (selectionTouchesNode(list, selection)) {
       if (!renderDeferredForSelection) {
-        console.debug("DownKit job refresh deferred while text is selected", {
+        console.debug("VidOtter job refresh deferred while text is selected", {
           timestamp: new Date().toISOString(), severity: "DEBUG",
           node: "job-list", operation: "jobs.render", result: "deferred-selection"
         });
@@ -183,7 +183,7 @@
       return false;
     }
     if (renderDeferredForSelection) {
-      console.debug("DownKit job refresh resumed after text selection ended", {
+      console.debug("VidOtter job refresh resumed after text selection ended", {
         timestamp: new Date().toISOString(), severity: "DEBUG",
         node: "job-list", operation: "jobs.render", result: "resumed"
       });
@@ -299,7 +299,7 @@
     polling = null;
   }
 
-  root.DownKitJobs = { init, activate, deactivate, refresh, render, formatBytes, formatSpeed, totalSpeed };
+  root.VidOtterJobs = { init, activate, deactivate, refresh, render, formatBytes, formatSpeed, totalSpeed };
   if (typeof module !== "undefined" && module.exports) {
     module.exports = { formatBytes, formatSpeed, totalSpeed, fileName, jobFiles, fileSectionExpanded, selectionTouchesNode };
   }

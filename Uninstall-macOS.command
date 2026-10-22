@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
 
-host_name='com.downkit.bridge'
+host_name='com.vidotter.bridge'
 removed=0
 
 for native_dir in \
@@ -17,5 +17,5 @@ do
   fi
 done
 
-printf 'DownKit macOS 卸载完成，共移除 %s 个浏览器清单。\n' "$removed"
-printf '如不再使用，请同时从浏览器中移除 DownKit 扩展。\n'
+printf 'VidOtter macOS 卸载完成，共移除 %s 个浏览器清单。\n' "$removed"
+printf '如不再使用，请同时从浏览器中移除 VidOtter 扩展。\n'

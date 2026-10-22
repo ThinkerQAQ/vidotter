@@ -1,4 +1,4 @@
-package downkit
+package vidotter
 
 import (
 	"reflect"

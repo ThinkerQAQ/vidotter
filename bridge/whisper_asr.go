@@ -1,4 +1,4 @@
-package downkit
+package vidotter
 
 import (
 	"context"
@@ -86,7 +86,7 @@ func validateFFmpegASRSupport(path string) error {
 		outputs[index] = string(output)
 	}
 	if err := checkFFmpegASRCapabilities(outputs[0], outputs[1], outputs[2]); err != nil {
-		return fmt.Errorf("%w；请使用包含 WAV/PCM/重采样支持的 DownKit FFmpeg Slim", err)
+		return fmt.Errorf("%w；请使用包含 WAV/PCM/重采样支持的 VidOtter FFmpeg Slim", err)
 	}
 	fmt.Fprintln(consoleOut, "本地 ASR：FFmpeg WAV/PCM/重采样能力就绪")
 	return nil

@@ -1,7 +1,7 @@
 (function (root) {
   "use strict";
 
-  const api = root.DownKitPopup;
+  const api = root.VidOtterPopup;
   let activeTab = null;
   let page = null;
   let items = [];
@@ -35,7 +35,7 @@
     try {
       await copyText(resource.url);
       button.textContent = "已复制";
-      api.setMessage("downloadMessage", `已复制 ${DownKitMedia.resourceName(resource)} 的完整地址。`, "ok");
+      api.setMessage("downloadMessage", `已复制 ${VidOtterMedia.resourceName(resource)} 的完整地址。`, "ok");
     } catch (error) {
       api.setMessage("downloadMessage", `复制失败：${error.message || String(error)}`, "error");
     } finally {
@@ -50,7 +50,7 @@
     document.getElementById("emptyMedia").hidden = items.length > 0;
     for (const resource of items) {
       const node = template.content.firstElementChild.cloneNode(true);
-      const name = DownKitMedia.resourceName(resource);
+      const name = VidOtterMedia.resourceName(resource);
       node.querySelector(".resource-name").textContent = name;
       node.querySelector(".resource-name").title = name;
       node.querySelector(".label").textContent = resource.label;
@@ -167,13 +167,13 @@
     try {
       const quality = selectedQuality();
       const subtitles = selectedSubtitleRequest();
-      console.debug("DownKit subtitle request prepared", {
+      console.debug("VidOtter subtitle request prepared", {
         timestamp: new Date().toISOString(), severity: "DEBUG",
         node: "popup-download", operation: "subtitle.request.build",
         result: subtitles.mode, languages: subtitles.languages || []
       });
       const probe = await api.send("media.playlist.probe", { resource, page, quality });
-      const playlist = await root.DownKitPlaylistDialog.choose(probe);
+      const playlist = await root.VidOtterPlaylistDialog.choose(probe);
       if (!playlist) {
         api.setMessage("downloadMessage", "已取消下载。");
         return;
@@ -240,7 +240,7 @@
     mediaRefreshTimer = null;
   }
 
-  root.DownKitDownloads = { init, activate, deactivate };
+  root.VidOtterDownloads = { init, activate, deactivate };
   if (typeof module !== "undefined" && module.exports) {
     module.exports = { selectedQuality, siteLanguageSelectors, selectedSubtitleRequest, syncSubtitleOptionsVisibility, copyText };
   }

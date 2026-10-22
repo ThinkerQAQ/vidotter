@@ -101,7 +101,7 @@ func AndroidBind(root string) error {
 	if _, err := os.Stat(filepath.Join(sdk, "platforms", "android-35", "android.jar")); err != nil {
 		return errors.New("Android platform 35 SDK missing")
 	}
-	output := filepath.Join(root, "mobile", "android", "app", "libs", "downkit.aar")
+	output := filepath.Join(root, "mobile", "android", "app", "libs", "vidotter.aar")
 	if err := ensureDir(filepath.Dir(output)); err != nil {
 		return err
 	}
@@ -120,7 +120,7 @@ func AndroidBuild(root string) error {
 		return err
 	}
 	src := filepath.Join(root, "mobile", "android", "app", "build", "outputs", "apk", "debug", "app-debug.apk")
-	dst := filepath.Join(root, ".build", "artifacts", "android", "downkit-android-arm64-debug.apk")
+	dst := filepath.Join(root, ".build", "artifacts", "android", "vidotter-android-arm64-debug.apk")
 	if err := copyFile(src, dst); err != nil {
 		return err
 	}

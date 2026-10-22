@@ -1,7 +1,7 @@
 # Android 精简 FFmpeg
 
 这里构建的不是 `ffmpeg` 命令行，而是供 Android App 通过 JNI 调用的精简 libav `.so`。
-默认只构建 `arm64-v8a`，只保留 DownKit 本地 HLS 清单无损封装 MP4 所需组件。
+默认只构建 `arm64-v8a`，只保留 VidOtter 本地 HLS 清单无损封装 MP4 所需组件。
 
 ## 依赖
 

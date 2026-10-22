@@ -1,6 +1,6 @@
 //go:build tools
 
-package downkit
+package vidotter
 
 // Keep gomobile's binding package pinned in go.mod. gomobile invokes gobind in
 // a separate process, so the dependency is not visible from normal imports.

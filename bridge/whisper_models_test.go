@@ -1,4 +1,4 @@
-package downkit
+package vidotter
 
 import (
 	"context"
@@ -117,7 +117,7 @@ func TestDownloadWhisperModelRejectsHashMismatch(t *testing.T) {
 func TestHandleInstallWhisperModelRejectsUnknownModel(t *testing.T) {
 	server := &bridgeServer{state: bridgeState{Token: "secret"}, config: defaultBridgeConfig()}
 	request := httptest.NewRequest(http.MethodPost, "/v1/tools/whisper/models/install", strings.NewReader(`{"model":"unknown"}`))
-	request.Header.Set("X-DownKit-Token", "secret")
+	request.Header.Set("X-VidOtter-Token", "secret")
 	response := httptest.NewRecorder()
 	server.handleInstallWhisperModel(response, request)
 	if response.Code != http.StatusBadGateway {

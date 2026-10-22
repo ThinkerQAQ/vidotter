@@ -1,4 +1,4 @@
-package downkit
+package vidotter
 
 import (
 	"context"
@@ -20,7 +20,7 @@ func (p *fixedSubtitlePipeline) Process(_ context.Context, _ SubtitleRequest, _ 
 func TestFinalizeOutputsOwnsCleanup(t *testing.T) {
 	root := t.TempDir()
 	mediaPath := filepath.Join(root, "video.mp4")
-	workDir := filepath.Join(root, ".downkit-work", "job-test")
+	workDir := filepath.Join(root, ".vidotter-work", "job-test")
 	if err := os.MkdirAll(workDir, 0o755); err != nil {
 		t.Fatal(err)
 	}

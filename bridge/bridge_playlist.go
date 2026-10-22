@@ -1,4 +1,4 @@
-package downkit
+package vidotter
 
 import (
 	"fmt"
@@ -62,7 +62,7 @@ func probeBridgePlaylist(task bridgeTask, config bridgeConfig) (playlistProbeRes
 	if err != nil {
 		return playlistProbeResult{}, err
 	}
-	workDir, err := os.MkdirTemp("", "downkit-playlist-probe-")
+	workDir, err := os.MkdirTemp("", "vidotter-playlist-probe-")
 	if err != nil {
 		return playlistProbeResult{}, err
 	}

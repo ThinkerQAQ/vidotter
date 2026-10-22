@@ -1,4 +1,4 @@
-package com.downkit.mobile
+package com.vidotter.mobile
 
 import android.app.Notification
 import android.app.NotificationChannel
@@ -8,7 +8,7 @@ import android.app.Service
 import android.content.Intent
 import android.os.IBinder
 import android.os.SystemClock
-import downkit.Downkit
+import vidotter.Vidotter
 import org.json.JSONObject
 import java.util.concurrent.Executors
 
@@ -48,7 +48,7 @@ class DownloadService : Service() {
                 "queueDurationMs" to executionStartedAt - queuedAt,
             )
             try {
-                Downkit.downloadMobile(task, AndroidMediaMuxer())
+                Vidotter.downloadMobile(task, AndroidMediaMuxer())
                 MobileLog.info(
                     requestId,
                     "download-service",
@@ -101,7 +101,7 @@ class DownloadService : Service() {
     private fun notification(text: String, ongoing: Boolean): Notification =
         Notification.Builder(this, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.stat_sys_download)
-            .setContentTitle("DownKit")
+            .setContentTitle("VidOtter")
             .setContentText(text)
             .setContentIntent(
                 PendingIntent.getActivity(
@@ -129,7 +129,7 @@ class DownloadService : Service() {
 
     companion object {
         const val EXTRA_TASK_JSON = "task_json"
-        private const val CHANNEL_ID = "downkit_download"
+        private const val CHANNEL_ID = "vidotter_download"
         private const val NOTIFICATION_ID = 4210
     }
 }
