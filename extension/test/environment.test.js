@@ -48,6 +48,7 @@ assert.match(environmentSource, /settings-heading|settingsHeading/);
 assert.doesNotMatch(environmentSource, /defaultExpanded/);
 assert.doesNotMatch(environmentSource, /tool\.name === "go-downloader"/);
 assert.doesNotMatch(environmentSource, /dependencyNeedsAttention|hasRecoveryAction/);
+assert.match(environmentSource, /function init\(\) {[\s\S]*?void refresh\(\);/);
 
 const backgroundSource = require("node:fs").readFileSync(require("node:path").join(__dirname, "../background.js"), "utf8");
 

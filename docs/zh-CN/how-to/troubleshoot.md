@@ -39,6 +39,12 @@ Bridge 启动后，可以从**本机**检查 `http://127.0.0.1:17891/`。但本�
 `http://127.0.0.1:17891/console/` 的授权操作依赖浏览器扩展转发，页面本身不持有 Bridge token。应从扩展的「打开工作台」进入，并检查扩展权限及连接状态；静态页面能加载不代表下载器已经接通。
 
 
+## 环境检测一直进行或 Bridge 无法启动
+
+VidOtter 使用本机回环端口 `127.0.0.1:17891`。如果其他进程已监听该端口，Native Messaging 主机虽然安装成功，Bridge 仍无法启动。在 Windows PowerShell 中执行 `Get-NetTCPConnection -LocalPort 17891 -State Listen`，并使用返回的 `OwningProcess` 确认占用者。**只停止确认不再需要的进程**，不要直接终止不明程序。
+
+正常启动后，Bridge 日志应包含 `event=ready`。新版弹窗在进入任何标签时也会主动刷新顶部环境状态。
+
 ## Bridge 重启后任务需要重新授权
 
 打开原视频页面，按需登录并重新播放，再从下载任务选择“重新授权并继续”。Cookie 和识别出的敏感授权头不会跨 Bridge 重启持久化。若 URL 本身过期，重新检测资源；不要靠修改 `jobs.json` 或复制 Token 恢复。见[任务管理](manage-downloads.md)。
