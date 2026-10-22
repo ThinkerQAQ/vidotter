@@ -18,6 +18,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 )
 
@@ -192,7 +193,13 @@ func runBridge() error {
 	}
 	listener, err := net.Listen("tcp", bridgeAddress)
 	if err != nil {
-		return fmt.Errorf("Bridge 监听 %s 失败：%w", bridgeAddress, err)
+		// Persistent logs must not contain raw network errors or local paths.
+		reason := "bind_failed"
+		if errors.Is(err, syscall.EADDRINUSE) {
+			reason = "port_in_use"
+		}
+		appendRuntimeEvent("ERROR", "bridge", "listen_failed", "reason", reason)
+		return fmt.Errorf("Bridge 无法监听 %s（端口可能已被其他程序占用）：%w", bridgeAddress, err)
 	}
 	if err := writeBridgeState(server.state); err != nil {
 		_ = listener.Close()
@@ -699,6 +706,13 @@ func ensureBridge() (bridgeState, error) {
 		if err == nil && pingBridge(state) == nil {
 			return state, nil
 		}
+	}
+	// Another application may still own the fixed local port.
+	// Report a concrete diagnosis rather than retrying native host startup forever.
+	conn, dialErr := net.DialTimeout("tcp", bridgeAddress, 200*time.Millisecond)
+	if dialErr == nil {
+		_ = conn.Close()
+		return bridgeState{}, fmt.Errorf("端口 %s 已被其他程序占用；请关闭占用端口的程序后重试", bridgeAddress)
 	}
 	return bridgeState{}, errors.New("VidOtter Bridge did not start")
 }

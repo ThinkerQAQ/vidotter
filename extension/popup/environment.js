@@ -580,6 +580,9 @@
   function init() {
     document.getElementById("refreshEnvironment").addEventListener("click", refresh);
     document.getElementById("settingsBack").addEventListener("click", goBack);
+    // The status badge is shared by all tabs. Refresh it even when the
+    // popup opens directly on media detection rather than Settings.
+    void refresh();
   }
 
   root.VidOtterEnvironment = { init, activate: refresh, renderTools };

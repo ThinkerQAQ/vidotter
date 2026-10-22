@@ -19,6 +19,9 @@ Once the Bridge is started, you can check the local loopback endpoint at `http:/
 
 If there is a stale or incompatible process, stop it before reinstalling; do not delete `Data/`, which contains existing tasks and settings. Diagnostic logs are stored in `Data/logs/`.
 
+The Bridge requires local port `127.0.0.1:17891`. If the port is already owned by another process, Native Messaging may be registered correctly but the Bridge cannot start. In PowerShell, run `Get-NetTCPConnection -LocalPort 17891 -State Listen` and inspect `OwningProcess`. Stop a process **only after identifying it**, then reopen the extension. When the Bridge successfully starts, `Data/logs/bridge.log` should contain `event=ready`.
+
+
 ## Detect shows No media found
 
 - Return to the original webpage tab and **play** the permitted video; some websites do not request media until playback or seeking.
