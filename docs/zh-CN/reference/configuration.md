@@ -1,30 +1,83 @@
-# 配置参考
+# 桌面配置参考
 
-VidOtter 的**所有可编辑运行配置与浏览器偏好**统一保存在安装根目录的 `Data/config.toml`，其中 `Data` 与 `bin` 同级。Bridge 状态、下载任务、日志、模型、按需下载工具和桌面任务工作目录也位于 `Data`。
+Bridge 读取安装 `bin/` 同级的 `Data/config.toml`。优先通过界面修改，由程序验证后保存。直接改文件需要重启 Bridge；运行中的 Worker 可能保留任务提交时的配置快照，修改后用新任务验证。
 
-| TOML 配置节 | 字段 | 用途 |
+## 字段与默认值
+
+| 配置项 | 默认值 | 可用值或作用 |
 | --- | --- | --- |
-| `[download]` | `output_dir`、`concurrent`、`quality` | 下载目录、并发上限（1–64）、默认画质 |
-| `[proxy]` | `enabled`、`url`、`host`、`port` | 外网请求代理 |
-| `[tools]` | `ffmpeg`、`yt_dlp`、`whisper`、`whisper_model`、`llama`、`translation_model` | 组件路径及模型 |
-| `[interface]` | `open_mode`、`language` | Popup/侧边栏入口、中文或英文 |
-| `[sniffer]` | `hls`、`dash`、`mp4` | 资源检测开关 |
-| `[logging]` | `enabled`、`max_size_mb` | 日志开关和大小上限（1–100 MB） |
+| `download.output_dir` | 安装目录 `Data/downloads/` | 非空输出路径，建议可写的绝对路径 |
+| `download.concurrent` | `12` | 1–64 的整数，下载器并发 |
+| `download.quality` | `""` | 默认选择、`best` 或 `720` / `720p` 等正整数高度 |
+| `proxy.enabled` | `false` | 启用明确配置的 HTTP 代理 |
+| `proxy.url` | `""` | HTTP 代理 URL，与主机、端口一起规范化 |
+| `proxy.host`, `proxy.port` | `""`, `0` | 主机和端口，配置时端口范围 1–65535 |
+| `tools.ffmpeg`, `tools.yt_dlp` | `""` | 程序覆盖路径，留空自动查找 |
+| `tools.whisper`, `tools.llama` | `""` | whisper-cli、llama-server 路径 |
+| `tools.whisper_model`, `tools.translation_model` | `""` | 本地模型文件路径 |
+| `interface.open_mode` | `popup` | `popup` 或 `sidePanel` |
+| `interface.language` | `zh-CN` | `zh-CN` 或 `en` |
+| `interface.show_logs` | `true` | 显示日志导航，与文件日志独立 |
+| `sniffer.hls`, `sniffer.dash`, `sniffer.mp4` | 均为 `true` | 至少保留一种检测类型 |
+| `logging.enabled` | `true` | 写入结构化事件日志 |
+| `logging.max_size_mb` | `10` | 单个活动组件日志上限，1–100 MB |
 
-Bridge 负责校验与原子写入，浏览器通过扩展后台访问配置。扩展设置统一由 TOML 管理；标签页中短期缓存的媒体资源仍由浏览器会话存储承载。Native Messaging 按浏览器标准需要 JSON 注册清单，生成于 `Data/native-host/`，它不是用户配置。
+代理支持 HTTP，HTTPS 目标通过 CONNECT 访问；不支持 SOCKS 或携带账号密码的代理 URL。主机、端口需同时填写，主机字段不含协议和端口。URL 与主机、端口冲突时应通过界面重新保存。
 
-自动迁移代码已移除，运行时直接读取 Data/config.toml。任务记录继续使用 JSON 状态快照。已经指定的下载文件夹不会被擅自移动。界面语言与字幕目标语言互相独立。
+## 完整示例
 
-直接修改 TOML 文件后需要重启 Bridge；通过界面保存的配置会立即生效。
+替换为自己的输出路径。Windows 可使用 `'C:\Users\YourName\Downloads\VidOtter'`，TOML 单引号字符串保留反斜杠。
 
+```toml
+[download]
+output_dir = '/home/yourname/Downloads/VidOtter'
+concurrent = 12
+quality = ""
 
-## 日志与界面入口
+[proxy]
+enabled = false
+url = ""
+host = ""
+port = 0
 
-在「设置 → 界面与交互」中切换「显示日志入口」，对应 TOML 的 `[interface] show_logs`（默认 `true`）。它只影响 Popup、Side Panel 和 Web UI 的导航，不会停用日志文件记录。
+[tools]
+ffmpeg = ""
+yt_dlp = ""
+whisper = ""
+whisper_model = ""
+llama = ""
+translation_model = ""
 
-运行日志在 `Data/logs/`，日志页沿用 BlogCTL 的搜索、级别筛选、自动刷新、全选、复制和清空交互。日志由本地 Bridge 鉴权提供，不提供任意文件读取入口。关闭日志记录由 `[logging] enabled` 控制，最大文件大小使用 `[logging] max_size_mb`。
+[interface]
+open_mode = "popup"
+language = "zh-CN"
+show_logs = true
 
+[sniffer]
+hls = true
+dash = true
+mp4 = true
 
-### 关键运行事件与隐私
+[logging]
+enabled = true
+max_size_mb = 10
+```
 
-从 v1.2.1 起，Bridge 会记录任务排队、Worker 启动、下载/转码/字幕阶段切换、每 25% 的进度里程碑、任务完成或失败、暂停/恢复/重试/删除、播放列表探测、配置保存、组件安装等关键节点。日志包含等级、组件、事件、12 位任务 ID、阶段及必要的数量/耗时；**不包含 URL、Cookie、Token、媒体标题、输出路径、字幕原文或完整异常文本**。日志不会逐次记录高频进度轮询。失败详情仍保留在任务状态中；在共享诊断日志前也应自行检查隐私。
+不要用局部片段覆盖已有配置。加载器解码整份文件并验证；TOML 损坏或配置无效时使用默认值，但不覆盖错误文件。手写时遗漏字段也可能导致验证失败，编辑前先备份。
+
+## 运行文件
+
+| `Data/` 下的位置 | 用途 |
+| --- | --- |
+| `config.toml` | 用户设置 |
+| `bridge.json` | 运行 PID、地址和认证 Token，不应分享 |
+| `jobs.json` | 任务快照，包含 URL 和输出信息，不是脱敏导出 |
+| `native-host/com.vidotter.bridge.json` | 生成的浏览器注册清单 |
+| `models/`, `tools/` | 下载模型与可选组件 |
+| `work/` | 下载断点及处理文件 |
+| `logs/` | Bridge、Worker 结构化事件及轮转 |
+| `downloads/` | 默认输出目录 |
+
+结构化事件仅接受任务 ID、阶段、数量、耗时等固定字段，排除 URL、Cookie、Token、标题、路径、字幕和原始错误。其他运行文件及手动采集的终端输出仍可能包含敏感信息。日志轮转到 `.1`，界面读取有限的近期尾部，而非全部历史。
+
+定义见 `bridge/bridge_config.go`、`bridge/runtime_layout.go`、`bridge/bridge_job_store.go`。操作见[工具](../how-to/configure-tools.md)及[升级](../how-to/upgrade.md)。

@@ -1,31 +1,27 @@
 # Android 精简 FFmpeg
 
-这里构建的不是 `ffmpeg` 命令行，而是供 Android App 通过 JNI 调用的精简 libav `.so`。
-默认只构建 `arm64-v8a`，只保留 VidOtter 本地 HLS 清单无损封装 MP4 所需组件。
+这里生成供 JNI 封装器使用的 libav `.so`，不是 Android 命令行 ffmpeg。当前 App 仍使用系统 MediaExtractor/MediaMuxer；构建这些库不会自动把 FFmpeg 接入 App。
 
-## 依赖
+## 依赖与命令
 
-- Linux、macOS 或 WSL
-- Android NDK
-- FFmpeg 源码
-- make
+在 Linux、macOS 或 WSL 中准备 FFmpeg 源码、make、JDK、Android SDK/NDK。维护程序会检查 Android 环境；从仓库根目录运行：
 
-## 构建
-
-```bash
-export ANDROID_NDK_HOME=/path/to/android-ndk
-./build.sh /path/to/ffmpeg
+```sh
+export ANDROID_SDK_ROOT=/path/to/android-sdk
+export ANDROID_NDK_HOME=/path/to/android-sdk/ndk/version
+go -C tools/vidotterdev run . ffmpeg-android --source /path/to/FFmpeg
 ```
 
-同时构建常见 Android ABI：
+默认 ABI 为 `arm64-v8a`，编译 API 为 24。指定多个 ABI 时使用逗号分隔：
 
-```bash
-ANDROID_ABIS="arm64-v8a armeabi-v7a x86_64" ./build.sh /path/to/ffmpeg
+```sh
+ANDROID_ABIS=arm64-v8a,armeabi-v7a,x86_64 go -C tools/vidotterdev run . ffmpeg-android --source /path/to/FFmpeg
 ```
 
-产物位于 `out/jniLibs/<abi>/`。正式集成时复制到 Android 模块的
-`src/main/jniLibs/<abi>/`，并由一个很薄的 JNI wrapper 调用 libavformat。
+产物位于 `.build/artifacts/android/ffmpeg/jniLibs/<abi>/`；`--output /absolute/output/path` 可修改输出根目录。库的编译 API 不等于 App 的最低系统版本（当前 App 为 API 26）。
 
-当前配置故意关闭网络和转码：网络下载、AES 解密由 Go 引擎负责，FFmpeg 只读取本地清单和分片并执行 stream copy。这样可以缩小体积，也不需要 x264/x265 等 GPL 编码器。
+## 集成要求
 
-分发 App 时必须同时提供 FFmpeg/libav 的许可证、版本和对应源码获取方式；如果以后启用 GPL 组件，需要重新审查整个应用的许可证义务。
+复制原生库到 Android 模块对应 `src/main/jniLibs/<abi>/`，实现 JNI wrapper，再接入 Go 的 `PlatformMuxer`；这些是后续集成工作，不是当前命令已完成的功能。按每个分发 ABI 准备库并在设备上测试。
+
+配置关闭网络和转码，Go 负责下载与解密，FFmpeg 只读取本地清单和分片进行 stream copy。发布时同时提供许可证、版本、构建配置和对应源码；改变启用的组件后重新核对分发许可。见[维护指南](../../docs/zh-CN/architecture/maintenance.md)。

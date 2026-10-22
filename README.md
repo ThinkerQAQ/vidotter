@@ -2,43 +2,55 @@
 
 [简体中文](README_ZH.md) · [Documentation](docs/index.md) · [Releases](https://github.com/ThinkerQAQ/vidotter/releases)
 
-VidOtter discovers HLS, DASH, MP4 and split media tracks in Chrome/Edge and downloads them using a local Go Bridge. Desktop downloads support optional subtitle extraction, speech recognition and translation. An independent Android app accepts shared media URLs.
+VidOtter detects media in Chrome/Edge and downloads it with a local Go Bridge. It supports HLS, MP4 and desktop resolution of supported webpage or split-track sources. Optional tools provide site subtitles, local speech recognition and subtitle translation. Android is a separate client for direct media links.
 
-## Quick Start
+## Install and download
 
-**New to VidOtter?** Follow the [illustrated first-run guide](docs/tutorial/first-run-on-new-machine.md) for the release installation, browser extension, Bridge connection, and first download. The [troubleshooting guide](docs/how-to/troubleshoot.md) covers connection and media-detection failures.
+1. Download the archive for your system and CPU from [Releases](https://github.com/ThinkerQAQ/vidotter/releases). Extract the whole archive to a permanent folder.
+2. In that folder run `.\bin\vidotterdev.exe install` in Windows PowerShell, or `./bin/vidotterdev install` on Linux/macOS. Linux/macOS need a separate FFmpeg installation in PATH for merging and muxing.
+3. Open `chrome://extensions` or `edge://extensions`, enable **Developer mode**, choose **Load unpacked**, and select `extension/`.
+4. Play a video, open VidOtter, check the Bridge status, and select the intended resource in **Detect**. For the first download choose **No subtitles**.
+5. Open **Downloads**, wait for **Completed**, then check the output file.
 
-Download a [desktop release](https://github.com/ThinkerQAQ/vidotter/releases) and extract the complete archive. On Windows run `bin\vidotterdev.exe install`; on Linux/macOS run `./bin/vidotterdev install`. All installer and release logic is Go-owned. Linux and macOS also require FFmpeg in PATH.
+The browser starts the Bridge through Native Messaging. A packaged release needs no Go or Node.js installation. See [first-run setup](docs/tutorial/first-run-on-new-machine.md) for extension IDs and connection checks.
 
-Open `chrome://extensions` or `edge://extensions`, enable Developer mode and load the unpacked `extension/` folder. Play a video, click VidOtter, detect its media and download it. The installed extension starts the Bridge automatically through Native Messaging.
+## Capabilities
 
-## Interface preview
+| Feature | Desktop | Android |
+| --- | --- | --- |
+| Detect media in a browser tab | Chrome/Edge extension | Requires a compatible browser extension; otherwise paste/share a direct URL |
+| Direct MP4/HLS download | Go downloader | Shared Go downloader |
+| Webpage resolution and split audio/video | Optional yt-dlp and FFmpeg, source dependent | Not generally supported |
+| Site subtitles | Optional yt-dlp | Not integrated |
+| Local ASR and translation | Windows release includes executables; models downloaded separately | Not integrated |
+| Full-page workspace | Extension relay + loopback Web UI | Native app |
 
-![VidOtter v1.3.0 media detection empty state](docs/images/first-run-detect-zh.png)
+Detection does not guarantee a source can be downloaded. DRM is not bypassed. Linux/macOS releases do not bundle FFmpeg or local ASR/translation sidecars.
 
-Screenshot of the v1.3.0 extension loaded in an isolated Microsoft Edge profile (Chinese UI). This is an empty detection state, not evidence of a connected Bridge or a successful download. See the [first-run walkthrough](docs/tutorial/first-run-on-new-machine.md) for setup steps.
+## Interface
 
-## Control surfaces
+![VidOtter Detect screen](docs/images/first-run-detect-zh.png)
 
-Popup, Side Panel and local **Web UI** share the same task and settings modules. Click **Open workspace** in the extension to access `http://127.0.0.1:17891/console/`. The extension is required for privileged requests; the HTTP page cannot read the Bridge authentication token.
+Chinese Detect screen from v1.3.0, shown before media detection. The screenshot illustrates navigation; follow the tutorial to check your own connection and output.
 
-## Capabilities and limitations
+Popup, Side Panel and Web UI share tasks and settings. Use **Open workspace** in the extension for the full-page UI. Settings and runtime data live in `Data/` beside `bin/`; preserve that directory during upgrades.
 
-- Go desktop downloader with job progress, retry and resume where supported
-- Optional yt-dlp resolver, FFmpeg muxing, whisper.cpp transcription and llama.cpp translation
-- Windows release carries local ASR/translation executables without model weights; Linux/macOS release capabilities differ
-- Android currently accepts direct MP4/HLS URLs; arbitrary webpages and split-track YouTube media are not generally supported on Android
+## Documentation
 
-See [Quick Start](docs/quick-start.md), [Tutorial](docs/tutorial/first-download.md), [How-to](docs/how-to/index.md), [Reference](docs/reference/index.md) and [Architecture](docs/architecture/index.md).
+- [Quick start](docs/quick-start.md) and [first download](docs/tutorial/first-download.md)
+- [Tools and models](docs/how-to/configure-tools.md), [subtitles](docs/how-to/subtitles.md), [tasks and resume](docs/how-to/manage-downloads.md)
+- [Upgrade or uninstall](docs/how-to/upgrade.md), [troubleshooting](docs/how-to/troubleshoot.md), [Android](docs/how-to/android.md)
+- [Configuration and API reference](docs/reference/index.md), [architecture](docs/architecture/index.md)
 
 ## Development
 
-VidOtter uses the native Go maintainer in `tools/vidotterdev/` for engineering tasks. Start with [AGENTS.md](AGENTS.md) and run `go -C tools/vidotterdev run . verify` or `go -C tools/vidotterdev run . build`. See the [maintenance guide](docs/architecture/maintenance.md) for packaging, toolchains and deployment.
+Requires Go 1.24 or later and Node.js for browser tests. From the repository root:
 
-Project code and documentation are Apache-2.0 licensed. Bundled third-party tools carry their own licence terms; see [NOTICE](NOTICE) and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+```sh
+go -C tools/vidotterdev run . verify
+go -C tools/vidotterdev run . build
+```
 
-## Local configuration and data
+Build outputs go to `.build/out/`. This does not install the application. Follow the [development tutorial](docs/tutorial/development.md) and [maintenance guide](docs/architecture/maintenance.md) for deployment and release packaging. Agent instructions are in [AGENTS.md](AGENTS.md).
 
-Installed binaries reside in `bin/`; local runtime files are stored in the sibling `Data/` directory. Edit `Data/config.toml` for the download, proxy, tools, interface, sniffer and logging settings. Job state (`jobs.json`), Bridge runtime state (`bridge.json`), logs, models, downloaded tool components and staging checkpoints live under `Data/`. Native Messaging requires a JSON registration manifest at `Data/native-host/com.vidotter.bridge.json`; it is generated protocol metadata, not a user config file. Existing download destinations remain unchanged when migrating legacy configuration.
-
-The [Go maintainer](docs/architecture/maintenance.md) in `tools/vidotterdev/` owns release packaging, installation and cross-platform builds. Media and Android SDKs retain their upstream build tools.
+VidOtter code and documentation use [Apache-2.0](LICENSE). Third-party components have separate terms: [NOTICE](NOTICE), [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

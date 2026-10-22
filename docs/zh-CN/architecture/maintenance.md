@@ -58,3 +58,21 @@ go -C tools/vidotterdev run . deploy --os windows --arch amd64 --target /mnt/c/s
 Windows 使用 `bin/vidotterdev.exe install` 注册 Native Messaging，Linux/macOS 使用 `./bin/vidotterdev install`；解除注册则执行 `uninstall`。安装和部署不得覆盖 `Data/`、已有下载文件和配置。
 
 Android 保留官方 Gradle Wrapper、gomobile、SDK/NDK 和 JDK；FFmpeg 继续使用上游 configure/make 以及需要的平台工具链。没有执行成功的目标构建，不应声明已完成验收。
+
+## 命令参数与前置条件
+
+基础构建需要 Go 1.24+，`verify` 还需要 Node.js；首次使用见[开发教程](../tutorial/development.md)。以下参数由统一维护程序解析：
+
+| 参数 | 用途 |
+| --- | --- |
+| `--root` | 明确仓库或安装根目录，否则从工作目录或程序位置向上查找 `extension/manifest.json` |
+| `--os` / `--arch` | 构建或部署的目标系统与架构；macOS 使用 `darwin` |
+| `--output` | 对支持的命令指定输出文件或目录 |
+| `--target` | deploy 必填，明确要修改的安装目录 |
+| `--extension-id` | install 接受的 32 位 a–p 扩展 ID |
+| `--source` | FFmpeg 源码；package 接收其对应源码归档 |
+| `--archive` | tool-install 使用的本地固定版本归档，仍校验 SHA-256 |
+
+Go flag 解析在第一个位置参数处停止，因此使用 `tool-install --archive /path/to/archive.zip whisper`，不要把选项放在 `whisper` 后面。`build` 只生成 Bridge；`deploy` 还构建维护程序、复制扩展和文档，但不准备第三方工具，也不自动注册。
+
+正式打包还需要 `.build/cache/source/FFmpeg-n8.1.2-source.tar.gz` 或 `package --source /path/to/archive`，归档 SHA-256 必须匹配代码固定值。只有 Windows 包复制 `dist/tools/`；Linux/macOS 包不附带 FFmpeg、Whisper、Llama。完整组件要求见[发行说明](../../../build/release/README.md)。`package` 不构建 Android APK，也不自动创建 GitHub Release。
