@@ -1,27 +1,13 @@
-# Quick Start
+# Quick start
 
-**If you are installing VidOtter for the first time, start with [First run on a new machine](tutorial/first-run-on-new-machine.md).** It explains the release layout, browser permissions, connection status, language settings, and what to do when nothing appears.
+Use a packaged desktop release for this path. A source checkout requires the separate [development tutorial](tutorial/development.md).
 
-## Desktop in five minutes
+1. Download the matching system/CPU archive from [Releases](https://github.com/ThinkerQAQ/vidotter/releases) and fully extract it to a permanent directory.
+2. In that directory run `.\bin\vidotterdev.exe install` in Windows PowerShell, or `./bin/vidotterdev install` on Linux/macOS. Linux/macOS also need FFmpeg in PATH for muxing/merging.
+3. Open `chrome://extensions` or `edge://extensions`, enable Developer mode, choose Load unpacked and select `extension/`.
+4. Open VidOtter and check its Bridge connection in Settings. The browser starts Bridge on demand; no terminal needs to remain open.
+5. Play a video, choose its complete MP4/HLS resource in Detect, leave subtitles at No subtitles and submit once. In Downloads wait for Completed and inspect the actual output.
 
-1. Download the Windows, Linux, or macOS archive from [Releases](https://github.com/ThinkerQAQ/vidotter/releases) and extract the **whole** archive to a permanent folder.
-2. From that folder, run \`.\bin\vidotterdev.exe install\` in Windows PowerShell or \`./bin/vidotterdev install\` on Linux/macOS. Linux/macOS require FFmpeg installed separately.
-3. Open \`chrome://extensions\` or \`edge://extensions\`, enable **Developer mode**, select **Load unpacked**, and choose the extracted \`extension/\` folder.
-4. Pin and open VidOtter. Confirm its environment indicator is healthy; use [connection troubleshooting](how-to/troubleshoot.md) if it is not.
-5. Play a video you are allowed to save, choose **Detect → resource → Download**, and wait for **Downloads → Completed**.
+If installation or connection is unclear, follow [first run](tutorial/first-run-on-new-machine.md). If resource selection is unclear, follow [first download](tutorial/first-download.md).
 
-![Detect is where available media will appear after playback](images/first-run-detect-en.png)
-
-*Actual v1.2.0 initial state. This isolated screenshot shows no detected media; it is not a successful-download example.*
-
-For a careful explanation of resource selection and job status, follow [First download](tutorial/first-download.md).
-
-## Which page should I read next?
-
-- [First run](tutorial/first-run-on-new-machine.md): install a release with screenshots
-- [First download](tutorial/first-download.md): follow a real media download
-- [Web UI](how-to/use-web-ui.md): open the full-page workspace
-- [Tools](how-to/configure-tools.md): choose FFmpeg, yt-dlp, subtitles and models
-- [Troubleshooting](how-to/troubleshoot.md): resolve connection, empty resources, and failed jobs
-
-A release requires no development tools. Developers should start with [AGENTS.md](../AGENTS.md) and [Go maintenance](architecture/maintenance.md).
+Next: [tools and models](how-to/configure-tools.md) · [subtitles](how-to/subtitles.md) · [workspace](how-to/use-web-ui.md) · [task recovery](how-to/manage-downloads.md) · [troubleshooting](how-to/troubleshoot.md).

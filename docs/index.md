@@ -1,22 +1,24 @@
 # VidOtter documentation
 
-[简体中文](zh-CN/index.md)
+[简体中文](zh-CN/index.md) · [README](../README.md)
 
-VidOtter detects media in the browser and downloads it using a local Go Bridge. The browser extension owns page access; the Bridge owns jobs, files and optional media tools.
+VidOtter detects browser media and downloads it on the same computer. Desktop browser sessions belong to the extension; jobs and files belong to the Go Bridge. Android is an independent client.
 
-| Goal | Start here |
+| Your goal | Read |
 | --- | --- |
-| Install and try VidOtter | [Quick Start](quick-start.md) |
-| First-time setup with actual UI screenshots | [First run on a new machine](tutorial/first-run-on-new-machine.md) |
-| Complete your first download | [Tutorial](tutorial/first-download.md) |
-| Understand the components | [System concepts](concepts/system.md) |
-| Configure local tools | [Tool configuration](how-to/configure-tools.md) |
-| Use the browser workspace | [Web UI](how-to/use-web-ui.md) |
-| Fix installation or download errors | [Troubleshooting](how-to/troubleshoot.md) |
-| Inspect local APIs and settings | [Reference](reference/index.md) |
-| Follow an M3U8 example | [Examples](examples/index.md) |
-| Extend the system safely | [Architecture](architecture/index.md) |
+| Install a packaged release | [Quick start](quick-start.md) or [first-run walkthrough](tutorial/first-run-on-new-machine.md) |
+| Select media and check the finished file | [First download](tutorial/first-download.md) |
+| Set up tools, proxy and models | [Tool configuration](how-to/configure-tools.md) |
+| Download, recognize or translate subtitles | [Subtitles](how-to/subtitles.md) |
+| Pause, recover or delete tasks | [Manage downloads](how-to/manage-downloads.md) |
+| Use the larger browser workspace | [Web UI](how-to/use-web-ui.md) |
+| Replace or move program files | [Upgrade and uninstall](how-to/upgrade.md) |
+| Use a mobile media link | [Android](how-to/android.md) |
+| Resolve a connection or task failure | [Troubleshooting](how-to/troubleshoot.md) |
+| Understand ownership and processing | [System](concepts/system.md), [download workflow](concepts/download-workflow.md) |
+| Look up fields and routes | [Reference](reference/index.md) |
+| Follow an HLS scenario | [Examples](examples/index.md) |
+| Make your first source build | [Development tutorial](tutorial/development.md) |
+| Change architecture or package a release | [Architecture](architecture/index.md), [maintenance](architecture/maintenance.md) |
 
-For code changes start with the repository-level [Agent Contract](../AGENTS.md).
-
-Development and release workflows: [Go maintenance and native tooling](architecture/maintenance.md).
+Tutorials walk through a result, how-to pages cover individual tasks, reference pages describe fields/contracts, and architecture pages explain implementation decisions. Engineering instructions for agents are in [AGENTS.md](../AGENTS.md).

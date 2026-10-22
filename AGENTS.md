@@ -67,3 +67,7 @@ Keep changes small, inspect the diff, commit/push coherent work when requested, 
 Installed binaries are under `bin/`. `Data/config.toml` is the durable product configuration; `Data/jobs.json`, `Data/bridge.json`, `Data/logs/`, `Data/models/`, `Data/tools/` and `Data/work/` hold persistent or generated runtime data. `Data/native-host/com.vidotter.bridge.json` is browser protocol metadata, not user configuration. Build outputs and caches live under ignored `.build/`; these must never be confused with installed `Data/`.
 
 The Go installer registers Native Messaging and the URL protocol. Installing, deploying, or uninstalling program registrations must not erase existing downloads or user data.
+
+## Documentation changes
+
+Keep English `docs/` and Chinese `docs/zh-CN/` pages aligned. README is the product entry; tutorials lead to a checked result; how-to pages cover individual operations; reference pages list current fields/routes; architecture pages explain ownership and implementation. Check commands against `tools/vidotterdev/main.go`, settings against `bridge/bridge_config.go`, and UI labels against extension sources. Preserve screenshot provenance and distinguish automated checks from browser/device acceptance. Installation guides must distinguish a release archive from a source build and state which operations preserve, move or delete user data.

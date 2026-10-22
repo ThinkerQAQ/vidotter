@@ -14,16 +14,16 @@ Go to **Detect**. Under **Resources on this page / Detected resources**, look fo
 
 | What appears | What to choose |
 | --- | --- |
-| \`video.mp4\` | Usually the direct file |
-| \`master.m3u8\` or a variant \`.m3u8\` | An HLS manifest; quality and playlist options depend on the source |
-| \`manifest.mpd\` | A DASH manifest; may require separate audio/video handling |
-| \`.ts\`, \`.m4s\` or isolated audio segments | Usually **not** the full video; find the parent manifest |
+| `video.mp4` | Usually the direct file |
+| `master.m3u8` or a variant `.m3u8` | An HLS manifest; quality and playlist options depend on the source |
+| `manifest.mpd` | A DASH manifest; may require separate audio/video handling |
+| `.ts`, `.m4s` or isolated audio segments | Usually **not** the full video; find the parent manifest |
 
 If nothing appears, play or seek the video once and open Detect again. Ads, unrelated page requests, and multiple qualities may appear in the list; inspect the name/URL and choose the intended item.
 
-![Detect before a video has been observed](../images/first-run-detect-en.png)
+![Detect before a video has been observed](../images/first-run-detect-zh.png)
 
-*An actual empty state from v1.2.0, not a staged list of downloadable URLs.*
+*Chinese Detect screen from v1.3.0 before media is found.*
 
 ## Submit one job
 
@@ -35,8 +35,10 @@ Other subtitle modes use original site captions when available; local transcript
 
 Open **Downloads**. A submitted job should appear there; the status moves through resolution/downloading/processing stages where applicable. Wait for **Completed**. Use the output-file action if offered, or open the download directory configured in **Settings → Download capabilities**.
 
-A job marked **Failed**, **Paused**, or **Processing** is not a finished file. Read the stage and error first, then use **Retry/Resume** only where supported. Check \`Data/logs/\` for Bridge-side details; the configured folder is described in [Configuration](../reference/configuration.md).
+A job marked **Failed**, **Paused**, or **Processing** is not a finished file. Read the stage and error first, then use **Retry/Resume** only where supported. Check `Data/logs/` for Bridge-side details; the configured folder is described in [Configuration](../reference/configuration.md).
 
 ## After it works
 
 Use **Open workspace** to work in the larger local Web UI, or set popup versus side panel under **Settings → Appearance & interaction**. For problems, use [Troubleshooting](../how-to/troubleshoot.md); for an M3U8-specific example, see [HLS example](../examples/m3u8-download.md).
+
+For subtitle setup and interrupted jobs, see [Subtitles](../how-to/subtitles.md) and [Manage downloads](../how-to/manage-downloads.md).

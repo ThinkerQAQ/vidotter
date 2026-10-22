@@ -1,21 +1,13 @@
-# 快速开始
+# 快速入门
 
-**第一次使用请先阅读带截图的[新电脑首次使用教程](tutorial/first-run-on-new-machine.md)。** 它会说明安装、浏览器授权、连接状态和无资源时的排查方式。
+此路径使用桌面发行包。从源码运行请看独立的[开发教程](tutorial/development.md)。
 
-## 5 步开始下载
+1. 从 [Releases](https://github.com/ThinkerQAQ/vidotter/releases) 下载对应系统、CPU 的压缩包，完整解压到固定目录。
+2. 在该目录运行安装命令：Windows PowerShell 使用 `.\bin\vidotterdev.exe install`，Linux/macOS 使用 `./bin/vidotterdev install`。Linux/macOS 还需将 FFmpeg 安装到 PATH，用于合并、封装。
+3. 打开 `chrome://extensions` 或 `edge://extensions`，开启开发人员模式，选择加载解压缩的扩展，指向 `extension/`。
+4. 打开 VidOtter，在设置中检查 Bridge 连接。浏览器会按需启动 Bridge，无需保持终端运行。
+5. 播放视频，在资源嗅探中选择完整 MP4/HLS 资源，字幕保持“不下载字幕”，提交一次。在下载任务等待完成并检查实际文件。
 
-1. 从 [Releases](https://github.com/ThinkerQAQ/vidotter/releases) 下载适合 Windows / Linux / macOS 的发行包，**完整解压到长期使用的目录**。
-2. 在该目录通过 PowerShell 执行 \`.\bin\vidotterdev.exe install\`，或在 Linux/macOS 执行 \`./bin/vidotterdev install\`。Linux/macOS 需要自行安装 FFmpeg。
-3. 打开 \`chrome://extensions\` 或 \`edge://extensions\`，启用「开发者模式」，选择「加载已解压的扩展程序」，指向 \`extension/\`。
-4. 固定并打开 VidOtter，确认环境状态正常；不正常先看[连接故障排查](how-to/troubleshoot.md)。
-5. 播放有权保存的视频，选择「资源嗅探 → 资源 → 下载」，最后在「下载任务」确认状态为「已完成」。
+安装或连接步骤不清楚时，按[首次使用](tutorial/first-run-on-new-machine.md)操作；不确定如何选资源时，看[首次下载](tutorial/first-download.md)。
 
-![资源嗅探初始状态](../images/first-run-detect-en.png)
-
-*真实 v1.2.0 初始界面，隔离测试下暂无资源，不代表下载已经成功。*
-
-下一步：[首次下载](tutorial/first-download.md)，含选资源、字幕与任务状态的解释。
-
-更多入口：[新电脑首次使用](tutorial/first-run-on-new-machine.md) · [Web UI](how-to/use-web-ui.md) · [工具配置](how-to/configure-tools.md) · [故障排查](how-to/troubleshoot.md)。
-
-使用发行包**不需要开发工具**；从源码开发请先看 [AGENTS.md](../../AGENTS.md) 与 [Go 工程维护](architecture/maintenance.md)。
+下一步：[工具与模型](how-to/configure-tools.md) · [字幕](how-to/subtitles.md) · [工作台](how-to/use-web-ui.md) · [任务恢复](how-to/manage-downloads.md) · [故障排查](how-to/troubleshoot.md)。

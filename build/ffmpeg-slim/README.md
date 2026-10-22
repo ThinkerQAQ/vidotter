@@ -10,13 +10,7 @@ go -C tools/vidotterdev run . ffmpeg-native
 
 如果构建机器需要代理，配置标准环境变量 `HTTPS_PROXY` 和 `HTTP_PROXY`；这些环境变量不会写入最终程序。Windows 构建依赖 MSYS2 UCRT64。
 
-默认输出为 `dist\tools\ffmpeg-slim.exe`。VidOtter 会按以下顺序发现 FFmpeg：
-
-1. 程序旁的 `tools/ffmpeg-slim`；
-2. 程序旁的 `tools/ffmpeg`；
-3. 程序旁的 `ffmpeg-slim`；
-4. 程序旁的 `ffmpeg`；
-5. 系统 PATH 和现有 Windows 兼容路径。
+默认输出为 `dist\tools\ffmpeg-slim.exe`。VidOtter 优先使用设置中的明确路径，其次查找可执行文件与安装目录附近的工具、`Data/tools/`，最后查找系统 PATH。设置中的失效路径必须先修正或清空，不会被静默忽略。安装结构和完整配置见[工具指南](../../docs/zh-CN/how-to/configure-tools.md)。
 
 Linux/macOS 可以准备 FFmpeg 源码和本机编译工具后直接运行：
 

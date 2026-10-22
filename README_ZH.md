@@ -1,63 +1,56 @@
 # VidOtter
 
-[English](README.md) · [中文文档](docs/zh-CN/index.md) · [Documentation](docs/index.md)
+[English](README.md) · [中文文档](docs/zh-CN/index.md) · [下载发行包](https://github.com/ThinkerQAQ/vidotter/releases)
 
-VidOtter 是一个通过 Chrome 或 Edge 扩展发现网页中的 M3U8、DASH 和 MP4 媒体，并交给本机 Bridge 下载和封装的跨平台工具。
+VidOtter 通过 Chrome/Edge 扩展发现网页媒体，由本机 Go Bridge 下载。支持 HLS、MP4，以及桌面端对部分网页和分离音视频来源的解析。可选工具提供原站字幕、本地语音识别和字幕翻译。Android 是面向媒体直链的独立客户端。
 
-## 字幕能力
+## 安装与首次下载
 
-Windows 版支持在下载媒体的同时生成独立字幕文件：
+1. 从 [Releases](https://github.com/ThinkerQAQ/vidotter/releases) 下载适合系统和 CPU 架构的发行包，完整解压到固定目录。
+2. 在解压目录运行安装命令：Windows PowerShell 使用 `.\bin\vidotterdev.exe install`；Linux/macOS 使用 `./bin/vidotterdev install`。Linux/macOS 需另外安装 FFmpeg 并加入 PATH，用于合并和封装。
+3. 打开 `chrome://extensions` 或 `edge://extensions`，开启“开发人员模式”，选择“加载解压缩的扩展”，加载 `extension/`。
+4. 播放视频，打开 VidOtter，确认 Bridge 连接状态，在“资源嗅探”中选择目标资源。首次下载选择“不下载字幕”。
+5. 到“下载任务”查看任务，等待完成后检查输出文件。
 
-- 优先下载网站提供的人工字幕或自动字幕；
-- 原站没有所需字幕时，可使用随发行包提供的 whisper.cpp 客户端在本机识别语音；
-- 可使用随发行包提供的 llama.cpp 和 TranslateGemma 在本机生成译文或双语 SRT；
-- 音频提取、语音识别、模型加载、逐条翻译和字幕生成均显示独立阶段与真实进度。
+浏览器通过 Native Messaging 按需启动 Bridge。使用发行包不需要安装 Go 或 Node.js。扩展 ID、安装结果和连接检查见[首次使用教程](docs/zh-CN/tutorial/first-run-on-new-machine.md)。
 
-Whisper 和 TranslateGemma 模型权重不包含在发行包内。请在扩展的“设置 → 下载能力”中选择模型、阅读相应许可并按需下载；下载完成后无需使用命令行。Linux 和 macOS 发行包目前不携带本地 ASR/翻译 sidecar。
+## 支持范围
 
-## 界面预览
+| 功能 | 桌面端 | Android |
+| --- | --- | --- |
+| 检测网页媒体 | Chrome/Edge 扩展 | 需要支持扩展的浏览器；也可粘贴或分享直链 |
+| MP4/HLS 直链下载 | Go 下载器 | 复用 Go 下载器 |
+| 网页解析与分离音视频 | 可选 yt-dlp、FFmpeg，取决于来源 | 暂不普遍支持 |
+| 原站字幕 | 可选 yt-dlp | 未集成 |
+| 本地识别与翻译 | Windows 包附带可执行程序，模型另行下载 | 未集成 |
+| 完整工作区 | 扩展中继 + 本机 Web UI | 原生 App |
 
-![VidOtter v1.3.0 资源嗅探初始界面](docs/images/first-run-detect-zh.png)
+检测到资源不代表一定能下载；工具不绕过 DRM。Linux/macOS 发行包不附带 FFmpeg 或本地识别、翻译 sidecar。
 
-上图为 v1.3.0 在隔离 Microsoft Edge 环境中加载真实扩展后截取的中文初始界面，**不代表 Bridge 已连接或下载已成功**。新用户请先看[带截图的首次使用教程](docs/zh-CN/tutorial/first-run-on-new-machine.md)，连接异常看[故障排查](docs/zh-CN/how-to/troubleshoot.md)。
+## 界面
 
-## 安装与使用
+![VidOtter 检测界面](docs/images/first-run-detect-zh.png)
 
-Windows、Linux 和 macOS 的整体流程相同：加载浏览器扩展、注册本机 Bridge，然后由浏览器按需自动启动 Bridge；无需手动常驻运行 Bridge。
+上图是 v1.3.0 尚未发现媒体时的中文检测页，用于说明界面入口；连接状态与下载结果需按教程在自己的机器上确认。
 
-### Windows
+Popup、Side Panel 和 Web UI 共用任务与设置。从扩展点击“打开工作区”可使用完整页面。设置与运行数据位于 `bin/` 同级的 `Data/`，升级时保留该目录。
 
-1. 从 [GitHub Releases](https://github.com/ThinkerQAQ/vidotter/releases) 下载 Windows 发行包并解压到固定目录，不要单独移动 Bridge、`extension` 或 `tools` 目录。
-2. 在 PowerShell/终端运行 `./bin/vidotterdev.exe install`。Go 安装器注册 Native Messaging Host，支持 Chrome 和 Edge。
-3. 打开 `edge://extensions` 或 `chrome://extensions`，启用“开发人员模式”，选择“加载解压缩的扩展”，然后选择发行包中的 `extension` 目录。
-4. 打开包含媒体的网页并开始播放，点击 VidOtter 扩展图标，在检测到的资源中选择需要的项目并开始下载。
-5. 如果移动了解压目录或替换了 Bridge，请重新运行 `./bin/vidotterdev.exe install`。需要卸载时，运行 `./bin/vidotterdev.exe uninstall`，再从浏览器中移除扩展。
+## 文档
 
-### Linux 和 macOS
+- [快速入门](docs/zh-CN/quick-start.md)、[首次下载](docs/zh-CN/tutorial/first-download.md)
+- [工具与模型](docs/zh-CN/how-to/configure-tools.md)、[字幕](docs/zh-CN/how-to/subtitles.md)、[任务与断点续传](docs/zh-CN/how-to/manage-downloads.md)
+- [升级与卸载](docs/zh-CN/how-to/upgrade.md)、[故障排查](docs/zh-CN/how-to/troubleshoot.md)、[Android](docs/zh-CN/how-to/android.md)
+- [配置与接口参考](docs/zh-CN/reference/index.md)、[架构](docs/zh-CN/architecture/index.md)
 
-1. 从 [GitHub Releases](https://github.com/ThinkerQAQ/vidotter/releases) 下载与系统和 CPU 架构匹配的发行包并解压到固定目录。
-2. Linux/macOS 在解压目录运行 `./bin/vidotterdev install`。Go 维护程序按照运行平台注册 Chrome、Chromium 和 Edge。
-3. Linux/macOS 发布包不携带 FFmpeg，请先通过系统包管理器安装 `ffmpeg` 并确保它在 `PATH` 中，以便完成媒体合并和封装。
-4. 打开 `edge://extensions` 或 `chrome://extensions`，启用“开发人员模式”，选择“加载解压缩的扩展”，然后选择发行包中的 `extension` 目录。
-5. 打开包含媒体的网页并开始播放，点击 VidOtter 扩展图标，在检测到的资源中选择需要的项目并开始下载。
+## 开发
 
-如果移动了解压目录，请重新运行 Go 安装程序。卸载时运行 `./bin/vidotterdev uninstall`，再从浏览器中移除扩展。
+需要 Go 1.24 或更高版本；浏览器测试需要 Node.js。在仓库根目录运行：
 
-## 许可证
+```sh
+go -C tools/vidotterdev run . verify
+go -C tools/vidotterdev run . build
+```
 
-VidOtter 自有代码和文档采用 [Apache License 2.0](LICENSE)；随项目分发的第三方组件仍遵循各自的许可证，详情见 [NOTICE](NOTICE) 和 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+产物位于 `.build/out/`，构建不会自动安装。部署与打包见[开发教程](docs/zh-CN/tutorial/development.md)及[工程维护](docs/zh-CN/architecture/maintenance.md)。Agent 约定见 [AGENTS.md](AGENTS.md)。
 
-## 开发与构建
-
-项目使用 `tools/vidotterdev/` 原生 Go 维护程序，不依赖额外的开发网关。进入仓库根目录后运行 `go -C tools/vidotterdev run . verify` 和 `go -C tools/vidotterdev run . build`；发行打包、部署及平台依赖参阅[工程维护指南](docs/zh-CN/architecture/maintenance.md)。Agent 规范见 [AGENTS.md](AGENTS.md)。
-
-## 本地配置与数据
-
-Windows 手动部署推荐把二进制放在根目录 `bin/`，把浏览器扩展放在 `extension/`，把 FFmpeg、Whisper 和 Llama 等随包组件放在 `tools/`。本地状态放在与 `bin` 同级的 `Data/`。
-
-- `Data/config.toml`：下载、代理、工具、界面、资源检测和日志配置。
-- `Data/jobs.json`：任务状态快照；`Data/bridge.json`：Bridge 运行时状态。
-- `Data/models/`、`Data/tools/`、`Data/logs/`、`Data/work/`：模型、按需下载工具、日志和下载工作文件。
-- `Data/native-host/`：浏览器要求的 Native Messaging JSON 注册清单。
-
-原来已经选择的下载目录会保留。安装后，在 `edge://extensions` 或 `chrome://extensions` 中加载或重新加载新 `extension/`。修改 TOML 文件后需要重启 Bridge，界面保存的配置则立即生效。
+项目代码和文档采用 [Apache-2.0](LICENSE)；第三方组件采用各自的许可，见 [NOTICE](NOTICE) 和 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。

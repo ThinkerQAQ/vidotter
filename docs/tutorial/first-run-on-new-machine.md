@@ -2,7 +2,7 @@
 
 **Goal:** install the desktop Bridge, connect the browser extension, identify a media file and find the finished download. You do not need Go, Node.js, an account, or speech-recognition models to use a packaged release.
 
-This walkthrough applies to **VidOtter v1.3.0**. The illustration shows the real extension loaded in an isolated Edge profile, in Chinese. It shows an empty detection state, not a verified Bridge connection or download.
+This walkthrough applies to **VidOtter v1.3.0**. The screenshot shows the Chinese interface before media detection. Follow the steps below to verify your own connection and download.
 
 ## 1. Download the desktop package
 
@@ -10,12 +10,12 @@ Open [VidOtter Releases](https://github.com/ThinkerQAQ/vidotter/releases), choos
 
 A desktop release has this layout:
 
-- \`bin/\` — Bridge executable and the Go installer
-- \`extension/\` — unpacked Chrome/Edge extension
-- \`tools/\` — packaged media tools, where available
-- \`Data/\` — persistent settings and jobs, created at runtime
+- `bin/` — Bridge executable and the Go installer
+- `extension/` — unpacked Chrome/Edge extension
+- `tools/` — packaged media tools, where available
+- `Data/` — persistent settings and jobs, created at runtime
 
-**Do not** load the ZIP itself as an extension or move \`bin/\` away from \`extension/\`. Preserve \`Data/\` across upgrades. Windows packages include FFmpeg; on Linux/macOS, install FFmpeg in \`PATH\` before downloading HLS/DASH streams. Speech recognition and translation models are optional and not included.
+**Do not** load the ZIP itself as an extension or move `bin/` away from `extension/`. Preserve `Data/` across upgrades. Windows packages include FFmpeg; on Linux/macOS, install FFmpeg in `PATH` before downloading HLS/DASH streams. Speech recognition and translation models are optional and not included.
 
 ## 2. Register the local Bridge
 
@@ -33,22 +33,22 @@ Open a terminal **in the extracted directory**:
 ./bin/vidotterdev install
 ~~~
 
-The command registers the native messaging host \`com.vidotter.bridge\` with supported browsers. It does **not** start a permanently running server. The extension starts the Bridge as needed.
+The command registers the native messaging host `com.vidotter.bridge` with supported browsers. It does **not** start a permanently running server. The extension starts the Bridge as needed.
 
-You should see a **Native Messaging installed** line naming the executable and a **Host manifest** location under \`Data/native-host/\`. If the command fails, stop here and consult [Connection troubleshooting](../how-to/troubleshoot.md). For an extension installed under a different ID, re-run install with \`--extension-id YOUR_32_CHARACTER_ID\`.
+You should see a **Native Messaging installed** line naming the executable and a **Host manifest** location under `Data/native-host/`. If the command fails, stop here and consult [Connection troubleshooting](../how-to/troubleshoot.md). For an extension installed under a different ID, re-run install with `--extension-id YOUR_32_CHARACTER_ID`.
 
 ## 3. Load the browser extension
 
-1. Open \`edge://extensions\` or \`chrome://extensions\`.
+1. Open `edge://extensions` or `chrome://extensions`.
 2. Turn on **Developer mode**.
-3. Choose **Load unpacked** and select the extracted **\`extension/\` directory**, the one containing \`manifest.json\`.
+3. Choose **Load unpacked** and select the extracted **`extension/` directory**, the one containing `manifest.json`.
 4. Pin VidOtter to the browser toolbar, then click its icon.
 
 VidOtter provides three destinations: **Detect**, **Downloads**, and **Settings**. The upper-right indicator should eventually report a healthy environment. If it remains **Checking environment** or shows **Environment issue**, the Bridge has not been verified. Do not proceed assuming downloads will work.
 
 ![VidOtter v1.3.0 Detect screen before any media is found](../images/first-run-detect-zh.png)
 
-*Real v1.3.0 extension UI in an isolated Edge profile, with an empty media list.*
+*Detect screen before playback has produced a media resource.*
 
 ## 4. Choose language and inspect settings
 
@@ -60,7 +60,7 @@ Under **Settings → Connection & runtime**, check the browser/Bridge status. Do
 
 1. Open a website with a video you are authorized to save, and **start playback**.
 2. While keeping that tab open, click VidOtter and choose **Detect**.
-3. In **Detected resources**, select the matching HLS (\`.m3u8\`), DASH (\`.mpd\`), or MP4 resource. Pages may expose multiple qualities, audio tracks, segments, or playlists. Prefer the playable manifest or complete media file over a single segment.
+3. In **Detected resources**, select the matching HLS (`.m3u8`), DASH (`.mpd`), or MP4 resource. Pages may expose multiple qualities, audio tracks, segments, or playlists. Prefer the playable manifest or complete media file over a single segment.
 4. Set **Subtitles → No subtitles** for your first attempt, then click **Download** on the resource.
 
 **Expected result:** a new job appears under **Downloads**. If nothing is detected, try playing/seeking the video once; some sites fetch media only after playback. DRM-protected video and arbitrary sites are not guaranteed to work. A resource appearing in Detect is **not** itself proof that it can be downloaded.
@@ -71,7 +71,7 @@ For playlist choices, subtitle modes, and an end-to-end explanation, see [Your f
 
 Open **Downloads** and find the newly created job. Wait until its status is **Completed**, then use the available output-file action or inspect the directory configured under **Settings → Download capabilities**. A job stuck in processing is not completed; read its error rather than repeatedly submitting duplicates.
 
-You can also use **Open workspace** in the extension header for a larger browser tab at \`http://127.0.0.1:17891/console/\`. This address is loopback-only. The Web UI requires the extension relay to perform privileged operations; opening the address by itself does not connect the browser.
+You can also use **Open workspace** in the extension header for a larger browser tab at `http://127.0.0.1:17891/console/`. This address is loopback-only. The Web UI requires the extension relay to perform privileged operations; opening the address by itself does not connect the browser.
 
 ## 7. If it does not work
 
@@ -79,10 +79,6 @@ You can also use **Open workspace** in the extension header for a larger browser
 - **Checking environment never finishes:** open Settings, refresh, and check the Bridge connection before attempting a download.
 - **No media found:** return to the original playing tab; navigate or play again and reopen Detect.
 - **Missing FFmpeg or unsupported format:** inspect Download capabilities; Linux/macOS need an external FFmpeg installation.
-- **Failed job:** inspect the error and the Bridge logs in \`Data/logs/\`. Do not assume the page or source supports downloading.
+- **Failed job:** inspect the error and the Bridge logs in `Data/logs/`. Do not assume the page or source supports downloading.
 
 See [Troubleshooting](../how-to/troubleshoot.md) and [Configuration](../reference/configuration.md). For developers, [Go maintenance](../architecture/maintenance.md) explains the supported build and verification commands.
-
-## Reproduction notes
-
-On 2026-10-22, the v1.3.0 extension was loaded in an isolated Edge profile to capture its initial Detect screen. The screenshot does not show a completed browser-to-download test; verify the connection and perform a real download on your installation.

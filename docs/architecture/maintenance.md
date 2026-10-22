@@ -60,3 +60,21 @@ go -C tools/vidotterdev run . deploy --os windows --arch amd64 --target /mnt/c/s
 Register Native Messaging with `bin/vidotterdev.exe install` on Windows or `./bin/vidotterdev install` on Linux/macOS. Uninstall with the corresponding `uninstall` command. Install/deploy leave `Data/`, existing downloads and saved configuration intact.
 
 Android uses the official Gradle Wrapper, gomobile, SDK/NDK and JDK. FFmpeg uses upstream configure/make, Android NDK and MSYS2 as needed; no custom Shell, CMD or PowerShell orchestration replaces these toolchains. Verify the required SDK/toolchain before claiming a platform build succeeded.
+
+## Flags and prerequisites
+
+Base builds need Go 1.24+; `verify` additionally needs Node.js. Start with the [development tutorial](../tutorial/development.md).
+
+| Flag | Purpose |
+| --- | --- |
+| `--root` | Explicit repository/install root; otherwise search upward from working directory or executable for `extension/manifest.json` |
+| `--os` / `--arch` | Build/deploy target; use `darwin` for macOS |
+| `--output` | Output file or directory for commands supporting it |
+| `--target` | Required explicit installation destination for deploy |
+| `--extension-id` | 32-character a–p extension ID for install |
+| `--source` | FFmpeg source tree, or corresponding source archive for package |
+| `--archive` | Local pinned tool archive for tool-install; SHA-256 is still verified |
+
+Go flag parsing stops at the first positional argument. Use `tool-install --archive /path/to/archive.zip whisper`, not options after `whisper`. `build` generates only Bridge; `deploy` also builds the maintainer and copies extension/docs, but does not provision media tools or register the native host.
+
+Formal packaging also needs `.build/cache/source/FFmpeg-n8.1.2-source.tar.gz`, or `package --source /path/to/archive`, matching the pinned SHA-256. Only Windows archives copy `dist/tools/`; Linux/macOS do not bundle FFmpeg, Whisper or Llama. See [release notes](../../build/release/README.md) for component requirements. `package` does not build Android or create a GitHub Release.
