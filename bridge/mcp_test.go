@@ -78,6 +78,8 @@ func TestMCPToolProtocolAndRedaction(t *testing.T) {
 		!strings.Contains(init.Instructions, "already-connected Remote Browser Tool") ||
 		!strings.Contains(init.Instructions, "second CDP client") {
 		t.Fatal("MCP instructions must prioritize the already-connected browser plugin")
+	} else if strings.Contains(init.Instructions, "authorized to download") {
+		t.Fatal("MCP instructions must not invent a copyright-permission check")
 	}
 	list, err := clientSession.ListTools(ctx, nil)
 	if err != nil || len(list.Tools) != 13 {

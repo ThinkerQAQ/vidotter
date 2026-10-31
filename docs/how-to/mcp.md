@@ -7,7 +7,7 @@ VidOtter exposes **13 optional MCP tools** through the same desktop Go executabl
 | MCP tool | Operation |
 | --- | --- |
 | `vidotter_status` | Check whether the Bridge is online and required tools are installed (does not launch the Bridge). |
-| `vidotter_download` | Enqueue an authorized public HTTP(S) media URL or supported webpage, optionally with subtitles. |
+| `vidotter_download` | Enqueue a public HTTP(S) media URL or supported webpage, optionally with subtitles. |
 | `vidotter_list_jobs` | List recent download states. |
 | `vidotter_get_job` | Inspect one task and its progress. |
 | `vidotter_control_job` | Pause, resume, or retry without providing browser credentials. |
@@ -68,7 +68,7 @@ The profile and runtime key belong in private OS storage, **not** this public Gi
 ## Limitations and security
 
 - MCP requires direct public HTTP(S) destinations, rejects local/private addresses and nonstandard ports at submission, and does not accept Cookie/authorization headers. Public webpage resolution may require the optional yt-dlp component.
-- This submission-time validation is **not** a complete protection from DNS rebinding, redirects, or source-specific yt-dlp behavior. Use only for user-authorized media and do not share the private Tunnel with untrusted clients.
+- This submission-time validation is **not** a complete protection from DNS rebinding, redirects, or source-specific yt-dlp behavior. Do not share the private Tunnel with untrusted clients.
 - Browser-login-dependent downloads and session refresh remain in the **Chrome/Edge extension**, not MCP. `needs-session` jobs cannot be resumed using AI tools.
 - MCP never exposes the Bridge token, local absolute paths, raw source URLs or arbitrary filesystem reads in ordinary job responses. It does not offer deletion or modification of global settings.
 - `vidotter_read_subtitle` can return personal text to the connected AI service; call it only on the user's request. It accepts only registered subtitle files belonging to completed jobs under the configured output directory.
