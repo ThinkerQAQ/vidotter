@@ -42,6 +42,14 @@ Popup、Side Panel 和 Web UI 共用任务与设置。从扩展点击“打开�
 - [升级与卸载](docs/zh-CN/how-to/upgrade.md)、[故障排查](docs/zh-CN/how-to/troubleshoot.md)、[Android](docs/zh-CN/how-to/android.md)
 - [配置与接口参考](docs/zh-CN/reference/index.md)、[架构](docs/zh-CN/architecture/index.md)
 
+## 合法使用与第三方服务声明
+
+VidOtter 是独立的媒体管理工具，与视频平台不存在官方关联。使用者应确保依法有权下载、保存或处理相关内容，并遵守适用法律和来源网站的服务条款。检测到媒体地址不代表取得下载、转载或再分发授权。本项目不绕过 DRM 或访问控制机制。
+
+[Apache-2.0 License](LICENSE) 仅适用于 VidOtter 原创代码，不代表获得第三方媒体内容或打包依赖的授权。第三方组件仍受各自许可证约束，详见[第三方许可证说明](THIRD_PARTY_NOTICES.md)。
+
+**本地隐私：** 下载任务历史可能在本机 `Data/` 中保留来源 URL 或页面 URL，包括带有访问令牌的查询参数。持久化任务会排除 Cookie 和常见授权请求头，但分享任务记录、日志或备份前仍应检查并清理敏感信息。
+
 ## 开发
 
 需要 Go 1.24 或更高版本；浏览器测试需要 Node.js。在仓库根目录运行：

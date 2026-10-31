@@ -42,6 +42,14 @@ Popup, Side Panel and Web UI share tasks and settings. Use **Open workspace** in
 - [Upgrade or uninstall](docs/how-to/upgrade.md), [troubleshooting](docs/how-to/troubleshoot.md), [Android](docs/how-to/android.md)
 - [Configuration and API reference](docs/reference/index.md), [architecture](docs/architecture/index.md)
 
+## Legal Use and Third-Party Services
+
+VidOtter is an independent media management tool, not affiliated with or endorsed by video websites. Use it only for content you are legally entitled to download, store or process, and comply with applicable law and source-site terms. A detectable media URL does not establish permission to download or redistribute the content. VidOtter does not bypass DRM or access-control mechanisms.
+
+The [Apache-2.0 License](LICENSE) covers VidOtter's original code, not third-party media or packaged dependencies. See [third-party notices](THIRD_PARTY_NOTICES.md) for separate component terms.
+
+**Local privacy:** Download task history may retain source or page URLs, including URL query parameters that act as access tokens, in the local `Data/` directory. Cookies and standard authorization headers are excluded from persisted jobs, but do not upload or share task-history files, logs or backups without reviewing and removing sensitive information.
+
 ## Development
 
 Requires Go 1.24 or later and Node.js for browser tests. From the repository root:
