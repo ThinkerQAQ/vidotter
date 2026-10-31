@@ -19,6 +19,8 @@ VidOtter 在现有桌面 Go 程序中增加**六个可选 MCP 工具**。浏览�
 
 先安装官方 tunnel-client。Windows 在发行包目录执行 `powershell -NoProfile -File scripts/Setup-VidOtter-MCP.ps1`；Linux/macOS 执行 `bash scripts/setup-mcp.sh`。向导询问 Tunnel ID 和受限运行密钥，保存到当前用户私有目录（Windows 使用 DPAPI，Unix 使用仅本人可读的文件），运行 doctor，并尽可能设置登录后常驻启动。重复执行时保留已有私有配置，同一个 Tunnel 只应运行一个客户端进程。向导不自动下载 tunnel-client，也不能代替用户在 ChatGPT 中注册和授权。
 
+新版 MCP 2026-07-28 使用 `server/discover` 进行无状态工具发现；旧客户端仍可用 `initialize` 握手，两者共用同一 stdio 连接。
+
 ## 本地 stdio
 
 桌面可执行文件支持 `--mcp-stdio`，例如：

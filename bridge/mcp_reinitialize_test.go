@@ -109,3 +109,102 @@ func TestRepeatedInitializeOnOneTunnelStdioChildCreatesFreshMCPToolsSession(t *t
 	}
 }
 func stringJSONID(id int) string { return string([]byte{'0' + byte(id)}) }
+
+func TestModernMCPDiscoveryAndToolsOnSameTunnelChild(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 8*time.Second)
+	defer cancel()
+	stdinReader, stdinWriter := io.Pipe()
+	stdoutReader, stdoutWriter := io.Pipe()
+	done := make(chan error, 1)
+	go func() {
+		defer stdoutWriter.Close()
+		done <- runReinitializableMCPStdio(ctx, func() *mcp.Server {
+			return newVidOtterMCPServer(newMCPBridgeClient())
+		}, stdinReader, stdoutWriter)
+	}()
+	reader := bufio.NewReader(stdoutReader)
+	modernMeta := map[string]any{
+		"io.modelcontextprotocol/protocolVersion":    "2026-07-28",
+		"io.modelcontextprotocol/clientInfo":         map[string]string{"name": "regression", "version": "1"},
+		"io.modelcontextprotocol/clientCapabilities": map[string]any{},
+	}
+	send := func(id int, method string, params map[string]any) map[string]any {
+		t.Helper()
+		if params == nil {
+			params = map[string]any{}
+		}
+		params["_meta"] = modernMeta
+		body, err := json.Marshal(map[string]any{
+			"jsonrpc": "2.0", "id": id, "method": method, "params": params,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := stdinWriter.Write(append(body, '\n')); err != nil {
+			t.Fatal(err)
+		}
+		type wireResult struct {
+			body []byte
+			err  error
+		}
+		ch := make(chan wireResult, 1)
+		go func() {
+			data, err := reader.ReadBytes('\n')
+			ch <- wireResult{data, err}
+		}()
+		select {
+		case answer := <-ch:
+			if answer.err != nil {
+				t.Fatal(answer.err)
+			}
+			var response map[string]any
+			if err := json.Unmarshal(answer.body, &response); err != nil {
+				t.Fatal(err)
+			}
+			if _, exists := response["error"]; exists {
+				t.Fatalf("%s error: %v", method, response["error"])
+			}
+			if got, _ := response["id"].(float64); got != float64(id) {
+				t.Fatalf("%s response ID = %v, want %d", method, response["id"], id)
+			}
+			result, ok := response["result"].(map[string]any)
+			if !ok || result["resultType"] != "complete" {
+				t.Fatalf("%s missing complete result: %#v", method, response)
+			}
+			return result
+		case <-time.After(4 * time.Second):
+			t.Fatalf("%s timed out", method)
+			return nil
+		}
+	}
+	first := send(1, "server/discover", nil)
+	versions, ok := first["supportedVersions"].([]any)
+	if !ok || len(versions) == 0 || versions[0] != "2026-07-28" {
+		t.Fatalf("modern discovery versions: %v", first)
+	}
+	for _, id := range []int{2, 4} {
+		list := send(id, "tools/list", nil)
+		tools, ok := list["tools"].([]any)
+		if !ok || len(tools) != 6 {
+			t.Fatalf("modern tools/list returned %v", list)
+		}
+		if id == 2 {
+			send(3, "server/discover", nil)
+		}
+	}
+	result := send(5, "tools/call", map[string]any{
+		"name": "vidotter_status", "arguments": map[string]any{},
+	})
+	if _, ok := result["structuredContent"]; !ok {
+		t.Fatalf("modern tools/call missing content: %#v", result)
+	}
+	stdinWriter.Close()
+	select {
+	case err := <-done:
+		if err != nil {
+			t.Fatal(err)
+		}
+	case <-time.After(3 * time.Second):
+		t.Fatal("modern MCP child failed to exit")
+	}
+}

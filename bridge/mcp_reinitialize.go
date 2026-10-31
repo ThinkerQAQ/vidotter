@@ -54,11 +54,22 @@ func runReinitializableMCPStdio(ctx context.Context, server func() *mcp.Server, 
 		// Inspect method only, never log or copy raw order payloads to disk.
 		var envelope struct {
 			Method string `json:"method"`
+			Params struct {
+				Meta map[string]json.RawMessage `json:"_meta"`
+			} `json:"params"`
 		}
 		if err := json.Unmarshal(frame, &envelope); err != nil {
 			continue
 		}
-		if envelope.Method == "initialize" {
+		// The 2026-07-28 MCP protocol uses self-contained requests and
+		// server/discover instead of the legacy initialize handshake. Start
+		// the same SDK session for either protocol before forwarding frames.
+		var version string
+		_ = json.Unmarshal(envelope.Params.Meta["io.modelcontextprotocol/protocolVersion"], &version)
+		modern := version >= "2026-07-28"
+		start := envelope.Method == "initialize" || current == nil &&
+			(envelope.Method == "server/discover" || modern && envelope.Method != "")
+		if start {
 			generation.Add(1)
 			stop()
 			rdr, wtr := io.Pipe()

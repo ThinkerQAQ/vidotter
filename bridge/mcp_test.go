@@ -24,7 +24,7 @@ func TestMCPToolProtocolAndRedaction(t *testing.T) {
 		switch r.URL.Path {
 		case "/v1/environment":
 			_ = json.NewEncoder(w).Encode(map[string]any{"environment": map[string]any{
-				"version": "1.4.0", "platform": "linux", "executable": "/private/path",
+				"version": "1.4.1", "platform": "linux", "executable": "/private/path",
 				"ffmpeg": map[string]any{"available": true}, "ytDlp": map[string]any{"available": true},
 			}})
 		case "/v1/tasks":
