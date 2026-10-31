@@ -8,6 +8,9 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
+
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
 func TestBrowserAutomationDefaultDeniedAndLocallyControlled(t *testing.T) {
@@ -83,5 +86,48 @@ func TestBrowserAutomationURLIsPublicAndToolWhitelisted(t *testing.T) {
 	}
 	if _, err := (&browserAutomationProxy{}).call(context.Background(), browserAutomationCall{Name: "browser_open", URL: "http://localhost/admin"}); err == nil {
 		t.Fatal("private URL must be rejected before starting the browser component")
+	}
+}
+
+// Exercise the VidOtter-to-MCP adapter against a local in-memory tool server.
+// This does not start another browser/CDP connection or trigger user consent.
+func TestBrowserAutomationProxyForwardsMCPWithoutCDP(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	serverTransport, clientTransport := mcp.NewInMemoryTransports()
+	server := mcp.NewServer(&mcp.Implementation{Name: "test-browser", Version: "1"}, nil)
+	type closeParams struct {
+		PageID int `json:"pageId"`
+	}
+	mcp.AddTool(server, &mcp.Tool{Name: "close_page", Description: "Close an owned tab"},
+		func(_ context.Context, _ *mcp.CallToolRequest, in closeParams) (*mcp.CallToolResult, struct{}, error) {
+			if in.PageID != 37 {
+				t.Errorf("unexpected page ID %d", in.PageID)
+			}
+			return &mcp.CallToolResult{Content: []mcp.Content{&mcp.TextContent{Text: "closed owned test page"}}}, struct{}{}, nil
+		})
+	serverSession, err := server.Connect(ctx, serverTransport, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer serverSession.Close()
+	client := mcp.NewClient(&mcp.Implementation{Name: "test-vidotter", Version: "1"}, nil)
+	clientSession, err := client.Connect(ctx, clientTransport, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	proxy := &browserAutomationProxy{session: clientSession}
+	defer proxy.close()
+	out, err := proxy.call(ctx, browserAutomationCall{Name: "browser_close", PageID: 37})
+	if err != nil || !strings.Contains(out, "closed owned test page") {
+		t.Fatalf("browser MCP adapter failed without CDP: out=%q err=%v", out, err)
+	}
+}
+
+func TestBrowserAutomationProxyCooldownAvoidsRepeatedBrowserConnection(t *testing.T) {
+	proxy := &browserAutomationProxy{reconnectAfter: time.Now().Add(browserAutomationCooldown)}
+	out, err := proxy.call(context.Background(), browserAutomationCall{Name: "browser_status"})
+	if out != "" || err == nil || !strings.Contains(err.Error(), "cooldown") {
+		t.Fatalf("failed proxy must not reconnect immediately, out=%q err=%v", out, err)
 	}
 }

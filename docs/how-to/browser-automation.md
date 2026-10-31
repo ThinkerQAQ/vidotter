@@ -69,4 +69,5 @@ The optional browser component remains maintained and versioned independently. U
 - **Browser component missing:** Install it from Components; it is not required for manual playback.
 - **Browser CDP unavailable:** Enable local remote debugging in a supported Edge/Chrome instance; grant browser consent. Component installation does not imply CDP authorization.
 - **Browser click refused:** Enable interactions explicitly in the local Components panel. The AI cannot change this setting.
+- **Browser automation request times out:** The adapter does not automatically restart or retry the CDP child. Failed sessions have a 30-second reconnect cooldown to avoid repeated browser authorization prompts. Check the existing Remote Browser Tool connection and browser consent before retrying manually.
 - **`Unsupported URL` for webpage:** Do not submit the webpage to yt-dlp as if it were an m3u8; capture the actual media request in the extension first.

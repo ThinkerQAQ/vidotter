@@ -376,12 +376,12 @@ func (c *mcpBridgeClient) browserState(ctx context.Context) (mcpBrowserState, er
 	return status, err
 }
 func (c *mcpBridgeClient) browserAction(ctx context.Context, in browserAutomationCall) (mcpBrowserActionResult, error) {
-	// The browser subprocess permits up to 40 seconds for a page operation.
-	// Do not let the ordinary Bridge HTTP client's 22-second timeout cancel it.
+	// Browser subprocess cold starts can take longer than ordinary Bridge calls.
+	// Do not let the normal 22-second HTTP timeout cancel browser operations.
 	browserClient := *c
 	if c.httpClient != nil {
 		longClient := *c.httpClient
-		longClient.Timeout = 48 * time.Second
+		longClient.Timeout = browserAutomationTimeout + 12*time.Second
 		browserClient.httpClient = &longClient
 	}
 	var result mcpBrowserActionResult

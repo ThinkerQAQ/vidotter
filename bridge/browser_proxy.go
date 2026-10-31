@@ -22,9 +22,13 @@ type browserAutomationCall struct {
 }
 
 type browserAutomationProxy struct {
-	mu      sync.Mutex
-	session *mcp.ClientSession
+	mu             sync.Mutex
+	session        *mcp.ClientSession
+	reconnectAfter time.Time
 }
+
+const browserAutomationTimeout = 75 * time.Second
+const browserAutomationCooldown = 30 * time.Second
 
 func (p *browserAutomationProxy) close() {
 	p.mu.Lock()
@@ -37,6 +41,9 @@ func (p *browserAutomationProxy) close() {
 func (p *browserAutomationProxy) connect(ctx context.Context) error {
 	if p.session != nil {
 		return nil
+	}
+	if time.Now().Before(p.reconnectAfter) {
+		return errors.New("browser automation temporarily unavailable; retry after cooldown")
 	}
 	node, err := resolveBrowserNode()
 	if err != nil {
@@ -77,9 +84,9 @@ func (p *browserAutomationProxy) connect(ctx context.Context) error {
 func (p *browserAutomationProxy) call(ctx context.Context, in browserAutomationCall) (string, error) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	timeout := 40 * time.Second
+	timeout := browserAutomationTimeout
 	if in.Name == "browser_status" {
-		timeout = 10 * time.Second
+		timeout = 12 * time.Second
 	}
 	callCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
@@ -123,9 +130,18 @@ func (p *browserAutomationProxy) call(ctx context.Context, in browserAutomationC
 	}
 	result, err := p.session.CallTool(callCtx, &mcp.CallToolParams{Name: upstreamName, Arguments: args})
 	if err != nil {
+		// Drop the failed MCP child but never retry in the same call: a retry
+		// could spawn another CDP client and trigger a second browser prompt.
 		_ = p.session.Close()
 		p.session = nil
-		return "", errors.New("browser automation did not respond; check local CDP authorization")
+		p.reconnectAfter = time.Now().Add(browserAutomationCooldown)
+		if errors.Is(err, context.DeadlineExceeded) || errors.Is(callCtx.Err(), context.DeadlineExceeded) {
+			return "", errors.New("browser automation timed out; no automatic reconnect was attempted")
+		}
+		if errors.Is(err, context.Canceled) || errors.Is(callCtx.Err(), context.Canceled) {
+			return "", errors.New("browser automation request canceled")
+		}
+		return "", errors.New("browser automation MCP session failed; no automatic reconnect was attempted")
 	}
 	if result.IsError {
 		return "", errors.New("browser tool refused the operation; check owned tabs and browser consent")
