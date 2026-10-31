@@ -42,3 +42,9 @@ Upstream license: <https://github.com/golang/mobile/blob/master/LICENSE>
 ## Gradle Wrapper and JUnit
 
 The Android project includes the Gradle Wrapper under Apache-2.0 and uses JUnit 4.13.2 for tests under Eclipse Public License 1.0. These tools do not change the license of VidOtter's original code.
+
+## Go executable dependencies
+
+`vidotterdev licenses` collects full upstream license artifacts and a versioned dependency report for every desktop target using pinned go-licenses v2.0.1. Formal packaging includes them in `THIRD_PARTY_LICENSES/` alongside the Go runtime license; a collection failure stops packaging. FFmpeg, Whisper, Llama and LLVM OpenMP remain separately licensed sidecars with their own full license and source/build notices.
+
+Go 维护入口按桌面目标平台生成完整许可及版本清单，并随包放入 THIRD_PARTY_LICENSES；收集失败停止打包。正式 Windows 包同时要求 FFmpeg、Whisper、Llama、LLVM OpenMP 的许可与来源文件齐全。

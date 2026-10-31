@@ -76,3 +76,7 @@ Android 保留官方 Gradle Wrapper、gomobile、SDK/NDK 和 JDK；FFmpeg 继续
 Go flag 解析在第一个位置参数处停止，因此使用 `tool-install --archive /path/to/archive.zip whisper`，不要把选项放在 `whisper` 后面。`build` 只生成 Bridge；`deploy` 还构建维护程序、复制扩展和文档，但不准备第三方工具，也不自动注册。
 
 正式打包还需要 `.build/cache/source/FFmpeg-n8.1.2-source.tar.gz` 或 `package --source /path/to/archive`，归档 SHA-256 必须匹配代码固定值。只有 Windows 包复制 `dist/tools/`；Linux/macOS 包不附带 FFmpeg、Whisper、Llama。完整组件要求见[发行说明](../../../build/release/README.md)。`package` 不构建 Android APK，也不自动创建 GitHub Release。
+
+## 依赖许可
+
+`go -C tools/vidotterdev run . licenses` 通过固定版本上游工具，按桌面平台收集完整 Go 依赖许可与版本清单；`package` 自动执行。正式 Windows 打包会拒绝缺少 sidecar 许可与来源文件的产物。CI 在 Windows、macOS、Linux 执行现有 verify/build；浏览器与 Android 实机验收仍需单独进行。

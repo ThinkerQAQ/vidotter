@@ -78,3 +78,7 @@ Base builds need Go 1.24+; `verify` additionally needs Node.js. Start with the [
 Go flag parsing stops at the first positional argument. Use `tool-install --archive /path/to/archive.zip whisper`, not options after `whisper`. `build` generates only Bridge; `deploy` also builds the maintainer and copies extension/docs, but does not provision media tools or register the native host.
 
 Formal packaging also needs `.build/cache/source/FFmpeg-n8.1.2-source.tar.gz`, or `package --source /path/to/archive`, matching the pinned SHA-256. Only Windows archives copy `dist/tools/`; Linux/macOS do not bundle FFmpeg, Whisper or Llama. See [release notes](../../build/release/README.md) for component requirements. `package` does not build Android or create a GitHub Release.
+
+## Dependency licenses
+
+Run `go -C tools/vidotterdev run . licenses` to collect target-specific full Go notices through pinned upstream go-licenses v2.0.1. `package` runs this automatically. Formal Windows packaging also rejects missing sidecar license/source notices. CI runs the existing verify/build commands on Windows, macOS and Linux; browser and Android acceptance remain separate.

@@ -38,6 +38,9 @@ func Package(root, requested string, allowMissing bool, source string) error {
 	if err := ensureDir(output); err != nil {
 		return err
 	}
+	if err := Licenses(root); err != nil {
+		return err
+	}
 	for _, t := range targets() {
 		name := fmt.Sprintf("vidotter-v%s-%s-%s", current, t.Name, t.Arch)
 		stage := filepath.Join(root, ".build", "out", "release-stage", name)
@@ -72,6 +75,9 @@ func Package(root, requested string, allowMissing bool, source string) error {
 		if err := copyTree(filepath.Join(root, "docs"), filepath.Join(stage, "docs"), nil); err != nil {
 			return err
 		}
+		if err := copyTree(filepath.Join(root, ".build", "out", "licenses", t.OS+"-"+t.Arch), filepath.Join(stage, "THIRD_PARTY_LICENSES"), nil); err != nil {
+			return err
+		}
 		if t.OS == "windows" {
 			tools := filepath.Join(root, "dist", "tools")
 			if _, err := os.Stat(tools); err != nil {
@@ -81,7 +87,7 @@ func Package(root, requested string, allowMissing bool, source string) error {
 			} else if err := copyTree(tools, filepath.Join(stage, "tools"), nil); err != nil {
 				return err
 			}
-			for _, required := range []string{"ffmpeg-slim.exe", "whisper/whisper-cli.exe", "llama/llama-server.exe", "COPYING.LGPLv2.1", "ffmpeg-slim-SOURCE.txt"} {
+			for _, required := range []string{"ffmpeg-slim.exe", "whisper/whisper-cli.exe", "llama/llama-server.exe", "COPYING.LGPLv2.1", "ffmpeg-slim-SOURCE.txt", "whisper/LICENSE", "whisper/SOURCE.txt", "llama/LICENSE", "llama/SOURCE.txt", "llama/LICENSE-LLVM-OpenMP"} {
 				if _, err := os.Stat(filepath.Join(stage, "tools", filepath.FromSlash(required))); err != nil && !allowMissing {
 					return fmt.Errorf("incomplete Windows release: missing licensed component %s", required)
 				}
