@@ -21,7 +21,7 @@ func main() {
 
 func execute(args []string) error {
 	if len(args) == 0 {
-		return errors.New("usage: vidotterdev <verify|build|package|deploy|install|uninstall|components|tool-install|android-bind|android-build|ffmpeg-native|ffmpeg-android|icons> [flags]")
+		return errors.New("usage: vidotterdev <verify|build|licenses|package|deploy|install|uninstall|components|tool-install|android-bind|android-build|ffmpeg-native|ffmpeg-android|icons> [flags]")
 	}
 	command := args[0]
 	flags := flag.NewFlagSet(command, flag.ContinueOnError)
@@ -57,6 +57,8 @@ func execute(args []string) error {
 		return maint.Verify(root)
 	case "build":
 		return maint.Build(root, *platform, *arch, *output)
+	case "licenses":
+		return maint.Licenses(root)
 	case "package":
 		return maint.Package(root, *version, *allowMissing, *ffmpegSource)
 	case "deploy":
