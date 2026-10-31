@@ -11,32 +11,37 @@ let browserCommandPort = null;
 let browserCommandRetry = null;
 
 async function handleBrowserCommand(command) {
-  if (!command || command.type !== "browser_media_download") return;
+  if (!command || !["browser_media_download", "browser_media_refresh"].includes(command.type)) return;
   const reply = { commandId: command.commandId, ok: false };
   try {
     if (!command.expiresAt || Date.now() >= Date.parse(command.expiresAt)) {
       throw new Error("expired browser command");
     }
-    if (!Number.isInteger(command.tabId) || !command.resourceKey) {
-      throw new Error("invalid command");
+    if (command.type === "browser_media_refresh") {
+      await syncRecentBrowserMedia(command.pageHash || "");
+      reply.ok = true;
+    } else {
+      if (!Number.isInteger(command.tabId) || !command.resourceKey) {
+        throw new Error("invalid command");
+      }
+      const [resources, tab] = await Promise.all([
+        VidOtterStore.get(command.tabId),
+        chrome.tabs.get(command.tabId)
+      ]);
+      const resource = resources.find(item => item.id === command.resourceKey);
+      if (!resource || !/^https?:\/\//.test(String(tab.url || ""))) {
+        throw new Error("resource no longer present");
+      }
+      const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(tab.url));
+      const pageHash = [...new Uint8Array(digest)].map(value => value.toString(16).padStart(2, "0")).join("");
+      if (pageHash !== command.pageHash) {
+        throw new Error("browser tab navigated since capture");
+      }
+      const page = { url: tab.url, title: tab.title || "video", userAgent: navigator.userAgent };
+      const result = await submitBridgeTask(resource, page, command.quality || "best", "single", command.subtitles, true);
+      reply.ok = true;
+      reply.taskId = result.taskId;
     }
-    const [resources, tab] = await Promise.all([
-      VidOtterStore.get(command.tabId),
-      chrome.tabs.get(command.tabId)
-    ]);
-    const resource = resources.find(item => item.id === command.resourceKey);
-    if (!resource || !/^https?:\/\//.test(String(tab.url || ""))) {
-      throw new Error("resource no longer present");
-    }
-    const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(tab.url));
-    const pageHash = [...new Uint8Array(digest)].map(value => value.toString(16).padStart(2, "0")).join("");
-    if (pageHash !== command.pageHash) {
-      throw new Error("browser tab navigated since capture");
-    }
-    const page = { url: tab.url, title: tab.title || "video", userAgent: navigator.userAgent };
-    const result = await submitBridgeTask(resource, page, command.quality || "best", "single", undefined, true);
-    reply.ok = true;
-    reply.taskId = result.taskId;
   } catch (_) {
     // The Bridge's public MCP response never includes details from the
     // browser session or media URL; errors stay deliberately generic.
@@ -57,7 +62,10 @@ function connectBrowserCommands() {
     const port = chrome.runtime.connectNative("com.vidotter.bridge");
     browserCommandPort = port;
     port.onMessage.addListener(message => {
-      if (message?.type === "browser_media_download") {
+      if (message?.type === "browser_subscribed" && message.ok) {
+        syncRecentBrowserMedia().catch(() => {});
+      }
+      if (["browser_media_download", "browser_media_refresh"].includes(message?.type)) {
         handleBrowserCommand(message).catch(() => {});
       }
     });
@@ -416,6 +424,45 @@ async function record(input) {
   }
   await chrome.action.setBadgeBackgroundColor({ tabId: resource.tabId, color: "#2563eb" });
   await chrome.action.setBadgeText({ tabId: resource.tabId, text: String(Math.min(visibleItems.length, 99)) });
+}
+
+// Recover the ephemeral Bridge media index after Bridge/native-host reconnects,
+// and on demand from MCP. Never read cookies here; only local metadata leaves
+// the extension, and the Bridge exposes only a redacted page path to MCP.
+async function syncRecentBrowserMedia(pageHash = "") {
+  await mediaSnifferConfigReady;
+  const tabs = (await chrome.tabs.query({}))
+    .filter(tab => Number.isInteger(tab.id) && /^https?:\/\//i.test(String(tab.url || "")))
+    .sort((a, b) => (b.lastAccessed || 0) - (a.lastAccessed || 0));
+  let announced = 0;
+  const now = Date.now();
+  for (const tab of tabs) {
+    if (pageHash) {
+      const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(tab.url));
+      const candidateHash = [...new Uint8Array(digest)].map(value => value.toString(16).padStart(2, "0")).join("");
+      if (candidateHash !== pageHash) continue;
+    }
+    const items = VidOtterMedia.recentResourcesForSync(
+      await VidOtterStore.get(tab.id), currentMediaSnifferConfig, now);
+    for (const resource of items) {
+      if (announced >= 48) return announced;
+      // A navigation can occur while the metadata scan is in flight.
+      const current = await chrome.tabs.get(tab.id).catch(() => null);
+      if (!current || current.url !== tab.url) break;
+      await bridgeFetch("/v1/browser/media", {
+        method: "POST",
+        body: JSON.stringify({
+          resourceKey: resource.id,
+          tabId: tab.id,
+          kind: resource.kind,
+          pageTitle: tab.title || "",
+          pageUrl: tab.url
+        })
+      });
+      announced += 1;
+    }
+  }
+  return announced;
 }
 
 async function refreshMediaBadges() {

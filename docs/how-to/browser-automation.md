@@ -28,6 +28,10 @@ On October 31, 2026, a Windows installation completed a **real end-to-end smoke 
 
 A newly installed user only needs the VidOtter extension, Bridge, local browser-debugging consent and the optional Browser Automation component. The component is opt-in, and interactive clicking remains off by default. If the browser is already showing the selected media, use `vidotter_list_browser_media` directly; opening a fresh tab or clicking Play is **not required** when the resource is already captured.
 
+### Additional browser-first HLS acceptance (Windows, October 31, 2026)
+
+After the v1.5.1 browser-first MCP change, an independent test used the public [hls.js demo](https://hlsjs.video-dev.org/demo/) as a webpage input: the Edge extension captured multiple HLS resources, `vidotter_download(url="https://hlsjs.video-dev.org/demo/", quality="480")` returned `route=browser`, and job `77ce068babe5` reached `completed`/100% with one media file. No yt-dlp webpage extractor was used. A second public HTML video test on W3Schools also completed with `route=browser` and one MP4 file. These are smoke tests, not a claim that all HLS sites or codecs work.
+
 ## When Remote Browser Tool is already connected
 
 If ChatGPT already has a working Remote Browser Tool MCP connection, **reuse that existing browser tool** for opening background tabs and inspecting or playing media. Then use `vidotter_list_browser_media` and `vidotter_download_browser_media` from VidOtter. The VidOtter extension captures media independently of how the tab was opened. **Do not enable or call VidOtter's nested Browser Automation component in this mode**: starting a second CDP client may cause another Edge/Chrome authorization prompt. This two-MCP workflow does not require an additional browser component installation, does not copy Remote Browser Tool source, and preserves the existing browser session.

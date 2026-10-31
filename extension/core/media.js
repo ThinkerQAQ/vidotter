@@ -111,6 +111,19 @@
     return detected && configAllowsKind(detected.kind, config) ? detected : null;
   }
 
+  // The Bridge index is memory-only (10 minutes). After a restart, publish
+  // recent captures again without surfacing media URLs/cookies to MCP.
+  function recentResourcesForSync(resources, config, now = Date.now()) {
+    return (Array.isArray(resources) ? resources : [])
+      .filter(item => item && configAllowsKind(item.kind, config) &&
+        Number.isInteger(item.tabId) && item.tabId >= 0 &&
+        validHTTPURL(item.url) &&
+        Number(item.detectedAt) > 0 && Number(item.detectedAt) <= now &&
+        now - Number(item.detectedAt) < 10 * 60 * 1000)
+      .sort((a, b) => b.detectedAt - a.detectedAt)
+      .slice(0, 12);
+  }
+
   function hash(value) {
     let result = 2166136261;
     const text = String(value || "");
@@ -186,6 +199,7 @@
     DEFAULT_SNIFFER_CONFIG,
     normalizeSnifferConfig,
     configAllowsKind,
+    recentResourcesForSync,
     classify,
     makeResource,
     displayList,

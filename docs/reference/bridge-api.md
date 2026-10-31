@@ -73,7 +73,9 @@ The following endpoints require `X-VidOtter-Token` on loopback and are **not** p
 | --- | --- |
 | `POST /v1/browser/media` | Extension announces page identity, tab-scoped resource key and media kind; no raw media URL or Cookie. |
 | `GET /v1/browser/media` | Returns short-lived opaque media IDs and sanitized page information. |
-| `POST /v1/browser/media/{id}/download` | MCP requests the extension to submit the matched resource. |
+| `GET /v1/browser/media?refresh=1` | Requests metadata-only resync through the existing extension Native Messaging channel before listing. |
+| `POST /v1/browser/media/{id}/download` | MCP requests the extension to submit the selected opaque ID. |
+| `POST /v1/browser/media/by-page/download` | Match the full page identity within Bridge, request scoped metadata resync if necessary, then submit a matching HLS/MP4 through the extension; never expose raw captured URLs or session data. |
 | `GET /v1/browser/commands/next` | Persistent Native Messaging host long-polls for pending commands. |
 | `POST /v1/browser/commands/result` | Extension acknowledges the submitted task ID; no session details. |
 | `GET /v1/browser/automation` | Return optional browser component install/enable/interaction status. |

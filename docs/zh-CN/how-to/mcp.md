@@ -7,7 +7,7 @@ VidOtter 在现有桌面 Go 程序中增加**13 个可选 MCP 工具**。浏览�
 | 工具 | 用途 |
 | --- | --- |
 | `vidotter_status` | 检查 Bridge 和依赖状态（不会启动 Bridge） |
-| `vidotter_download` | 提交公开 HTTP(S) 媒体或受支持的网页链接，可选字幕 |
+| `vidotter_download` | MP4/M3U8 直链走原生下载；网页默认使用浏览器捕获的 HLS/MP4；`strategy=page` 才显式使用 yt-dlp 网页解析 |
 | `vidotter_list_jobs` | 查询最近的任务状态 |
 | `vidotter_get_job` | 查询单个任务的进度 |
 | `vidotter_control_job` | 暂停、恢复、重试，不提供浏览器凭据 |
@@ -20,6 +20,10 @@ VidOtter 在现有桌面 Go 程序中增加**13 个可选 MCP 工具**。浏览�
 | `vidotter_browser_snapshot` | 读取组件创建的后台页面结构 |
 | `vidotter_browser_click` | 仅本地显式启用自动点击后才能操作已有控件 |
 | `vidotter_browser_close` | 关闭组件自己创建的后台标签页 |
+
+**普通网页默认走浏览器优先。** 在 Edge/Chrome 后台标签页打开网页、正常播放后，调用 `vidotter_download(url=...)`。VidOtter 在 Bridge 内按**完整页面 URL** 匹配短期媒体索引，匹配到 HLS/MP4 后，交由原生下载队列处理；浏览器 Cookie 和请求头仅在提交下载时由扩展读取，不会通过 MCP 返回。未检测到匹配资源时明确返回需要播放的提示，**不会自动回退 yt-dlp**。普通 MP4/M3U8 直链仍可直接下载；只有明确选择 `strategy=page` 才尝试 yt-dlp 解析兼容的公开网页。`strategy=browser` 表示严格要求浏览器捕获。
+
+Bridge 重启或内存索引丢失时，扩展在重新连接及 MCP 请求时**补报十分钟内捕获的非敏感媒体索引**。MCP 列表仍去除页面查询参数；Bridge 内部使用完整页面身份做精确匹配，避免同路径不同视频误选。若同一页面同时有 HLS 和 MP4，优先选择 HLS；只有 DASH/分离轨道时，仍需用户显式选择适用的通用页面解析方式。
 
 下载接口立即返回 `task_id`，不代表已下载完成。用 `vidotter_get_job` 查询结果。
 
@@ -80,7 +84,7 @@ Linux/macOS 使用对应的 `bin/vidotter-linux-...` 或 `bin/vidotter-macos-...
 
 ## 安全边界
 
-- 只接受公开 HTTP(S) 链接。MCP 在提交时拒绝私网地址、非标准端口和包含账号密码的 URL；公开网页解析可能依赖可选的 yt-dlp。
+- 只接受公开 HTTP(S) 链接。MCP 在提交时拒绝私网地址、非标准端口和包含账号密码的 URL。网页默认使用浏览器捕获的 HLS/MP4；只有显式 `strategy=page` 才使用可选的 yt-dlp。
 - 这一输入校验**不能彻底阻止 DNS 重绑定、HTTP 重定向及 yt-dlp 特定访问行为**。不要将私人 Tunnel 共享给不可信的调用者。
 - 浏览器登录态和 Cookie 仍由扩展掌握；MCP 不支持替用户刷新浏览器会话。需要重新授权的任务必须回到扩展完成。
 - MCP 的任务响应不会返回原始源 URL、绝对路径、Bridge Token；不提供任意文件读取、文件删除或全局配置修改。

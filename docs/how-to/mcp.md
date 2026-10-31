@@ -7,7 +7,7 @@ VidOtter exposes **13 optional MCP tools** through the same desktop Go executabl
 | MCP tool | Operation |
 | --- | --- |
 | `vidotter_status` | Check whether the Bridge is online and required tools are installed (does not launch the Bridge). |
-| `vidotter_download` | Enqueue a public HTTP(S) media URL or supported webpage, optionally with subtitles. |
+| `vidotter_download` | Download direct MP4/M3U8 natively; for webpage URLs first use matching browser-captured HLS/MP4. `strategy=page` explicitly opts into yt-dlp resolution. |
 | `vidotter_list_jobs` | List recent download states. |
 | `vidotter_get_job` | Inspect one task and its progress. |
 | `vidotter_control_job` | Pause, resume, or retry without providing browser credentials. |
@@ -20,6 +20,10 @@ VidOtter exposes **13 optional MCP tools** through the same desktop Go executabl
 | `vidotter_browser_snapshot` | Read the owned background page accessibility snapshot. |
 | `vidotter_browser_click` | Click a control on an owned tab **only after local opt-in**. |
 | `vidotter_browser_close` | Close only a component-owned background tab. |
+
+For a webpage URL, the default strategy is **browser-first**: open the page in an Edge/Chrome background tab, start the normal player, then call `vidotter_download(url=...)`. VidOtter matches the **exact page URL** against the extension's short-lived capture index. Matching HLS/MP4 uses the existing native download queue with the browser's request context, captured only at submission time. It never silently retries an uncaptured webpage through yt-dlp. If no matching media was detected, play/reload the page and retry; choose `strategy=page` only when you explicitly want yt-dlp to extract a supported public webpage. MP4/M3U8 direct links work without a browser capture. `strategy=browser` explicitly requires a browser match.
+
+When the Bridge restarts or its in-memory index expires, the extension republishes **only recent media metadata**, on reconnect and on demand, without exposing signed URLs, cookies, or request headers to MCP. Matching checks the full page identity (including query parameters) inside the Bridge, even though MCP listings redact the query. HLS is preferred to MP4 when both are captured; DASH-only or separated-track pages still need an explicitly chosen compatible page resolver.
 
 Download submission returns a `task_id` immediately. Poll `vidotter_get_job` until completed/failed; the submission itself does **not** wait for video transfer.
 
@@ -82,7 +86,7 @@ The profile and runtime key belong in private OS storage, **not** this public Gi
 
 ## Limitations and security
 
-- MCP requires direct public HTTP(S) destinations, rejects local/private addresses and nonstandard ports at submission, and does not accept Cookie/authorization headers. Public webpage resolution may require the optional yt-dlp component.
+- MCP requires public HTTP(S) destinations, rejects local/private addresses and nonstandard ports at submission, and does not accept Cookie/authorization headers. Webpage URLs use browser-captured HLS/MP4 by default; optional yt-dlp is used only with explicit `strategy=page`.
 - This submission-time validation is **not** a complete protection from DNS rebinding, redirects, or source-specific yt-dlp behavior. Do not share the private Tunnel with untrusted clients.
 - Browser-login-dependent downloads and session refresh remain in the **Chrome/Edge extension**, not MCP. `needs-session` jobs cannot be resumed using AI tools.
 - MCP never exposes the Bridge token, local absolute paths, raw source URLs or arbitrary filesystem reads in ordinary job responses. It does not offer deletion or modification of global settings.

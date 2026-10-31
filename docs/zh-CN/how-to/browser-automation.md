@@ -28,6 +28,10 @@ VidOtter 采用**一个产品、一个 MCP 入口、一条私人 Tunnel**。浏�
 
 新用户只需要安装 VidOtter 扩展和 Bridge、授权本机浏览器调试，并按需安装 Browser Automation 组件；不用另外安装 ChatGPT 浏览器插件。组件默认关闭，自动点击需要另行手动启用。**资源已经被扩展捕获时，直接查询资源 ID 下载即可，不需要重新打开网页或点击播放器。**
 
+### 补充验收：浏览器优先 HLS 下载（Windows，2026-10-31）
+
+升级到 v1.5.1 后，使用公开的 [hls.js 演示页](https://hlsjs.video-dev.org/demo/) 验证：Edge 扩展发现多条 HLS 资源，直接调用 `vidotter_download(url="https://hlsjs.video-dev.org/demo/", quality="480")` 返回 `route=browser`，任务 `77ce068babe5` 随后达到 `completed`、100%、1 个输出文件，**未调用 yt-dlp 网页解析器**。另以 W3Schools 公开 HTML Video 页验证网页匹配 MP4 后通过原生下载器完成。此结果仅代表所列样例通过，不保证所有站点或编码兼容。
+
 ## 已连接 Remote Browser Tool 时
 
 如果 ChatGPT 已经连接并正常使用 Remote Browser Tool MCP，**直接复用现有插件**打开后台标签页、查看页面和操作媒体播放，再用 VidOtter 的 `vidotter_list_browser_media` 和 `vidotter_download_browser_media` 完成媒体发现与下载。VidOtter 扩展无需区分页面是由哪个工具打开的。
