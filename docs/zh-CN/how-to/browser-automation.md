@@ -6,17 +6,17 @@ VidOtter 采用**一个产品、一个 MCP 入口、一条私人 Tunnel**。浏�
 
 ## 完整流程
 
-1. 用户在 Edge/Chrome 打开并播放有权下载的媒体（手动操作，或通过可选自动化组件新建后台标签页）。
+1. 用户在 Edge/Chrome 打开并播放媒体（手动操作，或通过可选自动化组件新建后台标签页）。
 2. 现有 VidOtter 扩展的 `chrome.webRequest` 监听器捕获播放时请求的 HLS / DASH / MP4 资源。
 3. 扩展只将 **资源索引元数据** 发给本地 Bridge：标签页作用域的资源 key、媒体类型、页面标题、页面 URL。Bridge 去除 URL 查询参数和片段，生成随机资源 ID，**只在内存中保存 10 分钟**；不索引签名媒体 URL、Cookie 和认证请求头。
 4. `vidotter_list_browser_media` 返回资源 ID、经清理的页面地址及媒体类型。下载前应核对目标页面、标题和剧集，不能盲目取最新一个。
 5. `vidotter_download_browser_media` 通过持久 **Native Messaging** 连接向扩展发出请求。扩展从既有 `chrome.storage.session` 中找到对应资源，**在真正提交任务时**按需读取会话信息，继续执行原有任务构造、Bridge 入队与下载。MCP 只返回任务 ID，再用 `vidotter_get_job` 查询进度。
 
-如果网页没发出媒体网络请求，不能从普通 HTML 凭空推断 m3u8。项目不开发视频网站专用解析器，不绕过 DRM、登录或访问控制。用户应确保自己有权下载、保存相关内容。
+如果网页没发出媒体网络请求，不能从普通 HTML 凭空推断 m3u8。项目不开发视频网站专用解析器，不绕过 DRM、登录或访问控制。媒体权利及合法使用由用户自行负责，参见 README 的法律声明。
 
 ## 已连接 Remote Browser Tool 时
 
-如果 ChatGPT 已经连接并正常使用 Remote Browser Tool MCP，**直接复用现有插件**打开后台标签页、查看页面和操作用户授权的媒体播放，再用 VidOtter 的 `vidotter_list_browser_media` 和 `vidotter_download_browser_media` 完成媒体发现与下载。VidOtter 扩展无需区分页面是由哪个工具打开的。
+如果 ChatGPT 已经连接并正常使用 Remote Browser Tool MCP，**直接复用现有插件**打开后台标签页、查看页面和操作媒体播放，再用 VidOtter 的 `vidotter_list_browser_media` 和 `vidotter_download_browser_media` 完成媒体发现与下载。VidOtter 扩展无需区分页面是由哪个工具打开的。
 
 **这种情况下不要同时启用或调用 VidOtter 内置的 Browser Automation 子组件**，否则会额外建立一个 CDP 客户端，Edge/Chrome 可能再次要求授权。双 MCP 协作无需额外安装浏览器自动化组件，也不会复制 Remote Browser Tool 的代码。
 
@@ -37,7 +37,7 @@ VidOtter 不复用你单独安装的 Remote Browser Tool 的配置、Tunnel、�
 | 操作 | 默认策略 |
 | --- | --- |
 | 查看组件与连接状态 | 允许 |
-| 新建授权网页的后台标签页 | 启用组件后允许 |
+| 新建公开网页的后台标签页 | 启用组件后允许 |
 | 读取和关闭组件创建的标签页 | 启用组件后允许 |
 | 点击自己新建的页面 | **需要单独在本地授权** |
 | 访问/控制用户原有标签页 | **禁止** |
@@ -45,7 +45,7 @@ VidOtter 不复用你单独安装的 Remote Browser Tool 的配置、Tunnel、�
 | AI 直接查看网络原始请求和认证头 | **禁止** |
 | 向 GitHub 提交用户数据、签名 URL、Cookie、私有配置 | **禁止** |
 
-即使只能点击自己创建的页面，点击动作仍可能触发提交表单等副作用；不能仅凭控件文字断言安全。不得用自动点击执行登录、购买、账户管理等操作。浏览器调试访问及媒体下载均需符合用户授权与来源网站规定。
+即使只能点击自己创建的页面，点击动作仍可能触发提交表单等副作用；不能仅凭控件文字断言安全。不得用自动点击执行登录、购买、账户管理等操作。浏览器调试权限和媒体使用均须遵守适用权限与法律。
 
 ## 内部依赖关系
 

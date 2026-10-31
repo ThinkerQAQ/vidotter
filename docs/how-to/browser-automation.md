@@ -6,17 +6,17 @@ VidOtter is a **single product and a single MCP connection**. Browser Automation
 
 ## Media discovery flow
 
-1. The user opens and plays authorized media in Edge/Chrome (manually, or in a dedicated background tab created with the optional browser component).
+1. The user opens and plays media in Edge/Chrome (manually, or in a dedicated background tab created with the optional browser component).
 2. The VidOtter extension's existing `chrome.webRequest` listener captures playable HLS/DASH/MP4 requests.
 3. The extension sends **only metadata** to the authenticated local Bridge: a tab-scoped resource key, media kind, page title, and page URL. Bridge removes URL query strings/fragments and stores an opaque ID **in memory for 10 minutes**. It never puts captured URLs, cookies, or browser headers in this index.
 4. `vidotter_list_browser_media` returns these opaque IDs and sanitized page identity. Match the page and episode **before downloading**.
 5. `vidotter_download_browser_media` asks the extension, through a persistent **Native Messaging** connection, to submit the selected resource. The extension looks up the resource in its existing `chrome.storage.session` cache and retrieves cookies **on demand**, using the unchanged task construction and Bridge download queue. The MCP response contains only a task ID; poll `vidotter_get_job`.
 
-If no network media appears, opening HTML alone is not sufficient. VidOtter never ships site-specific extractors and does not bypass DRM or access controls. Download only content you have permission to retain.
+If no network media appears, opening HTML alone is not sufficient. VidOtter never ships site-specific extractors and does not bypass DRM or access controls. Media licensing and lawful use are the user's responsibility; see the README legal notice.
 
 ## When Remote Browser Tool is already connected
 
-If ChatGPT already has a working Remote Browser Tool MCP connection, **reuse that existing browser tool** for opening background tabs and inspecting or playing user-authorized media. Then use `vidotter_list_browser_media` and `vidotter_download_browser_media` from VidOtter. The VidOtter extension captures media independently of how the tab was opened. **Do not enable or call VidOtter's nested Browser Automation component in this mode**: starting a second CDP client may cause another Edge/Chrome authorization prompt. This two-MCP workflow does not require an additional browser component installation, does not copy Remote Browser Tool source, and preserves the existing browser session.
+If ChatGPT already has a working Remote Browser Tool MCP connection, **reuse that existing browser tool** for opening background tabs and inspecting or playing media. Then use `vidotter_list_browser_media` and `vidotter_download_browser_media` from VidOtter. The VidOtter extension captures media independently of how the tab was opened. **Do not enable or call VidOtter's nested Browser Automation component in this mode**: starting a second CDP client may cause another Edge/Chrome authorization prompt. This two-MCP workflow does not require an additional browser component installation, does not copy Remote Browser Tool source, and preserves the existing browser session.
 
 For users without a separate Remote Browser Tool connection, the optional standalone component described below provides one-product installation and one VidOtter MCP connection; browser authorization may still be required by Edge/Chrome.
 
@@ -35,7 +35,7 @@ The upstream browser component's independent configuration, browser profile, log
 | Browser operation | Default |
 | --- | --- |
 | Read component health | Allowed when installed |
-| Create a new background tab for an authorized public URL | Allowed when enabled |
+| Create a new background tab for a public URL | Allowed when enabled |
 | Snapshot a component-owned tab | Allowed when enabled |
 | Close a component-owned tab | Allowed when enabled |
 | Click on a component-owned tab | **Separate local opt-in** |
@@ -44,7 +44,7 @@ The upstream browser component's independent configuration, browser profile, log
 | Use network/cookie APIs from AI tools | **Denied**; media network access stays inside the extension |
 | Log raw signed media URLs, request headers, or cookies | **Denied** |
 
-Browser clicking can have side effects even on an owned tab; this cannot be made safe just from accessibility labels. Do not use click tools for purchases, login, submitting forms, or account changes. User authorization is required for browsing and any download.
+Browser clicking can have side effects even on an owned tab; this cannot be made safe just from accessibility labels. Do not use click tools for purchases, login, submitting forms, or account changes. Browser access and media use must comply with applicable permissions and laws.
 
 ## Architecture
 

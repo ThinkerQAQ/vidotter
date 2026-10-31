@@ -39,7 +39,7 @@ Popup, Side Panel and Web UI share tasks and settings. Use **Open workspace** in
 
 ## Optional AI / MCP integration
 
-The desktop Bridge includes 13 optional MCP tools for submitting authorized public downloads, checking tasks, controlling retries, and reading completed subtitles. MCP reuses the existing download engine and requires no separate business service. [Setup and security](docs/how-to/mcp.md). The browser extension can now share short-lived opaque media IDs with MCP, and an opt-in Remote Browser Tool component can open isolated background tabs through the same VidOtter Tunnel. Browser session cookies remain exclusively in the extension. [Browser automation setup](docs/how-to/browser-automation.md).
+The desktop Bridge includes 13 optional MCP tools for submitting public media downloads, checking tasks, controlling retries, and reading completed subtitles. MCP reuses the existing download engine and requires no separate business service. [Setup and security](docs/how-to/mcp.md). The browser extension can now share short-lived opaque media IDs with MCP, and an opt-in Remote Browser Tool component can open isolated background tabs through the same VidOtter Tunnel. Browser session cookies remain exclusively in the extension. [Browser automation setup](docs/how-to/browser-automation.md).
 
 ## Documentation
 
@@ -50,7 +50,7 @@ The desktop Bridge includes 13 optional MCP tools for submitting authorized publ
 
 ## Legal Use and Third-Party Services
 
-VidOtter is an independent media management tool, not affiliated with or endorsed by video websites. Use it only for content you are legally entitled to download, store or process, and comply with applicable law and source-site terms. A detectable media URL does not establish permission to download or redistribute the content. VidOtter does not bypass DRM or access-control mechanisms.
+VidOtter is an independent media management tool, not affiliated with or endorsed by video websites. It does not validate the copyright or license status of media, and does not filter downloads based on copyright classification. Users are responsible for complying with applicable laws, source-site terms, and third-party rights when downloading, storing, or distributing content. VidOtter does not bypass DRM or access-control mechanisms.
 
 The [Apache-2.0 License](LICENSE) covers VidOtter's original code, not third-party media or packaged dependencies. See [third-party notices](THIRD_PARTY_NOTICES.md) for separate component terms.
 
