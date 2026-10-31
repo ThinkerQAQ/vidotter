@@ -63,3 +63,21 @@ Handlers commonly return `{ok:false,error}` with 400 for invalid input/state, 40
 Submission is not completion. Poll jobs and inspect status, phase and files; see [task states](../how-to/manage-downloads.md).
 
 Worker-only `progress`, `output`, `files`, `state` actions under `/v1/jobs/{id}/` report execution results. They are not user controls. Field definitions are in `bridge/bridge.go`, `bridge/bridge_jobs.go`, `bridge/subtitle.go` and `bridge/bridge_preferences.go`. The relay contract is in `extension/background.js` and `extension/console-relay.js`; its actions differ from HTTP routes.
+
+
+### Browser media integration (local authenticated API)
+
+The following endpoints require `X-VidOtter-Token` on loopback and are **not** public Internet APIs. Browser media indexes expire after ten minutes and never contain signed media URLs or Cookie headers.
+
+| HTTP route | Responsibility |
+| --- | --- |
+| `POST /v1/browser/media` | Extension announces page identity, tab-scoped resource key and media kind; no raw media URL or Cookie. |
+| `GET /v1/browser/media` | Returns short-lived opaque media IDs and sanitized page information. |
+| `POST /v1/browser/media/{id}/download` | MCP requests the extension to submit the matched resource. |
+| `GET /v1/browser/commands/next` | Persistent Native Messaging host long-polls for pending commands. |
+| `POST /v1/browser/commands/result` | Extension acknowledges the submitted task ID; no session details. |
+| `GET /v1/browser/automation` | Return optional browser component install/enable/interaction status. |
+| `POST /v1/browser/automation` | Local component install and explicit permission action. |
+| `POST /v1/browser/automation/call` | Fixed allowlist for the optional child MCP; interactive clicking is separately opt-in. |
+
+The optional browser component downloads pinned and SHA-256 checked upstream release artifacts into local private Data. The AI-facing interface neither manages independent ChatGPT Tunnels nor exposes cookies or arbitrary browser operations.

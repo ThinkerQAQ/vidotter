@@ -14,30 +14,32 @@ import (
 	"github.com/pelletier/go-toml/v2"
 )
 
-const bridgeVersion = "1.4.1"
+const bridgeVersion = "1.5.0"
 
 type bridgeConfig struct {
-	OutputDir        string `json:"outputDir"`
-	Proxy            string `json:"proxy,omitempty"`
-	ProxyEnabled     *bool  `json:"proxyEnabled,omitempty"`
-	ProxyHost        string `json:"proxyHost"`
-	ProxyPort        int    `json:"proxyPort"`
-	Concurrent       int    `json:"concurrent"`
-	Quality          string `json:"quality"`
-	FFmpegPath       string `json:"ffmpegPath"`
-	YTDLPPath        string `json:"ytDlpPath"`
-	WhisperPath      string `json:"whisperPath"`
-	WhisperModel     string `json:"whisperModel"`
-	LlamaPath        string `json:"llamaPath"`
-	TranslationModel string `json:"translationModel"`
-	OpenMode         string `json:"openMode"`
-	UILanguage       string `json:"uiLanguage"`
-	ShowLogs         bool   `json:"showLogs"`
-	DetectHls        bool   `json:"detectHls"`
-	DetectDash       bool   `json:"detectDash"`
-	DetectMp4        bool   `json:"detectMp4"`
-	LogEnabled       bool   `json:"logEnabled"`
-	LogMaxMB         int    `json:"logMaxMB"`
+	OutputDir                 string `json:"outputDir"`
+	Proxy                     string `json:"proxy,omitempty"`
+	ProxyEnabled              *bool  `json:"proxyEnabled,omitempty"`
+	ProxyHost                 string `json:"proxyHost"`
+	ProxyPort                 int    `json:"proxyPort"`
+	Concurrent                int    `json:"concurrent"`
+	Quality                   string `json:"quality"`
+	FFmpegPath                string `json:"ffmpegPath"`
+	YTDLPPath                 string `json:"ytDlpPath"`
+	WhisperPath               string `json:"whisperPath"`
+	WhisperModel              string `json:"whisperModel"`
+	LlamaPath                 string `json:"llamaPath"`
+	TranslationModel          string `json:"translationModel"`
+	OpenMode                  string `json:"openMode"`
+	UILanguage                string `json:"uiLanguage"`
+	ShowLogs                  bool   `json:"showLogs"`
+	DetectHls                 bool   `json:"detectHls"`
+	DetectDash                bool   `json:"detectDash"`
+	DetectMp4                 bool   `json:"detectMp4"`
+	LogEnabled                bool   `json:"logEnabled"`
+	LogMaxMB                  int    `json:"logMaxMB"`
+	BrowserAutomationEnabled  bool   `json:"browserAutomationEnabled"`
+	BrowserInteractionEnabled bool   `json:"browserInteractionEnabled"`
 }
 
 type fileConfig struct {
@@ -70,6 +72,10 @@ type fileConfig struct {
 		DASH bool `toml:"dash"`
 		MP4  bool `toml:"mp4"`
 	} `toml:"sniffer"`
+	BrowserAutomation struct {
+		Enabled     bool `toml:"enabled"`
+		Interactive bool `toml:"interactive"`
+	} `toml:"browser_automation"`
 	Logging struct {
 		Enabled bool `toml:"enabled"`
 		MaxMB   int  `toml:"max_size_mb"`
@@ -153,6 +159,9 @@ func normalizeBridgeConfig(c bridgeConfig) (bridgeConfig, error) {
 	if c.UILanguage != "en" && c.UILanguage != "zh-CN" {
 		return c, errors.New("invalid interface language")
 	}
+	if !c.BrowserAutomationEnabled {
+		c.BrowserInteractionEnabled = false
+	}
 	if !c.DetectHls && !c.DetectDash && !c.DetectMp4 {
 		return c, errors.New("至少保留一种媒体检测类型")
 	}
@@ -183,6 +192,8 @@ func configToFile(c bridgeConfig) fileConfig {
 	f.Sniffer.HLS = c.DetectHls
 	f.Sniffer.DASH = c.DetectDash
 	f.Sniffer.MP4 = c.DetectMp4
+	f.BrowserAutomation.Enabled = c.BrowserAutomationEnabled
+	f.BrowserAutomation.Interactive = c.BrowserInteractionEnabled
 	f.Logging.Enabled = c.LogEnabled
 	f.Logging.MaxMB = c.LogMaxMB
 	return f
@@ -201,6 +212,7 @@ func configFromFile(f fileConfig) bridgeConfig {
 		OpenMode: f.Interface.OpenMode, UILanguage: f.Interface.Language, ShowLogs: showLogs,
 		DetectHls: f.Sniffer.HLS, DetectDash: f.Sniffer.DASH, DetectMp4: f.Sniffer.MP4,
 		LogEnabled: f.Logging.Enabled, LogMaxMB: f.Logging.MaxMB,
+		BrowserAutomationEnabled: f.BrowserAutomation.Enabled, BrowserInteractionEnabled: f.BrowserAutomation.Interactive,
 	}
 }
 

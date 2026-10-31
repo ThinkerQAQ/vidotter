@@ -6,7 +6,7 @@ VidOtter detects media in Chrome/Edge and downloads it with a local Go Bridge. I
 
 ## Install and download
 
-**FFmpeg license notice (Windows package):** The Windows download includes a separate **FFmpeg Slim** executable using FFmpeg code under **LGPL-2.1-or-later**; it is not licensed as VidOtter's original Apache-2.0 code. For the current [v1.4.1 release](https://github.com/ThinkerQAQ/vidotter/releases/tag/v1.4.1), the [exact corresponding FFmpeg source archive](https://github.com/ThinkerQAQ/vidotter/releases/download/v1.4.1/FFmpeg-n8.1.2-source.tar.gz) is supplied beside the binaries. The Windows archive includes `COPYING.LGPLv2.1` and `ffmpeg-slim-SOURCE.txt` for license and build/source details. Check the matching assets and notices for each version you download. See [third-party notices](THIRD_PARTY_NOTICES.md) and [FFmpeg's license guidance](https://ffmpeg.org/legal.html).
+**FFmpeg license notice (Windows package):** The Windows download includes a separate **FFmpeg Slim** executable using FFmpeg code under **LGPL-2.1-or-later**; it is not licensed as VidOtter's original Apache-2.0 code. For the current [v1.5.0 release](https://github.com/ThinkerQAQ/vidotter/releases/tag/v1.5.0), the [exact corresponding FFmpeg source archive](https://github.com/ThinkerQAQ/vidotter/releases/download/v1.5.0/FFmpeg-n8.1.2-source.tar.gz) is supplied beside the binaries. The Windows archive includes `COPYING.LGPLv2.1` and `ffmpeg-slim-SOURCE.txt` for license and build/source details. Check the matching assets and notices for each version you download. See [third-party notices](THIRD_PARTY_NOTICES.md) and [FFmpeg's license guidance](https://ffmpeg.org/legal.html).
 
 1. Download the archive for your system and CPU from [Releases](https://github.com/ThinkerQAQ/vidotter/releases). Extract the whole archive to a permanent folder.
 2. In that folder run `.\bin\vidotterdev.exe install` in Windows PowerShell, or `./bin/vidotterdev install` on Linux/macOS. Linux/macOS need a separate FFmpeg installation in PATH for merging and muxing.
@@ -39,7 +39,7 @@ Popup, Side Panel and Web UI share tasks and settings. Use **Open workspace** in
 
 ## Optional AI / MCP integration
 
-The desktop Bridge includes six optional MCP tools for submitting authorized public downloads, checking tasks, controlling retries, and reading completed subtitles. MCP reuses the existing download engine and requires no separate business service. [Setup and security](docs/how-to/mcp.md). Browser session cookies remain exclusively in the extension.
+The desktop Bridge includes 13 optional MCP tools for submitting authorized public downloads, checking tasks, controlling retries, and reading completed subtitles. MCP reuses the existing download engine and requires no separate business service. [Setup and security](docs/how-to/mcp.md). The browser extension can now share short-lived opaque media IDs with MCP, and an opt-in Remote Browser Tool component can open isolated background tabs through the same VidOtter Tunnel. Browser session cookies remain exclusively in the extension. [Browser automation setup](docs/how-to/browser-automation.md).
 
 ## Documentation
 

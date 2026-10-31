@@ -23,3 +23,4 @@ VidOtter detects browser media and downloads it on the same computer. Desktop br
 | Change architecture or package a release | [Architecture](architecture/index.md), [maintenance](architecture/maintenance.md) |
 
 Tutorials walk through a result, how-to pages cover individual tasks, reference pages describe fields/contracts, and architecture pages explain implementation decisions. Engineering instructions for agents are in [AGENTS.md](../AGENTS.md).
+\n- [Browser Automation](how-to/browser-automation.md)\n

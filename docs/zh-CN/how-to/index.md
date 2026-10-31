@@ -12,3 +12,4 @@
 | 升级或移动时保留数据 | [升级](upgrade.md) |
 | 手机使用 MP4/HLS 链接 | [Android](android.md) |
 | 定位安装或处理失败 | [故障排查](troubleshoot.md) |
+\n- [浏览器自动化组件](browser-automation.md)\n

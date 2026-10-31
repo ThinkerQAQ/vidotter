@@ -23,3 +23,4 @@ VidOtter 在浏览器发现媒体，在同一台电脑上执行下载。桌面�
 | 修改架构或创建发行包 | [架构](architecture/index.md)、[工程维护](architecture/maintenance.md) |
 
 Tutorial 带读者完成一个结果，How-to 解决单项任务，Reference 列出字段和契约，Architecture 解释实现取舍。Agent 工程约定见 [AGENTS.md](../../AGENTS.md)。
+\n- [浏览器自动化组件](how-to/browser-automation.md)\n

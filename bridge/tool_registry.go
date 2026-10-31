@@ -398,6 +398,7 @@ func newDesktopToolRegistry() *toolRegistry {
 		bridgeRuntimeTool{},
 		networkProxyTool{},
 		goDownloaderTool{},
+		browserAutomationTool{},
 		executableTool{
 			name: "ffmpeg", displayName: "FFmpeg Slim", executableName: "ffmpeg", configKey: "ffmpegPath",
 			description: "无损封装 HLS、TS、fMP4 及分离音视频轨。", delivery: "bundled-sidecar",

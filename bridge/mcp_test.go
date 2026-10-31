@@ -75,8 +75,8 @@ func TestMCPToolProtocolAndRedaction(t *testing.T) {
 	}
 	defer clientSession.Close()
 	list, err := clientSession.ListTools(ctx, nil)
-	if err != nil || len(list.Tools) != 6 {
-		t.Fatalf("want 6 tools, got %d, %v", len(list.Tools), err)
+	if err != nil || len(list.Tools) != 13 {
+		t.Fatalf("want 13 tools, got %d, %v", len(list.Tools), err)
 	}
 	call := func(name string, args any) *mcp.CallToolResult {
 		t.Helper()

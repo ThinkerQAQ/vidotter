@@ -2,7 +2,7 @@
 
 [English](../../how-to/mcp.md) · [Bridge HTTP API](../reference/bridge-api.md)
 
-VidOtter 在现有桌面 Go 程序中增加**六个可选 MCP 工具**。浏览器扩展、MCP 共用同一个认证 Bridge 和下载任务队列，不存在第二套下载器。
+VidOtter 在现有桌面 Go 程序中增加**13 个可选 MCP 工具**。浏览器扩展、MCP 共用同一个认证 Bridge 和下载任务队列，不存在第二套下载器。
 
 | 工具 | 用途 |
 | --- | --- |
@@ -13,6 +13,14 @@ VidOtter 在现有桌面 Go 程序中增加**六个可选 MCP 工具**。浏览�
 | `vidotter_control_job` | 暂停、恢复、重试，不提供浏览器凭据 |
 | `vidotter_read_subtitle` | 读取已完成任务的字幕文件，最大 256 KiB |
 
+| `vidotter_list_browser_media` | 读取扩展抓到的媒体索引（短期资源 ID，不含签名链接和 Cookie） |
+| `vidotter_download_browser_media` | 请扩展按照资源 ID 与当前授权会话提交下载 |
+| `vidotter_browser_status` | 查询可选浏览器自动化的安装与权限状态 |
+| `vidotter_browser_open` | 经可选组件创建公开网页的后台标签页 |
+| `vidotter_browser_snapshot` | 读取组件创建的后台页面结构 |
+| `vidotter_browser_click` | 仅本地显式启用自动点击后才能操作已有控件 |
+| `vidotter_browser_close` | 关闭组件自己创建的后台标签页 |
+
 下载接口立即返回 `task_id`，不代表已下载完成。用 `vidotter_get_job` 查询结果。
 
 ## 配置向导（可选）
@@ -20,6 +28,12 @@ VidOtter 在现有桌面 Go 程序中增加**六个可选 MCP 工具**。浏览�
 先安装官方 tunnel-client。Windows 在发行包目录执行 `powershell -NoProfile -File scripts/Setup-VidOtter-MCP.ps1`；Linux/macOS 执行 `bash scripts/setup-mcp.sh`。向导询问 Tunnel ID 和受限运行密钥，保存到当前用户私有目录（Windows 使用 DPAPI，Unix 使用仅本人可读的文件），运行 doctor，并尽可能设置登录后常驻启动。重复执行时保留已有私有配置，同一个 Tunnel 只应运行一个客户端进程。向导不自动下载 tunnel-client，也不能代替用户在 ChatGPT 中注册和授权。
 
 新版 MCP 2026-07-28 使用 `server/discover` 进行无状态工具发现；旧客户端仍可用 `initialize` 握手，两者共用同一 stdio 连接。
+
+## 可选媒体抓包与浏览器自动化
+
+**只需 VidOtter 一个 MCP 和一个私人 Tunnel。** 通过[浏览器自动化组件](browser-automation.md)按需安装 Remote Browser MCP v0.3.0 原版发行包作为本地 stdio 依赖，无需复制源码或创建第二个插件。VidOtter 只暴露受限白名单：默认不操作用户已有标签页、不执行任意 JavaScript、不访问浏览器存储/Cookie；自动点击必须在本地单独确认后才会开启。
+
+扩展将非敏感媒体索引写入 Bridge 的十分钟内存缓存；MCP 使用资源 ID 请求下载时，通过持久 Native Messaging 让扩展按需读取 Cookie 并按原有流程提交，且会验证 MCP 触发任务的媒体目标是否指向公开网络。
 
 ## 本地 stdio
 

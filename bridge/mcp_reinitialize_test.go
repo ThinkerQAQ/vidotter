@@ -85,8 +85,8 @@ func TestRepeatedInitializeOnOneTunnelStdioChildCreatesFreshMCPToolsSession(t *t
 			t.Fatal("missing tools result")
 		}
 		tools, ok := result["tools"].([]any)
-		if !ok || len(tools) != 6 {
-			t.Fatalf("expected 6 tools, got %d", len(tools))
+		if !ok || len(tools) != 13 {
+			t.Fatalf("expected 13 tools, got %d", len(tools))
 		}
 	}
 	initialize(1)
@@ -185,7 +185,7 @@ func TestModernMCPDiscoveryAndToolsOnSameTunnelChild(t *testing.T) {
 	for _, id := range []int{2, 4} {
 		list := send(id, "tools/list", nil)
 		tools, ok := list["tools"].([]any)
-		if !ok || len(tools) != 6 {
+		if !ok || len(tools) != 13 {
 			t.Fatalf("modern tools/list returned %v", list)
 		}
 		if id == 2 {

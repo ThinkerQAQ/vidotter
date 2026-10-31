@@ -44,6 +44,7 @@ type bridgeTask struct {
 	Quality       string            `json:"quality"`
 	Playlist      string            `json:"playlist"`
 	ResolvePage   bool              `json:"resolvePage"`
+	ViaMCP        bool              `json:"viaMcp,omitempty"`
 	MediaHeaders  map[string]string `json:"mediaHeaders"`
 	PageHeaders   map[string]string `json:"pageHeaders"`
 	MediaCookies  []browserCookie   `json:"mediaCookies"`
@@ -69,16 +70,19 @@ type workerPayload struct {
 }
 
 type bridgeServer struct {
-	state        bridgeState
-	mu           sync.Mutex
-	pending      map[string]pendingBridgeTask
-	jobs         map[string]*bridgeJob
-	jobStorePath string
-	config       bridgeConfig
-	tools        *toolRegistry
-	componentMu  sync.Mutex
-	httpServer   *http.Server
-	restart      func()
+	state            bridgeState
+	mu               sync.Mutex
+	pending          map[string]pendingBridgeTask
+	jobs             map[string]*bridgeJob
+	jobStorePath     string
+	config           bridgeConfig
+	tools            *toolRegistry
+	componentMu      sync.Mutex
+	browserMedia     *browserMediaHub
+	browserInstallMu sync.Mutex
+	browserAgent     *browserAutomationProxy
+	httpServer       *http.Server
+	restart          func()
 }
 
 func bridgeStatePath() (string, error) {
@@ -162,6 +166,12 @@ func runBridge() error {
 	mux.HandleFunc("/console/", server.handleConsole)
 	mux.HandleFunc("/v1/ping", server.handlePing)
 	mux.HandleFunc("/v1/tasks", server.handleTasks)
+	mux.HandleFunc("/v1/browser/media", server.handleBrowserMedia)
+	mux.HandleFunc("/v1/browser/media/", server.handleBrowserMedia)
+	mux.HandleFunc("/v1/browser/commands/next", server.handleBrowserCommands)
+	mux.HandleFunc("/v1/browser/commands/result", server.handleBrowserCommands)
+	mux.HandleFunc("/v1/browser/automation", server.handleBrowserAutomation)
+	mux.HandleFunc("/v1/browser/automation/call", server.handleBrowserAutomationCall)
 	mux.HandleFunc("/v1/playlist/probe", server.handlePlaylistProbe)
 	mux.HandleFunc("/v1/worker/", server.handleWorker)
 	mux.HandleFunc("/v1/environment", server.handleEnvironment)
@@ -279,6 +289,14 @@ func (s *bridgeServer) handleTasks(response http.ResponseWriter, request *http.R
 	var task bridgeTask
 	if decodeBridgeJSON(response, request, &task) != nil {
 		return
+	}
+	if task.ViaMCP {
+		// MCP-triggered browser media must not reach private network services.
+		// The normal extension-only workflow remains unchanged.
+		if err := validateMCPMediaURL(request.Context(), task.URL); err != nil {
+			writeJSON(response, http.StatusBadRequest, map[string]any{"ok": false, "error": "MCP media destination is not public"})
+			return
+		}
 	}
 	s.mu.Lock()
 	config := s.config
@@ -610,6 +628,8 @@ func (s *bridgeServer) handleConfig(response http.ResponseWriter, request *http.
 		config.DetectMp4 = s.config.DetectMp4
 		config.LogEnabled = s.config.LogEnabled
 		config.LogMaxMB = s.config.LogMaxMB
+		config.BrowserAutomationEnabled = s.config.BrowserAutomationEnabled
+		config.BrowserInteractionEnabled = s.config.BrowserInteractionEnabled
 		s.mu.Unlock()
 		normalized, err := normalizeBridgeConfig(config)
 		if err != nil {
@@ -672,6 +692,17 @@ func runNativeHost() error {
 		if err := json.Unmarshal(message, &request); err != nil {
 			_ = writeNativeMessage(os.Stdout, map[string]any{"ok": false, "error": "invalid request"})
 			continue
+		}
+		if request.Command == "subscribe_browser" {
+			state, err := ensureBridge()
+			if err != nil {
+				_ = writeNativeMessage(os.Stdout, map[string]any{"ok": false, "error": "Bridge unavailable"})
+				return err
+			}
+			if err := writeNativeMessage(os.Stdout, map[string]any{"ok": true, "type": "browser_subscribed"}); err != nil {
+				return err
+			}
+			return runNativeBrowserCommands(state)
 		}
 		if request.Command != "ensure_bridge" && request.Command != "status" {
 			_ = writeNativeMessage(os.Stdout, map[string]any{"ok": false, "error": "unknown command"})

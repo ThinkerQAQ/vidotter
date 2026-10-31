@@ -2,7 +2,7 @@
 
 [中文](../zh-CN/how-to/mcp.md) · [Bridge API](../reference/bridge-api.md)
 
-VidOtter exposes **six optional MCP tools** through the same desktop Go executable. The browser extension and MCP share the existing authenticated loopback Bridge and download queue; MCP does not ship a second downloader.
+VidOtter exposes **13 optional MCP tools** through the same desktop Go executable. The browser extension and MCP share the existing authenticated loopback Bridge and download queue; MCP does not ship a second downloader.
 
 | MCP tool | Operation |
 | --- | --- |
@@ -13,6 +13,14 @@ VidOtter exposes **six optional MCP tools** through the same desktop Go executab
 | `vidotter_control_job` | Pause, resume, or retry without providing browser credentials. |
 | `vidotter_read_subtitle` | Read a subtitle already produced for a completed job, up to 256 KiB. |
 
+| `vidotter_list_browser_media` | List extension-captured media using short-lived opaque IDs (never raw signed URLs or cookies). |
+| `vidotter_download_browser_media` | Ask the extension to submit the selected ID using a freshly scoped browser session. |
+| `vidotter_browser_status` | Check optional Browser Automation installation and permission states. |
+| `vidotter_browser_open` | Open a public URL in a new background tab via optional Remote Browser Tool. |
+| `vidotter_browser_snapshot` | Read the owned background page accessibility snapshot. |
+| `vidotter_browser_click` | Click a control on an owned tab **only after local opt-in**. |
+| `vidotter_browser_close` | Close only a component-owned background tab. |
+
 Download submission returns a `task_id` immediately. Poll `vidotter_get_job` until completed/failed; the submission itself does **not** wait for video transfer.
 
 ## Setup helpers (optional)
@@ -20,6 +28,12 @@ Download submission returns a `task_id` immediately. Poll `vidotter_get_job` unt
 After installing the official tunnel-client, Windows users can run `powershell -NoProfile -File scripts/Setup-VidOtter-MCP.ps1` and Linux/macOS users can run `bash scripts/setup-mcp.sh` from the extracted release directory. The setup asks for your Tunnel ID and restricted runtime key, saves them under private user storage (Windows DPAPI; Unix user-readable-only file), runs doctor, and configures an OS login-time tunnel service when supported. Re-running preserves the existing private profile; use only one active daemon per Tunnel. On Windows the current user startup shortcut starts the tunnel at login; Unix uses systemd user services or LaunchAgent. The helpers do **not** download tunnel-client or register a ChatGPT connector on your behalf.
 
 Modern MCP 2026-07-28 clients can discover tools with a self-contained `server/discover` request, while older clients retain the legacy `initialize` protocol. Both are supported over the same stdio connection.
+
+## Optional browser discovery and automation
+
+**No second plugin and no second Tunnel:** the optional [Browser Automation component](browser-automation.md) installs the complete independently maintained Remote Browser MCP v0.3.0 release as a local stdio dependency. It does not copy or fork its code. VidOtter exposes only a restrictive subset of browser tools; arbitrary JavaScript, existing user tabs, raw network requests and cookie access are not exposed to AI. Clicking is disabled until the user explicitly enables it with a local confirmation.
+
+The extension publishes only nonsecret media metadata to Bridge's ten-minute in-memory index, and responds to MCP download requests over a persistent Native Messaging channel. The extension itself fetches cookies only upon actually submitting a download, and the Bridge validates MCP-triggered destinations as public URLs.
 
 ## Local stdio
 

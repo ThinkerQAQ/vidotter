@@ -72,3 +72,14 @@ The Go installer registers Native Messaging and the URL protocol. Installing, de
 ## Documentation changes
 
 Keep English `docs/` and Chinese `docs/zh-CN/` pages aligned. README is the product entry; tutorials lead to a checked result; how-to pages cover individual operations; reference pages list current fields/routes; architecture pages explain ownership and implementation. Check commands against `tools/vidotterdev/main.go`, settings against `bridge/bridge_config.go`, and UI labels against extension sources. Preserve screenshot provenance and distinguish automated checks from browser/device acceptance. Installation guides must distinguish a release archive from a source build and state which operations preserve, move or delete user data.
+
+
+### Browser Automation Component security
+
+- Browser automation is **optional** and is installed from a pinned, SHA256-verified Remote Browser MCP release. Never vendor or copy its source into VidOtter.
+- Do not implement site-specific video extractors, reverse engineer platform protocols, or bypass DRM / account access controls.
+- MCP tools must not reveal browser cookies, raw signed media URLs, authorization headers, or private filesystem paths. Browser media is indexed only in memory and expires after 10 minutes.
+- The embedded browser proxy must create its own background tabs and protect existing tabs. JavaScript evaluation and arbitrary network/cookie-storage access are never enabled.
+- Interactive browser clicking is **off by default** and can only be enabled through an explicit local settings confirmation. Never enable it through MCP.
+- The component must not require or create a second OpenAI Tunnel. Only VidOtter MCP is exposed to AI.
+- Never overwrite the local Data directory when deploying or packaging a release. Optional component sources and installation directories belong in private Data only.
