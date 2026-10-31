@@ -1,10 +1,13 @@
 package vidotter
 
 import (
+	"archive/zip"
+	"bytes"
 	"context"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -28,24 +31,52 @@ func TestNodeReleaseAssetFixedVersion(t *testing.T) {
 		t.Fatal("Android must not install Node.js runtime")
 	}
 }
-func TestNodeArchiveRejectsUnsafePaths(t *testing.T) {
-	valid := "node-" + bundledNodeVersion + "-linux-x64/"
-	asset := "node-" + bundledNodeVersion + "-linux-x64.tar.gz"
-	good := testBrowserArchive(t, map[string]string{
-		valid + "bin/node": "binary",
-		valid + "lib/node_modules/npm/bin/npm-cli.js": "cli",
-		valid + "LICENSE": "node license",
-	})
-	root := t.TempDir()
-	if err := extractMinimalNode(good, asset, root); err != nil {
+func testNodeArchive(t *testing.T, asset string, files map[string]string) []byte {
+	t.Helper()
+	if !strings.HasSuffix(asset, ".zip") {
+		return testBrowserArchive(t, files)
+	}
+	var raw bytes.Buffer
+	writer := zip.NewWriter(&raw)
+	for filename, content := range files {
+		file, err := writer.Create(filename)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := file.Write([]byte(content)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := writer.Close(); err != nil {
 		t.Fatal(err)
 	}
-	for _, entry := range []string{"bin/node", "lib/node_modules/npm/bin/npm-cli.js", "LICENSE"} {
+	return raw.Bytes()
+}
+
+func TestNodeArchiveRejectsUnsafePaths(t *testing.T) {
+	asset, err := nodeReleaseAsset(runtime.GOOS, "amd64")
+	if err != nil {
+		t.Fatal(err)
+	}
+	prefix := strings.TrimSuffix(strings.TrimSuffix(asset, ".zip"), ".tar.gz") + "/"
+	files := []string{"bin/node", "lib/node_modules/npm/bin/npm-cli.js", "LICENSE"}
+	if runtime.GOOS == "windows" {
+		files = []string{"node.exe", "node_modules/npm/bin/npm-cli.js", "LICENSE"}
+	}
+	archiveEntries := make(map[string]string, len(files))
+	for _, name := range files {
+		archiveEntries[prefix+name] = "test fixture"
+	}
+	root := t.TempDir()
+	if err := extractMinimalNode(testNodeArchive(t, asset, archiveEntries), asset, root); err != nil {
+		t.Fatal(err)
+	}
+	for _, entry := range files {
 		if _, err := os.Stat(filepath.Join(root, filepath.FromSlash(entry))); err != nil {
 			t.Fatal(err)
 		}
 	}
-	bad := testBrowserArchive(t, map[string]string{valid + "../node-v24.22.2-linux-x64/bin/node": "evil"})
+	bad := testNodeArchive(t, asset, map[string]string{prefix + "../outside/" + files[0]: "evil"})
 	if err := extractMinimalNode(bad, asset, t.TempDir()); err == nil {
 		t.Fatal("Node archive traversal accepted")
 	}
