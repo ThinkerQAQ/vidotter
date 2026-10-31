@@ -14,6 +14,20 @@ VidOtter 采用**一个产品、一个 MCP 入口、一条私人 Tunnel**。浏�
 
 如果网页没发出媒体网络请求，不能从普通 HTML 凭空推断 m3u8。项目不开发视频网站专用解析器，不绕过 DRM、登录或访问控制。媒体权利及合法使用由用户自行负责，参见 README 的法律声明。
 
+## 已验证：单 VidOtter MCP 完整链路（Windows）
+
+2026 年 10 月 31 日，**仅连接 VidOtter MCP** 完成了 Windows 真实端到端测试，无需另行调用 Remote Browser Tool 插件：
+
+1. `vidotter_status` 确认 Bridge `1.5.0` 可用，`vidotter_browser_status` 确认可选 `v0.3.0` 组件已安装并启用。
+2. `vidotter_browser_open` 为公开的 [MDN CC0 flower.mp4](https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4) 创建独立后台标签页。另一个公开示例页面还完成了 `vidotter_browser_snapshot` 和 `vidotter_browser_close` 验证。
+3. `vidotter_list_browser_media` 返回 `extension_connected=true`、与页面匹配的 MP4 媒体类型及短期 `resource_id`。
+4. `vidotter_download_browser_media` 使用该资源 ID 和 `quality=best` 提交任务；`vidotter_get_job` 返回 **completed、100%、1,128,375 字节、1 个输出文件**。
+5. `vidotter_browser_close` 关闭测试标签页，未选择或修改其他用户标签页。
+
+**已验证范围：** 浏览器打开网页、读取页面结构、关闭自己创建的标签页、扩展发现媒体、提交任务以及下载 MP4。**未验证：** 自动点击播放、HLS/DASH 全量下载，以及 Linux/macOS 的实际浏览器自动化体验。三平台构建和单元测试通过不等同于三平台真实浏览器验收。
+
+新用户只需要安装 VidOtter 扩展和 Bridge、授权本机浏览器调试，并按需安装 Browser Automation 组件；不用另外安装 ChatGPT 浏览器插件。组件默认关闭，自动点击需要另行手动启用。**资源已经被扩展捕获时，直接查询资源 ID 下载即可，不需要重新打开网页或点击播放器。**
+
 ## 已连接 Remote Browser Tool 时
 
 如果 ChatGPT 已经连接并正常使用 Remote Browser Tool MCP，**直接复用现有插件**打开后台标签页、查看页面和操作媒体播放，再用 VidOtter 的 `vidotter_list_browser_media` 和 `vidotter_download_browser_media` 完成媒体发现与下载。VidOtter 扩展无需区分页面是由哪个工具打开的。

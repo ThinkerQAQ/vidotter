@@ -35,6 +35,21 @@ VidOtter 在现有桌面 Go 程序中增加**13 个可选 MCP 工具**。浏览�
 
 扩展将非敏感媒体索引写入 Bridge 的十分钟内存缓存；MCP 使用资源 ID 请求下载时，通过持久 Native Messaging 让扩展按需读取 Cookie 并按原有流程提交，且会验证 MCP 触发任务的媒体目标是否指向公开网络。
 
+### Windows 单 MCP 下载实测流程
+
+在扩展 **设置 → 组件** 启用 Browser Automation 后，只使用 VidOtter MCP：
+
+```text
+vidotter_browser_status
+vidotter_browser_open(url="https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4")
+vidotter_list_browser_media
+vidotter_download_browser_media(resource_id=<列表返回且匹配 MP4 的资源 ID>, quality="best")
+vidotter_get_job(id=<上一步返回的任务 ID>)
+vidotter_browser_close(page_id=<open 返回的标签页 ID>)
+```
+
+所有 ID 都是临时的，必须从前一个工具响应中获取，不能写死。扩展已经捕获媒体时，可直接查询资源和提交下载，不必再次打开或点击播放器。本例已在 Windows 对公开 MP4 完整实测，并不代表所有网站或 HLS/DASH 都已验证；详见[验收记录](browser-automation.md#已验证单-vidotter-mcp-完整链路windows)。
+
 ## 本地 stdio
 
 桌面可执行文件支持 `--mcp-stdio`，例如：

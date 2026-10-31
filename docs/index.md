@@ -12,6 +12,7 @@ VidOtter detects browser media and downloads it on the same computer. Desktop br
 | Download, recognize or translate subtitles | [Subtitles](how-to/subtitles.md) |
 | Pause, recover or delete tasks | [Manage downloads](how-to/manage-downloads.md) |
 | Use ChatGPT or another MCP client | [MCP integration](how-to/mcp.md) |
+| Operate a browser using only VidOtter MCP | [Browser Automation](how-to/browser-automation.md) |
 | Use the larger browser workspace | [Web UI](how-to/use-web-ui.md) |
 | Replace or move program files | [Upgrade and uninstall](how-to/upgrade.md) |
 | Use a mobile media link | [Android](how-to/android.md) |
@@ -23,4 +24,3 @@ VidOtter detects browser media and downloads it on the same computer. Desktop br
 | Change architecture or package a release | [Architecture](architecture/index.md), [maintenance](architecture/maintenance.md) |
 
 Tutorials walk through a result, how-to pages cover individual tasks, reference pages describe fields/contracts, and architecture pages explain implementation decisions. Engineering instructions for agents are in [AGENTS.md](../AGENTS.md).
-\n- [Browser Automation](how-to/browser-automation.md)\n

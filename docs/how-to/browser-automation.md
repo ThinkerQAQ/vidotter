@@ -14,6 +14,20 @@ VidOtter is a **single product and a single MCP connection**. Browser Automation
 
 If no network media appears, opening HTML alone is not sufficient. VidOtter never ships site-specific extractors and does not bypass DRM or access controls. Media licensing and lawful use are the user's responsibility; see the README legal notice.
 
+## Verified single-MCP workflow (Windows)
+
+On October 31, 2026, a Windows installation completed a **real end-to-end smoke test using only VidOtter MCP**, without a separately connected Remote Browser Tool plugin:
+
+1. `vidotter_status` reported Bridge `1.5.0` ready; `vidotter_browser_status` confirmed the optional `v0.3.0` component was installed and enabled.
+2. `vidotter_browser_open` created a dedicated background tab for the public [MDN CC0 flower.mp4](https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4) test video. A separate documentation-page test also passed `vidotter_browser_snapshot` and `vidotter_browser_close`.
+3. `vidotter_list_browser_media` returned `extension_connected=true`, a matching MP4 entry and its short-lived opaque `resource_id`.
+4. `vidotter_download_browser_media` submitted that ID with `quality=best` and returned a queued task ID. `vidotter_get_job` then reported **completed / 100% / 1,128,375 bytes / one output file**.
+5. `vidotter_browser_close` closed the test tab. Existing tabs were not selected or changed.
+
+**What this proves:** browser open, page snapshot, owned-tab close, extension media detection, local job submission, and completed direct MP4 transfer all work together on Windows. Browser autoplay/click, HLS/DASH full-transfer paths, and automated multi-platform browser acceptance **were not covered**. Unit tests and builds run on Windows, Linux, and macOS; this does not establish real browser acceptance on all three.
+
+A newly installed user only needs the VidOtter extension, Bridge, local browser-debugging consent and the optional Browser Automation component. The component is opt-in, and interactive clicking remains off by default. If the browser is already showing the selected media, use `vidotter_list_browser_media` directly; opening a fresh tab or clicking Play is **not required** when the resource is already captured.
+
 ## When Remote Browser Tool is already connected
 
 If ChatGPT already has a working Remote Browser Tool MCP connection, **reuse that existing browser tool** for opening background tabs and inspecting or playing media. Then use `vidotter_list_browser_media` and `vidotter_download_browser_media` from VidOtter. The VidOtter extension captures media independently of how the tab was opened. **Do not enable or call VidOtter's nested Browser Automation component in this mode**: starting a second CDP client may cause another Edge/Chrome authorization prompt. This two-MCP workflow does not require an additional browser component installation, does not copy Remote Browser Tool source, and preserves the existing browser session.

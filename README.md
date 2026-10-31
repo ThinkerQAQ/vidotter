@@ -41,6 +41,8 @@ Popup, Side Panel and Web UI share tasks and settings. Use **Open workspace** in
 
 The desktop Bridge includes 13 optional MCP tools for submitting public media downloads, checking tasks, controlling retries, and reading completed subtitles. MCP reuses the existing download engine and requires no separate business service. [Setup and security](docs/how-to/mcp.md). The browser extension can now share short-lived opaque media IDs with MCP, and an opt-in Remote Browser Tool component can open isolated background tabs through the same VidOtter Tunnel. Browser session cookies remain exclusively in the extension. [Browser automation setup](docs/how-to/browser-automation.md).
 
+The optional Browser Automation component now has a **Windows-verified single-MCP path**: open an isolated background tab, discover a public MP4 with the extension, submit by opaque ID, poll to completion, and close the tab. The smoke test used only public MDN CC0 media; HLS/DASH transfer and browser autoplay are not part of this acceptance. See [tested workflow](docs/how-to/browser-automation.md#verified-single-mcp-workflow-windows).
+
 ## Documentation
 
 - [Quick start](docs/quick-start.md) and [first download](docs/tutorial/first-download.md)

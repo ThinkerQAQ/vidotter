@@ -12,6 +12,7 @@ VidOtter 在浏览器发现媒体，在同一台电脑上执行下载。桌面�
 | 下载、识别或翻译字幕 | [字幕](how-to/subtitles.md) |
 | 暂停、恢复或删除任务 | [任务管理](how-to/manage-downloads.md) |
 | 让 ChatGPT 或其他 MCP 客户端控制下载 | [MCP 接入](how-to/mcp.md) |
+| 只连接 VidOtter MCP 即可操作浏览器 | [浏览器自动化](how-to/browser-automation.md) |
 | 使用大页面工作台 | [Web UI](how-to/use-web-ui.md) |
 | 替换或移动程序目录 | [升级与卸载](how-to/upgrade.md) |
 | 在手机使用媒体链接 | [Android](how-to/android.md) |
@@ -23,4 +24,3 @@ VidOtter 在浏览器发现媒体，在同一台电脑上执行下载。桌面�
 | 修改架构或创建发行包 | [架构](architecture/index.md)、[工程维护](architecture/maintenance.md) |
 
 Tutorial 带读者完成一个结果，How-to 解决单项任务，Reference 列出字段和契约，Architecture 解释实现取舍。Agent 工程约定见 [AGENTS.md](../../AGENTS.md)。
-\n- [浏览器自动化组件](how-to/browser-automation.md)\n

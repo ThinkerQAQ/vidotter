@@ -35,6 +35,21 @@ Modern MCP 2026-07-28 clients can discover tools with a self-contained `server/d
 
 The extension publishes only nonsecret media metadata to Bridge's ten-minute in-memory index, and responds to MCP download requests over a persistent Native Messaging channel. The extension itself fetches cookies only upon actually submitting a download, and the Bridge validates MCP-triggered destinations as public URLs.
 
+### Validated Windows download sequence
+
+When Browser Automation is enabled in **Settings → Components**, use the single VidOtter MCP connection:
+
+```text
+vidotter_browser_status
+vidotter_browser_open(url="https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4")
+vidotter_list_browser_media
+vidotter_download_browser_media(resource_id=<opaque ID from matching MP4>, quality="best")
+vidotter_get_job(id=<task ID returned by the download>)
+vidotter_browser_close(page_id=<page ID returned by open>)
+```
+
+Each ID is ephemeral; read it from the corresponding response, never hard-code it. For a resource already detected in a browser tab, skip `browser_open` and use the media-list/download tools. This direct public MP4 example was confirmed on Windows; it is not a claim of universal HLS/DASH or website compatibility. See [the acceptance results](browser-automation.md#verified-single-mcp-workflow-windows).
+
 ## Local stdio
 
 The installed binary already supports the new argument:
