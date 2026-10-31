@@ -6,7 +6,7 @@ VidOtter 通过 Chrome/Edge 扩展发现网页媒体，由本机 Go Bridge 下�
 
 ## 安装与首次下载
 
-**FFmpeg 许可证声明（Windows 发行包）：** Windows 包附带独立的 **FFmpeg Slim** 可执行文件，所用 FFmpeg 代码采用 **LGPL-2.1-or-later**，不适用 VidOtter 原创代码的 Apache-2.0 授权。当前 [v1.3.2 发行版](https://github.com/ThinkerQAQ/vidotter/releases/tag/v1.3.2)在二进制旁同时提供[准确对应的 FFmpeg 源码包](https://github.com/ThinkerQAQ/vidotter/releases/download/v1.3.2/FFmpeg-n8.1.2-source.tar.gz)；Windows 压缩包内含 `COPYING.LGPLv2.1` 与 `ffmpeg-slim-SOURCE.txt`，说明许可证、源码和构建信息。下载其他版本时应按对应 Release 核实。详见[第三方许可证声明](THIRD_PARTY_NOTICES.md)及 [FFmpeg 官方法律说明](https://ffmpeg.org/legal.html)。
+**FFmpeg 许可证声明（Windows 发行包）：** Windows 包附带独立的 **FFmpeg Slim** 可执行文件，所用 FFmpeg 代码采用 **LGPL-2.1-or-later**，不适用 VidOtter 原创代码的 Apache-2.0 授权。当前 [v1.4.0 发行版](https://github.com/ThinkerQAQ/vidotter/releases/tag/v1.4.0)在二进制旁同时提供[准确对应的 FFmpeg 源码包](https://github.com/ThinkerQAQ/vidotter/releases/download/v1.4.0/FFmpeg-n8.1.2-source.tar.gz)；Windows 压缩包内含 `COPYING.LGPLv2.1` 与 `ffmpeg-slim-SOURCE.txt`，说明许可证、源码和构建信息。下载其他版本时应按对应 Release 核实。详见[第三方许可证声明](THIRD_PARTY_NOTICES.md)及 [FFmpeg 官方法律说明](https://ffmpeg.org/legal.html)。
 
 1. 从 [Releases](https://github.com/ThinkerQAQ/vidotter/releases) 下载适合系统和 CPU 架构的发行包，完整解压到固定目录。
 2. 在解压目录运行安装命令：Windows PowerShell 使用 `.\bin\vidotterdev.exe install`；Linux/macOS 使用 `./bin/vidotterdev install`。Linux/macOS 需另外安装 FFmpeg 并加入 PATH，用于合并和封装。
@@ -36,6 +36,10 @@ VidOtter 通过 Chrome/Edge 扩展发现网页媒体，由本机 Go Bridge 下�
 上图是 v1.3.0 尚未发现媒体时的中文检测页，用于说明界面入口；连接状态与下载结果需按教程在自己的机器上确认。
 
 Popup、Side Panel 和 Web UI 共用任务与设置。从扩展点击“打开工作区”可使用完整页面。设置与运行数据位于 `bin/` 同级的 `Data/`，升级时保留该目录。
+
+## 可选的 AI / MCP 接入
+
+桌面端提供六个 MCP 工具，让 ChatGPT 提交公开媒体下载、查询进度、控制任务和读取已完成字幕。MCP 直接复用现有下载引擎，不新建业务服务；浏览器 Cookie 仍只由扩展管理。详见 [MCP 接入与安全说明](docs/zh-CN/how-to/mcp.md)。
 
 ## 文档
 

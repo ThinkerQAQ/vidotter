@@ -611,6 +611,10 @@ func (s *bridgeServer) handleJobs(response http.ResponseWriter, request *http.Re
 		return
 	}
 	jobID, action := parts[0], parts[1]
+	if action == "subtitle" && request.Method == http.MethodGet {
+		s.handleJobSubtitle(response, request, jobID)
+		return
+	}
 	if action == "progress" && request.Method == http.MethodPost {
 		var update struct {
 			Phase               string `json:"phase"`

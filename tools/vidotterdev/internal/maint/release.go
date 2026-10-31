@@ -75,6 +75,9 @@ func Package(root, requested string, allowMissing bool, source string) error {
 		if err := copyTree(filepath.Join(root, "docs"), filepath.Join(stage, "docs"), nil); err != nil {
 			return err
 		}
+		if err := copyTree(filepath.Join(root, "scripts"), filepath.Join(stage, "scripts"), nil); err != nil {
+			return err
+		}
 		if err := copyTree(filepath.Join(root, ".build", "out", "licenses", t.OS+"-"+t.Arch), filepath.Join(stage, "THIRD_PARTY_LICENSES"), nil); err != nil {
 			return err
 		}

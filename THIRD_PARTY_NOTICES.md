@@ -33,6 +33,12 @@ Windows desktop release packages include the separate CPU build of `llama-server
 
 Upstream project and licensing information: <https://github.com/ggml-org/llama.cpp>
 
+## Model Context Protocol Go SDK
+
+The optional AI integration uses `github.com/modelcontextprotocol/go-sdk` under Apache-2.0. Its transitive Go dependencies are included in the generated per-platform `THIRD_PARTY_LICENSES/` directory of formal desktop releases.
+
+Upstream: <https://github.com/modelcontextprotocol/go-sdk>
+
 ## golang.org/x/mobile
 
 The Android bridge uses `golang.org/x/mobile`, licensed under the BSD 3-Clause License.
