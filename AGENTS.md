@@ -82,4 +82,5 @@ Keep English `docs/` and Chinese `docs/zh-CN/` pages aligned. README is the prod
 - The embedded browser proxy must create its own background tabs and protect existing tabs. JavaScript evaluation and arbitrary network/cookie-storage access are never enabled.
 - Interactive browser clicking is **off by default** and can only be enabled through an explicit local settings confirmation. Never enable it through MCP.
 - The component must not require or create a second OpenAI Tunnel. Only VidOtter MCP is exposed to AI.
+- If Remote Browser Tool MCP is already connected in ChatGPT, prefer that existing browser session for page actions and use VidOtter only for browser media discovery/download. Never start a second CDP browser client from VidOtter in that workflow.
 - Never overwrite the local Data directory when deploying or packaging a release. Optional component sources and installation directories belong in private Data only.

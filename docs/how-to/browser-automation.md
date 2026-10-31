@@ -14,6 +14,12 @@ VidOtter is a **single product and a single MCP connection**. Browser Automation
 
 If no network media appears, opening HTML alone is not sufficient. VidOtter never ships site-specific extractors and does not bypass DRM or access controls. Download only content you have permission to retain.
 
+## When Remote Browser Tool is already connected
+
+If ChatGPT already has a working Remote Browser Tool MCP connection, **reuse that existing browser tool** for opening background tabs and inspecting or playing user-authorized media. Then use `vidotter_list_browser_media` and `vidotter_download_browser_media` from VidOtter. The VidOtter extension captures media independently of how the tab was opened. **Do not enable or call VidOtter's nested Browser Automation component in this mode**: starting a second CDP client may cause another Edge/Chrome authorization prompt. This two-MCP workflow does not require an additional browser component installation, does not copy Remote Browser Tool source, and preserves the existing browser session.
+
+For users without a separate Remote Browser Tool connection, the optional standalone component described below provides one-product installation and one VidOtter MCP connection; browser authorization may still be required by Edge/Chrome.
+
 ## Optional one-product setup
 
 1. Install VidOtter normally; load its browser extension. Ordinary downloads work without Node.js or the optional component.

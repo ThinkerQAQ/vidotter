@@ -50,7 +50,7 @@ type mcpBrowserClickInput struct {
 
 func newVidOtterMCPServer(client *mcpBridgeClient) *mcp.Server {
 	server := mcp.NewServer(&mcp.Implementation{Name: "vidotter", Version: bridgeVersion}, &mcp.ServerOptions{
-		Instructions: "Use VidOtter only for media the user is authorized to download. Standard downloads are asynchronous. For browser media, optionally open a background tab using VidOtter Browser Automation, use the browser extension to capture network media requests after playback, list captured resources, choose the matching page, and submit by opaque ID. Browser automation is a separately installed opt-in component: the user must explicitly enable it locally, with interactive clicking disabled by default. Never use browser tools for login, purchases, form submission, account administration, arbitrary JavaScript, or private/existing tabs. Do not attempt DRM, access control or subscription bypass; no site-specific scrapers. No raw media URLs, cookies or headers may be returned through MCP. Downloads remain on the user's machine.",
+		Instructions: "Use VidOtter only for media the user is authorized to download. Standard downloads are asynchronous. For browser media, first prefer an already-connected Remote Browser Tool MCP for background browser operations, then use VidOtter media listing and download tools; do not start VidOtter browser automation when that existing tool is available, because doing so opens a second CDP client and may prompt the user again. Only when no Remote Browser Tool is connected, optionally use VidOtter Browser Automation to open a background tab. The VidOtter extension captures network media requests after playback; list captured resources, choose the matching page, and submit by opaque ID. Browser automation is a separately installed opt-in component: the user must explicitly enable it locally, with interactive clicking disabled by default. Never use browser tools for login, purchases, form submission, account administration, arbitrary JavaScript, or private/existing tabs. Do not attempt DRM, access control or subscription bypass; no site-specific scrapers. No raw media URLs, cookies or headers may be returned through MCP. Downloads remain on the user's machine.",
 	})
 	mcp.AddTool(server, vidotterMCPTool("vidotter_status", "Check VidOtter", "Read-only Bridge and media dependency availability; does not start Bridge.", true), func(ctx context.Context, req *mcp.CallToolRequest, in struct{}) (*mcp.CallToolResult, mcpStatus, error) {
 		out, err := client.status(ctx)
@@ -97,7 +97,7 @@ func newVidOtterMCPServer(client *mcpBridgeClient) *mcp.Server {
 			return nil, out, err
 		})
 	mcp.AddTool(server, vidotterMCPTool("vidotter_browser_open", "Open authorized browser page",
-		"Open a public webpage in a new background tab of the user's authorized Edge/Chrome via the optional Remote Browser MCP component. Never selects an existing tab or executes custom JS.", false),
+		"Standalone fallback only when no separate Remote Browser Tool MCP is connected: open a public webpage in a new background tab via the optional component. Prefer the existing Remote Browser Tool MCP when present to avoid a second CDP connection. Never select existing tabs or execute custom JS.", false),
 		func(ctx context.Context, req *mcp.CallToolRequest, in mcpBrowserOpenInput) (*mcp.CallToolResult, mcpBrowserActionResult, error) {
 			out, err := client.browserAction(ctx, browserAutomationCall{Name: "browser_open", URL: in.URL})
 			return nil, out, err

@@ -14,6 +14,14 @@ VidOtter 采用**一个产品、一个 MCP 入口、一条私人 Tunnel**。浏�
 
 如果网页没发出媒体网络请求，不能从普通 HTML 凭空推断 m3u8。项目不开发视频网站专用解析器，不绕过 DRM、登录或访问控制。用户应确保自己有权下载、保存相关内容。
 
+## 已连接 Remote Browser Tool 时
+
+如果 ChatGPT 已经连接并正常使用 Remote Browser Tool MCP，**直接复用现有插件**打开后台标签页、查看页面和操作用户授权的媒体播放，再用 VidOtter 的 `vidotter_list_browser_media` 和 `vidotter_download_browser_media` 完成媒体发现与下载。VidOtter 扩展无需区分页面是由哪个工具打开的。
+
+**这种情况下不要同时启用或调用 VidOtter 内置的 Browser Automation 子组件**，否则会额外建立一个 CDP 客户端，Edge/Chrome 可能再次要求授权。双 MCP 协作无需额外安装浏览器自动化组件，也不会复制 Remote Browser Tool 的代码。
+
+对于没有独立 Remote Browser Tool 的用户，下方的可选组件仍可提供单产品安装、单 VidOtter MCP 的能力，但首次连接仍须遵守浏览器自身的授权要求。
+
 ## 用户只需安装 VidOtter
 
 1. 正常安装 VidOtter，并加载浏览器扩展。基础下载无需 Node.js，也不依赖 Remote Browser MCP。
