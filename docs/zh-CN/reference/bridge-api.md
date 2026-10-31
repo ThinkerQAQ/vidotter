@@ -21,6 +21,7 @@ Web UI 操作通过扩展白名单中继，HTTP 页面不获取 Token。Worker �
 | `POST /v1/playlist/probe` | 探测支持的播放列表 |
 | `POST /v1/tasks` | 提交，`202` 返回 `{ok, taskId}` |
 | `GET /v1/jobs` | 任务快照 |
+| `GET /v1/jobs/{id}/subtitle?index=0` | 读取完成任务下已登记的字幕（限制下载目录、256 KiB） |
 | `POST /v1/jobs/clear` | 移除完成、失败记录 |
 | `POST /v1/jobs/{id}/pause` | 暂停活动 Worker |
 | `POST /v1/jobs/{id}/resume` | 继续，必要时刷新会话 |

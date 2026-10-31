@@ -11,6 +11,7 @@ VidOtter detects browser media and downloads it on the same computer. Desktop br
 | Set up tools, proxy and models | [Tool configuration](how-to/configure-tools.md) |
 | Download, recognize or translate subtitles | [Subtitles](how-to/subtitles.md) |
 | Pause, recover or delete tasks | [Manage downloads](how-to/manage-downloads.md) |
+| Use ChatGPT or another MCP client | [MCP integration](how-to/mcp.md) |
 | Use the larger browser workspace | [Web UI](how-to/use-web-ui.md) |
 | Replace or move program files | [Upgrade and uninstall](how-to/upgrade.md) |
 | Use a mobile media link | [Android](how-to/android.md) |

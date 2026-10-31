@@ -14,7 +14,7 @@ import (
 	"github.com/pelletier/go-toml/v2"
 )
 
-const bridgeVersion = "1.3.2"
+const bridgeVersion = "1.4.0"
 
 type bridgeConfig struct {
 	OutputDir        string `json:"outputDir"`

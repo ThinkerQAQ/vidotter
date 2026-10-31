@@ -11,6 +11,7 @@ VidOtter 在浏览器发现媒体，在同一台电脑上执行下载。桌面�
 | 设置工具、代理和模型 | [工具配置](how-to/configure-tools.md) |
 | 下载、识别或翻译字幕 | [字幕](how-to/subtitles.md) |
 | 暂停、恢复或删除任务 | [任务管理](how-to/manage-downloads.md) |
+| 让 ChatGPT 或其他 MCP 客户端控制下载 | [MCP 接入](how-to/mcp.md) |
 | 使用大页面工作台 | [Web UI](how-to/use-web-ui.md) |
 | 替换或移动程序目录 | [升级与卸载](how-to/upgrade.md) |
 | 在手机使用媒体链接 | [Android](how-to/android.md) |

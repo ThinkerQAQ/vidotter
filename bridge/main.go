@@ -143,6 +143,13 @@ func logURLSummary(raw string) string {
 
 // Main runs the desktop command-line application.
 func Main() {
+	if len(os.Args) >= 2 && os.Args[1] == "--mcp-stdio" {
+		if err := runVidOtterMCP(); err != nil {
+			fmt.Fprintln(os.Stderr, "VidOtter MCP:", err)
+			os.Exit(1)
+		}
+		return
+	}
 	if isNativeMessagingInvocation(os.Args[1:]) {
 		if err := runNativeHost(); err != nil {
 			fmt.Fprintln(os.Stderr, err)

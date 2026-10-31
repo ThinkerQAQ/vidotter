@@ -31,6 +31,7 @@ Use standard `git status/diff/log`, `rg`, and file reads/edits for repository wo
 
 - Reuse mature tools and SDKs before implementing infrastructure.
 - Keep the Go core minimal, modular and replaceable. Popup, Side Panel and Web UI share task and settings state.
+- MCP is optional and uses the existing authenticated desktop Bridge. Expose only explicit, bounded AI tools; do not return Bridge tokens, raw URLs or local paths. Tunnel profiles and runtime keys belong only in private OS configuration.
 - Browser page sessions remain in the extension. Never copy Native Messaging secrets, cookies or authorization material into Web UI assets, persistent storage, logs or documentation.
 - The Web UI may serve shared extension assets on loopback; privileged operations must cross the extension relay.
 - Keep tool configuration explicit. Separate read-only detection from downloading, file deletion and other side effects.

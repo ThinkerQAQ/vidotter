@@ -21,6 +21,7 @@ Web UI calls traverse the extension's action allowlist. The HTTP page does not o
 | `POST /v1/playlist/probe` | Inspect supported playlist |
 | `POST /v1/tasks` | Submit; `202` with `{ok, taskId}` |
 | `GET /v1/jobs` | Job snapshots |
+| `GET /v1/jobs/{id}/subtitle?index=0` | Read registered subtitle of a completed job within output directory (max 256 KiB) |
 | `POST /v1/jobs/clear` | Remove completed/failed records |
 | `POST /v1/jobs/{id}/pause` | Pause active worker |
 | `POST /v1/jobs/{id}/resume` | Resume with refreshed session if required |
