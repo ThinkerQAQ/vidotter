@@ -396,12 +396,24 @@
       button.textContent = action.label || action.id;
       button.title = action.description || "";
       button.addEventListener("click", async () => {
+        if (tool.name === "browser-automation" && action.id === "enable-interaction") {
+          // A separate, local user decision is mandatory. MCP cannot enable
+          // interactive browser control on its own.
+          const accepted = window.confirm(
+            "启用浏览器自动点击？\n\n" +
+            "AI 将只能操作自身新建的后台标签页，但页面操作仍可能触发表单、跳转或其他副作用。\n" +
+            "不会开放已有标签页、任意 JavaScript、Cookie 或浏览器存储。\n\n" +
+            "你可以随时在这里停用。"
+          );
+          if (!accepted) return;
+        }
         button.disabled = true;
         api.setMessage("environmentMessage", "正在执行 " + (tool.displayName || tool.name) + "：" + (action.label || action.id) + "…");
         try {
           await api.send("bridge.tool.action", { tool: tool.name, toolAction: action.id });
           const success = action.id === "restart" ? "Bridge 已重启并重新连接。"
             : action.id === "open-output" ? "已打开下载目录。"
+            : tool.name === "browser-automation" ? ("浏览器自动化：" + (action.label || action.id) + "已完成。")
             : (tool.displayName || tool.name) + " 已安装。";
           api.setMessage("environmentMessage", success, "ok");
           await refresh();

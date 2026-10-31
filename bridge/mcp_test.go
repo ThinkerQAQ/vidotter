@@ -74,9 +74,16 @@ func TestMCPToolProtocolAndRedaction(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer clientSession.Close()
+	if init := clientSession.InitializeResult(); init == nil ||
+		!strings.Contains(init.Instructions, "already-connected Remote Browser Tool") ||
+		!strings.Contains(init.Instructions, "second CDP client") {
+		t.Fatal("MCP instructions must prioritize the already-connected browser plugin")
+	} else if strings.Contains(init.Instructions, "authorized to download") {
+		t.Fatal("MCP instructions must not invent a copyright-permission check")
+	}
 	list, err := clientSession.ListTools(ctx, nil)
-	if err != nil || len(list.Tools) != 6 {
-		t.Fatalf("want 6 tools, got %d, %v", len(list.Tools), err)
+	if err != nil || len(list.Tools) != 13 {
+		t.Fatalf("want 13 tools, got %d, %v", len(list.Tools), err)
 	}
 	call := func(name string, args any) *mcp.CallToolResult {
 		t.Helper()

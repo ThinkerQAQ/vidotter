@@ -42,7 +42,7 @@ func newMCPBridgeClient() *mcpBridgeClient {
 			}
 			return state, nil
 		},
-		httpClient: &http.Client{Timeout: 15 * time.Second},
+		httpClient: &http.Client{Timeout: 22 * time.Second},
 	}
 }
 
@@ -340,4 +340,51 @@ func (c *mcpBridgeClient) subtitle(ctx context.Context, id string, index int) (m
 		return resp, err
 	}
 	return resp, nil
+}
+
+func (c *mcpBridgeClient) browserMedia(ctx context.Context) (browserMediaList, error) {
+	var result browserMediaList
+	err := c.request(ctx, false, http.MethodGet, "/v1/browser/media", nil, &result)
+	return result, err
+}
+func (c *mcpBridgeClient) downloadBrowserMedia(ctx context.Context, id, quality string) (mcpDownloadResult, error) {
+	if len(id) != 64 || !regexp.MustCompile("^[0-9a-f]{64}$").MatchString(id) {
+		return mcpDownloadResult{}, errors.New("invalid resource ID")
+	}
+	var reply struct{ TaskID string }
+	err := c.request(ctx, false, http.MethodPost, "/v1/browser/media/"+id+"/download", struct{ Quality string }{Quality: quality}, &reply)
+	if err != nil {
+		return mcpDownloadResult{}, err
+	}
+	if !mcpJobID.MatchString(reply.TaskID) {
+		return mcpDownloadResult{}, errors.New("invalid Bridge task ID")
+	}
+	return mcpDownloadResult{TaskID: reply.TaskID, Status: "queued"}, nil
+}
+
+type mcpBrowserState struct {
+	Installed   bool
+	Enabled     bool
+	Interactive bool
+	Version     string
+}
+type mcpBrowserActionResult struct{ Text string }
+
+func (c *mcpBridgeClient) browserState(ctx context.Context) (mcpBrowserState, error) {
+	var status mcpBrowserState
+	err := c.request(ctx, false, http.MethodGet, "/v1/browser/automation", nil, &status)
+	return status, err
+}
+func (c *mcpBridgeClient) browserAction(ctx context.Context, in browserAutomationCall) (mcpBrowserActionResult, error) {
+	// Browser subprocess cold starts can take longer than ordinary Bridge calls.
+	// Do not let the normal 22-second HTTP timeout cancel browser operations.
+	browserClient := *c
+	if c.httpClient != nil {
+		longClient := *c.httpClient
+		longClient.Timeout = browserAutomationTimeout + 12*time.Second
+		browserClient.httpClient = &longClient
+	}
+	var result mcpBrowserActionResult
+	err := browserClient.request(ctx, false, http.MethodPost, "/v1/browser/automation/call", in, &result)
+	return result, err
 }

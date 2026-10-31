@@ -39,6 +39,14 @@ The optional AI integration uses `github.com/modelcontextprotocol/go-sdk` under 
 
 Upstream: <https://github.com/modelcontextprotocol/go-sdk>
 
+## Optional Remote Browser MCP and Node.js runtime
+
+VidOtter can install the separately maintained [Remote Browser MCP](https://github.com/ThinkerQAQ/remote-browser-mcp) **v0.3.0** from its verified GitHub Release. This optional external component remains Apache-2.0, and its own LICENSE and THIRD_PARTY_NOTICES are preserved. It is installed on demand into the user's local Data directory and is not embedded in the VidOtter source repository or desktop Release.
+
+The optional setup installs npm dependencies from the pinned upstream package-lock using integrity checks and with npm lifecycle scripts disabled. The upstream project's own dependency notices apply. When no compatible Node.js is installed, VidOtter may bootstrap the official [Node.js](https://nodejs.org/en/about/previous-releases) **v24.22.2 LTS** binary from nodejs.org, SHA-256 verified against the corresponding official SHASUMS256.txt. Node.js is MIT-licensed with bundled third-party dependency notices; its LICENSE is preserved locally. The official npm package and its license files are retained.
+
+Neither dependency grants rights to download third-party audiovisual content, bypass DRM, nor control websites without the user's authorization.
+
 ## golang.org/x/mobile
 
 The Android bridge uses `golang.org/x/mobile`, licensed under the BSD 3-Clause License.

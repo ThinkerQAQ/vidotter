@@ -6,7 +6,7 @@ VidOtter 通过 Chrome/Edge 扩展发现网页媒体，由本机 Go Bridge 下�
 
 ## 安装与首次下载
 
-**FFmpeg 许可证声明（Windows 发行包）：** Windows 包附带独立的 **FFmpeg Slim** 可执行文件，所用 FFmpeg 代码采用 **LGPL-2.1-or-later**，不适用 VidOtter 原创代码的 Apache-2.0 授权。当前 [v1.4.1 发行版](https://github.com/ThinkerQAQ/vidotter/releases/tag/v1.4.1)在二进制旁同时提供[准确对应的 FFmpeg 源码包](https://github.com/ThinkerQAQ/vidotter/releases/download/v1.4.1/FFmpeg-n8.1.2-source.tar.gz)；Windows 压缩包内含 `COPYING.LGPLv2.1` 与 `ffmpeg-slim-SOURCE.txt`，说明许可证、源码和构建信息。下载其他版本时应按对应 Release 核实。详见[第三方许可证声明](THIRD_PARTY_NOTICES.md)及 [FFmpeg 官方法律说明](https://ffmpeg.org/legal.html)。
+**FFmpeg 许可证声明（Windows 发行包）：** Windows 包附带独立的 **FFmpeg Slim** 可执行文件，所用 FFmpeg 代码采用 **LGPL-2.1-or-later**，不适用 VidOtter 原创代码的 Apache-2.0 授权。当前 [v1.5.0 发行版](https://github.com/ThinkerQAQ/vidotter/releases/tag/v1.5.0)在二进制旁同时提供[准确对应的 FFmpeg 源码包](https://github.com/ThinkerQAQ/vidotter/releases/download/v1.5.0/FFmpeg-n8.1.2-source.tar.gz)；Windows 压缩包内含 `COPYING.LGPLv2.1` 与 `ffmpeg-slim-SOURCE.txt`，说明许可证、源码和构建信息。下载其他版本时应按对应 Release 核实。详见[第三方许可证声明](THIRD_PARTY_NOTICES.md)及 [FFmpeg 官方法律说明](https://ffmpeg.org/legal.html)。
 
 1. 从 [Releases](https://github.com/ThinkerQAQ/vidotter/releases) 下载适合系统和 CPU 架构的发行包，完整解压到固定目录。
 2. 在解压目录运行安装命令：Windows PowerShell 使用 `.\bin\vidotterdev.exe install`；Linux/macOS 使用 `./bin/vidotterdev install`。Linux/macOS 需另外安装 FFmpeg 并加入 PATH，用于合并和封装。
@@ -39,7 +39,9 @@ Popup、Side Panel 和 Web UI 共用任务与设置。从扩展点击“打开�
 
 ## 可选的 AI / MCP 接入
 
-桌面端提供六个 MCP 工具，让 ChatGPT 提交公开媒体下载、查询进度、控制任务和读取已完成字幕。MCP 直接复用现有下载引擎，不新建业务服务；浏览器 Cookie 仍只由扩展管理。详见 [MCP 接入与安全说明](docs/zh-CN/how-to/mcp.md)。
+桌面端提供 13 个 MCP 工具，让 ChatGPT 提交公开媒体下载、查询进度、控制任务和读取已完成字幕。MCP 直接复用现有下载引擎，不新建业务服务；浏览器 Cookie 仍只由扩展管理。扩展捕获的媒体通过短期资源 ID 供 MCP 查询；可选安装独立的 Remote Browser Tool 组件，通过同一条 VidOtter Tunnel 操作受限的后台标签页。详见[浏览器自动化组件](docs/zh-CN/how-to/browser-automation.md)。详见 [MCP 接入与安全说明](docs/zh-CN/how-to/mcp.md)。
+
+可选的 Browser Automation 组件现已通过 **Windows 单 MCP 端到端验证**：新建独立后台标签页、由扩展发现公开 MP4、按资源 ID 提交下载、查询完成状态、关闭测试页。测试仅使用 MDN CC0 公开素材；HLS/DASH 下载及自动播放未纳入此次验收。详见[实测流程](docs/zh-CN/how-to/browser-automation.md#已验证单-vidotter-mcp-完整链路windows)。
 
 ## 文档
 
@@ -50,7 +52,7 @@ Popup、Side Panel 和 Web UI 共用任务与设置。从扩展点击“打开�
 
 ## 合法使用与第三方服务声明
 
-VidOtter 是独立的媒体管理工具，与视频平台不存在官方关联。使用者应确保依法有权下载、保存或处理相关内容，并遵守适用法律和来源网站的服务条款。检测到媒体地址不代表取得下载、转载或再分发授权。本项目不绕过 DRM 或访问控制机制。
+VidOtter 是独立的媒体管理工具，与视频平台不存在官方关联。工具不验证媒体的版权或许可状态，也不按照版权归属对下载进行筛选。用户自行负责其下载、保存和分发行为符合适用法律、来源网站条款及第三方权益。项目不绕过 DRM 或访问控制机制。
 
 [Apache-2.0 License](LICENSE) 仅适用于 VidOtter 原创代码，不代表获得第三方媒体内容或打包依赖的授权。第三方组件仍受各自许可证约束，详见[第三方许可证说明](THIRD_PARTY_NOTICES.md)。
 

@@ -3,6 +3,78 @@
 importScripts("core/media.js", "core/store.js", "core/cookies.js", "core/launcher.js");
 
 const requestMeta = new Map();
+
+// This is a single private Native Messaging connection, independent from the
+// regular one-shot ensure_bridge requests. It allows MCP to ask the extension
+// to submit a media item without moving cookies or signed URLs into AI tools.
+let browserCommandPort = null;
+let browserCommandRetry = null;
+
+async function handleBrowserCommand(command) {
+  if (!command || command.type !== "browser_media_download") return;
+  const reply = { commandId: command.commandId, ok: false };
+  try {
+    if (!command.expiresAt || Date.now() >= Date.parse(command.expiresAt)) {
+      throw new Error("expired browser command");
+    }
+    if (!Number.isInteger(command.tabId) || !command.resourceKey) {
+      throw new Error("invalid command");
+    }
+    const [resources, tab] = await Promise.all([
+      VidOtterStore.get(command.tabId),
+      chrome.tabs.get(command.tabId)
+    ]);
+    const resource = resources.find(item => item.id === command.resourceKey);
+    if (!resource || !/^https?:\/\//.test(String(tab.url || ""))) {
+      throw new Error("resource no longer present");
+    }
+    const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(tab.url));
+    const pageHash = [...new Uint8Array(digest)].map(value => value.toString(16).padStart(2, "0")).join("");
+    if (pageHash !== command.pageHash) {
+      throw new Error("browser tab navigated since capture");
+    }
+    const page = { url: tab.url, title: tab.title || "video", userAgent: navigator.userAgent };
+    const result = await submitBridgeTask(resource, page, command.quality || "best", "single", undefined, true);
+    reply.ok = true;
+    reply.taskId = result.taskId;
+  } catch (_) {
+    // The Bridge's public MCP response never includes details from the
+    // browser session or media URL; errors stay deliberately generic.
+    reply.error = "cannot submit browser media";
+  }
+  try {
+    await bridgeFetch("/v1/browser/commands/result", {
+      method: "POST", body: JSON.stringify(reply)
+    });
+  } catch (_) {
+    console.warn("[media-sniffer] browser command acknowledgement unavailable");
+  }
+}
+
+function connectBrowserCommands() {
+  if (browserCommandPort) return;
+  try {
+    const port = chrome.runtime.connectNative("com.vidotter.bridge");
+    browserCommandPort = port;
+    port.onMessage.addListener(message => {
+      if (message?.type === "browser_media_download") {
+        handleBrowserCommand(message).catch(() => {});
+      }
+    });
+    port.onDisconnect.addListener(() => {
+      if (browserCommandPort === port) browserCommandPort = null;
+      if (browserCommandRetry) clearTimeout(browserCommandRetry);
+      browserCommandRetry = setTimeout(() => {
+        browserCommandRetry = null;
+        connectBrowserCommands();
+      }, 5000);
+    });
+    port.postMessage({ command: "subscribe_browser" });
+  } catch (_) {
+    browserCommandPort = null;
+  }
+}
+connectBrowserCommands();
 const tabQueues = new Map();
 const DEFAULT_OPEN_MODE = "popup";
 const POPUP_PATH = "popup/popup.html";
@@ -187,8 +259,9 @@ async function probeBridgePlaylist(resource, page, quality) {
   });
 }
 
-async function submitBridgeTask(resource, page, quality, playlist, subtitles) {
+async function submitBridgeTask(resource, page, quality, playlist, subtitles, fromMCP = false) {
   const task = await buildBridgeTask(resource, page, quality, playlist || "single", subtitles);
+  if (fromMCP) task.viaMcp = true;
   return bridgeFetch("/v1/tasks", {
     method: "POST",
     body: JSON.stringify(task)
@@ -321,6 +394,26 @@ async function record(input) {
   if (!resource) return;
   const items = await enqueue(resource.tabId, () => VidOtterStore.put(resource));
   const visibleItems = items.filter(item => VidOtterMedia.configAllowsKind(item.kind, currentMediaSnifferConfig));
+
+  // Only nonsecret metadata is announced. Never send the resource URL,
+  // authorization headers, or cookies to MCP/browser media listings.
+  try {
+    const tab = await chrome.tabs.get(resource.tabId);
+    if (/^https?:\/\//.test(String(tab.url || ""))) {
+      await bridgeFetch("/v1/browser/media", {
+        method: "POST",
+        body: JSON.stringify({
+          resourceKey: resource.id,
+          tabId: resource.tabId,
+          kind: resource.kind,
+          pageTitle: tab.title || "",
+          pageUrl: tab.url
+        })
+      });
+    }
+  } catch (_) {
+    // Sniffing still works without the optional MCP media index.
+  }
   await chrome.action.setBadgeBackgroundColor({ tabId: resource.tabId, color: "#2563eb" });
   await chrome.action.setBadgeText({ tabId: resource.tabId, text: String(Math.min(visibleItems.length, 99)) });
 }
@@ -544,7 +637,16 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         .then(session => sendResponse({ ok: true, pid: session.pid }), error => sendResponse({ ok: false, error: error.message || String(error) }));
       return true;
     }
-    if (tool === "go-downloader" && action === "open-output") {
+    if (tool === "browser-automation" &&
+      ["install", "enable", "disable", "enable-interaction", "disable-interaction"].includes(action)) {
+    bridgeFetch("/v1/browser/automation", {
+      method: "POST",
+      body: JSON.stringify({ action })
+    }).then(result => sendResponse(result), error =>
+      sendResponse({ ok: false, error: error.message || String(error) }));
+    return true;
+  }
+  if (tool === "go-downloader" && action === "open-output") {
       bridgeFetch("/v1/open-output", { method: "POST" })
         .then(result => sendResponse(result), error => sendResponse({ ok: false, error: error.message || String(error) }));
       return true;

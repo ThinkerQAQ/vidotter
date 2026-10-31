@@ -63,3 +63,21 @@ Web UI 操作通过扩展白名单中继，HTTP 页面不获取 Token。Worker �
 提交不等于完成，应轮询任务并检查状态、阶段和文件，见[任务状态](../how-to/manage-downloads.md)。
 
 `/v1/jobs/{id}/` 下的 `progress`、`output`、`files`、`state` 供 Worker 上报结果，不是用户控制。字段见 `bridge/bridge.go`、`bridge/bridge_jobs.go`、`bridge/subtitle.go`、`bridge/bridge_preferences.go`。中继契约见 `extension/background.js` 和 `extension/console-relay.js`，中继动作与 HTTP 路由不同。
+
+
+### Browser media integration (local authenticated API)
+
+The following endpoints require `X-VidOtter-Token` on loopback and are **not** public Internet APIs. Browser media indexes expire after ten minutes and never contain signed media URLs or Cookie headers.
+
+| HTTP route | Responsibility |
+| --- | --- |
+| `POST /v1/browser/media` | Extension announces page identity, tab-scoped resource key and media kind; no raw media URL or Cookie. |
+| `GET /v1/browser/media` | Returns short-lived opaque media IDs and sanitized page information. |
+| `POST /v1/browser/media/{id}/download` | MCP requests the extension to submit the matched resource. |
+| `GET /v1/browser/commands/next` | Persistent Native Messaging host long-polls for pending commands. |
+| `POST /v1/browser/commands/result` | Extension acknowledges the submitted task ID; no session details. |
+| `GET /v1/browser/automation` | Return optional browser component install/enable/interaction status. |
+| `POST /v1/browser/automation` | Local component install and explicit permission action. |
+| `POST /v1/browser/automation/call` | Fixed allowlist for the optional child MCP; interactive clicking is separately opt-in. |
+
+The optional browser component downloads pinned and SHA-256 checked upstream release artifacts into local private Data. The AI-facing interface neither manages independent ChatGPT Tunnels nor exposes cookies or arbitrary browser operations.

@@ -12,3 +12,4 @@ For a first installation, use [first run](../tutorial/first-run-on-new-machine.m
 | Preserve data when upgrading or moving | [Upgrade](upgrade.md) |
 | Use MP4/HLS links on a phone | [Android](android.md) |
 | Diagnose failed setup or processing | [Troubleshooting](troubleshoot.md) |
+\n- [Browser Automation](browser-automation.md)\n
