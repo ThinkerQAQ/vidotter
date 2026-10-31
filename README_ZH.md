@@ -6,6 +6,8 @@ VidOtter 通过 Chrome/Edge 扩展发现网页媒体，由本机 Go Bridge 下�
 
 ## 安装与首次下载
 
+**FFmpeg 许可证声明（Windows 发行包）：** Windows 包附带独立的 **FFmpeg Slim** 可执行文件，所用 FFmpeg 代码采用 **LGPL-2.1-or-later**，不适用 VidOtter 原创代码的 Apache-2.0 授权。当前 [v1.3.1 发行版](https://github.com/ThinkerQAQ/vidotter/releases/tag/v1.3.1)在二进制旁同时提供[准确对应的 FFmpeg 源码包](https://github.com/ThinkerQAQ/vidotter/releases/download/v1.3.1/FFmpeg-n8.1.2-source.tar.gz)；Windows 压缩包内含 `COPYING.LGPLv2.1` 与 `ffmpeg-slim-SOURCE.txt`，说明许可证、源码和构建信息。下载其他版本时应按对应 Release 核实。详见[第三方许可证声明](THIRD_PARTY_NOTICES.md)及 [FFmpeg 官方法律说明](https://ffmpeg.org/legal.html)。
+
 1. 从 [Releases](https://github.com/ThinkerQAQ/vidotter/releases) 下载适合系统和 CPU 架构的发行包，完整解压到固定目录。
 2. 在解压目录运行安装命令：Windows PowerShell 使用 `.\bin\vidotterdev.exe install`；Linux/macOS 使用 `./bin/vidotterdev install`。Linux/macOS 需另外安装 FFmpeg 并加入 PATH，用于合并和封装。
 3. 打开 `chrome://extensions` 或 `edge://extensions`，开启“开发人员模式”，选择“加载解压缩的扩展”，加载 `extension/`。
