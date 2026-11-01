@@ -1,0 +1,65 @@
+name: Build offline installers (acceptance candidates)
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Existing release with complete native archives
+        required: true
+        default: v1.6.2
+  pull_request:
+    paths:
+      - '.github/workflows/installer-smoke.yml'
+      - 'scripts/build-offline-installer.py'
+      - 'tools/vidotterdev/**'
+permissions:
+  contents: read
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            slug: linux-amd64
+          - os: windows-2025
+            slug: windows-amd64
+          - os: macos-15-intel
+            slug: macos-amd64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v6
+        with:
+          go-version: '1.27.1'
+          cache: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Install Qt IFW build-tool downloader
+        run: python -m pip install --disable-pip-version-check aqtinstall==3.3.0
+      - name: Install Linux Qt runtime dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libxkbcommon-x11-0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-render-util0 libxcb-xkb1 libxcb-util1
+      - name: Build verified release installer
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.release_tag || 'v1.6.2' }}
+        shell: bash
+        run: |
+          python scripts/build-offline-installer.py \
+            --tag "$RELEASE_TAG" \
+            --tools-root "$RUNNER_TEMP/qtifw" \
+            --working-dir "$RUNNER_TEMP/release-work" \
+            --output-dir "$RUNNER_TEMP/installer-output"
+      - name: Linux headless install/uninstall & Data preservation
+        if: runner.os == 'Linux'
+        shell: bash
+        run: bash scripts/smoke-offline-installer.sh "$RUNNER_TEMP/installer-output/VidOtter-Setup-${{ inputs.release_tag || 'v1.6.2' }}-linux-amd64.run"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: installer-candidate-${{ matrix.slug }}
+          path: ${{ runner.temp }}/installer-output/*
+          if-no-files-found: error
+          retention-days: 7

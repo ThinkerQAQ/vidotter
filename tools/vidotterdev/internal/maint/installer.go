@@ -167,8 +167,8 @@ func prepareInstaller(destination, stage, ver, targetOS string) error {
 Component.prototype.createOperations = function() {
     component.createOperations();
     component.addOperation("Execute",
-        "@TargetDir@/bin/%s", "install",
-        "UNDOEXECUTE", "@TargetDir@/bin/%s", "uninstall");
+        "@TargetDir@/bin/%s", "install", "--root", "@TargetDir@",
+        "UNDOEXECUTE", "@TargetDir@/bin/%s", "uninstall", "--root", "@TargetDir@");
 }
 `, bridgeInstaller, bridgeInstaller)
 	if err := os.WriteFile(filepath.Join(meta, "installscript.qs"), []byte(script), 0o644); err != nil {

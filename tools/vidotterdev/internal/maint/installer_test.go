@@ -45,7 +45,7 @@ func TestPrepareInstallerPreservesData(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(string(script), `"install"`) || !strings.Contains(string(script), `"uninstall"`) {
+	if !strings.Contains(string(script), `"install", "--root", "@TargetDir@"`) || !strings.Contains(string(script), `"uninstall", "--root", "@TargetDir@"`) {
 		t.Fatal("installer must register and unregister the Native Messaging host")
 	}
 	cfg, err := os.ReadFile(filepath.Join(destination, "config", "config.xml"))

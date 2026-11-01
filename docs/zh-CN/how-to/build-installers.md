@@ -56,6 +56,18 @@ macOS 使用 `--os darwin --arch amd64/arm64` 并输出 `.dmg`。
 选择“加载解压缩的扩展”，指向安装位置的 `extension/`。
 首次授权后，按当前机制由扩展通过 Native Messaging 按需启动 Bridge。
 
+## CI 候选安装包
+
+[安装器 CI 工作流](../../../.github/workflows/installer-smoke.yml)会从已发布的
+Release 下载正式归档，核验 SHA-256，然后在 Windows、macOS Intel、Linux amd64
+构建离线安装器候选文件。CI 为了可复现使用 `aqtinstall` 安装固定版本
+**Qt IFW 4.7**；正式的 Qt IFW 4.11 工具可通过 Qt Online Installer 安装，
+还需要另行验收。所有 CI 产物只是短期 Actions 附件，**不会自动发布 Release**。
+Linux CI 还会在临时 HOME 下执行真实安装、卸载和 Data 保留测试。
+
+2026-11-01 已使用完整 v1.6.2 发行包通过 Linux amd64 命令行安装/卸载测试；
+Windows、macOS 图形界面和浏览器扩展首次安装仍未完成实机验收。
+
 ## 发布前必须验收
 
 - 三平台生成真正能打开的离线安装器，不以单元测试代替图形验收。
@@ -63,7 +75,8 @@ macOS 使用 `--os darwin --arch amd64/arm64` 并输出 `.dmg`。
 - 升级前在 `Data/` 放入测试配置和任务，升级后验证未被覆盖。
 - 卸载后 Native Messaging 注册消失，`Data/` 原样保留。
 - Windows、macOS Intel/Apple Silicon、Linux amd64/arm64 分别验证。
-- 审查 Qt IFW 和原有第三方许可证，校验发布附件 SHA256，并处理需要的代码签名。
+- 审查 Qt IFW GPLv3 及其例外条款、对应源码分发义务与原有第三方许可证；
+  校验发布附件 SHA256，并处理需要的代码签名。
 
 验收前，**现有压缩包 + 手动运行 `vidotterdev install` 仍是正式可用方式**。
 

@@ -26,7 +26,7 @@ desktop graphical session and compatible Qt platform dependencies.
 
 ## Build an offline installer
 
-1. Install **Qt Installer Framework 4.11.0**'s build tools on the build machine,
+1. For a current official toolchain, install **Qt Installer Framework 4.11.0**'s build tools on the build machine,
    using Qt Online Installer's **Qt → Build tools** category. Verify
    `binarycreator` is on PATH. This is a **build-time-only** dependency.
    Review license obligations for shipped Qt IFW binaries before public release.
@@ -65,6 +65,21 @@ folder. Restart or reload the extension if the connection status remains
 unhealthy. The installer cannot silently add an unmanaged Chrome/Edge
 extension on arbitrary consumer machines.
 
+## Automated candidate workflow
+
+[Installer CI workflow](../../.github/workflows/installer-smoke.yml) pulls the existing
+GitHub Release archive, checks SHA-256, then builds offline installer candidates
+on Windows, macOS Intel, and Linux amd64. It uses pinned Qt IFW **4.7** via
+`aqtinstall` for reproducible open-source CI; Qt IFW 4.11 is available through
+the official Qt Online Installer and needs separate release validation.
+Candidates are temporary workflow artifacts, **not published Releases**.
+The Linux CI also performs an isolated command-line install/uninstall smoke test,
+including explicit target-directory registration and retained `Data/`.
+
+A Linux amd64 command-line build/install/uninstall test using the complete
+v1.6.2 release archive passed on 2026-11-01. Windows, macOS GUI, and browser
+extension onboarding are **not yet verified**.
+
 ## Release acceptance checklist
 
 - Verify `binarycreator` produces a self-contained installer and the
@@ -75,7 +90,8 @@ extension on arbitrary consumer machines.
   Ensure active downloads are stopped safely before attempting replacement.
 - Uninstall and verify Native Messaging is removed but `Data/` persists.
 - Test Windows, macOS Intel/Apple Silicon, and Linux amd64/arm64 separately.
-- Recheck all third-party license files and installer redistribution terms.
+- Recheck all third-party license files, **Qt IFW GPLv3 with exception**
+  redistribution/source obligations, and installer redistribution terms.
 - Sign/notarize platform deliverables where applicable, verify checksums,
   then upload the installer assets to GitHub Releases alongside archives.
 
