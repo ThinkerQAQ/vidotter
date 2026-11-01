@@ -123,6 +123,9 @@ func summarizeMCPJob(j bridgeJob) mcpJobSummary {
 	if j.Status == "waiting_for_browser" {
 		s.RequiresUserAction = true
 		s.ActionMessage = "请在浏览器中完成必要操作并播放视频；媒体出现后会自动继续下载。"
+		if j.WaitReason == "media_expired" || j.WaitReason == "media_access_denied" {
+			s.ActionMessage = "媒体访问失败，请检查网站播放权限并重新播放；仅捕获到新媒体后才会继续原任务。"
+		}
 	} else if j.Status == "failed" && j.Phase == "waiting-for-media" {
 		s.RequiresUserAction = true
 		s.ActionMessage = "等待媒体已超时，请重新打开页面并提交下载。"

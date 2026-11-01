@@ -23,12 +23,15 @@ type browserMediaAnnouncement struct {
 	Kind        string
 	PageTitle   string
 	PageURL     string
+	CapturedAt  int64
+	ExpiresAt   int64
 }
 type browserMediaItem struct {
 	ID          string    `json:"id"`
 	Kind        string    `json:"kind"`
 	PageTitle   string    `json:"page_title"`
 	PageURL     string    `json:"page_url"`
+	ExpiresAt   time.Time `json:"expires_at,omitempty"`
 	DetectedAt  time.Time `json:"detected_at"`
 	TabID       int       `json:"-"`
 	ResourceKey string    `json:"-"`
@@ -115,6 +118,20 @@ func (h *browserMediaHub) put(in browserMediaAnnouncement) (browserMediaItem, er
 		return browserMediaItem{}, err
 	}
 	now := time.Now()
+	captured := now
+	if in.CapturedAt > 0 {
+		captured = time.UnixMilli(in.CapturedAt)
+		if captured.After(now) {
+			captured = now
+		}
+	}
+	var expiry time.Time
+	if in.ExpiresAt > 0 {
+		expiry = time.UnixMilli(in.ExpiresAt)
+		if expiry.Year() < 2000 || expiry.Year() > 2100 {
+			expiry = time.Time{}
+		}
+	}
 	title := strings.TrimSpace(in.PageTitle)
 	if len([]rune(title)) > 90 {
 		title = string([]rune(title)[:90])
@@ -124,7 +141,13 @@ func (h *browserMediaHub) put(in browserMediaAnnouncement) (browserMediaItem, er
 	h.prune(now)
 	for key, item := range h.resources {
 		if item.TabID == in.TabID && item.ResourceKey == in.ResourceKey {
-			item.DetectedAt = now
+			// A Bridge reconnect or metadata resync cannot make a historical
+			// capture look new. Only the original webRequest timestamp wins.
+			if !captured.After(item.DetectedAt) {
+				return item, nil
+			}
+			item.DetectedAt = captured
+			item.ExpiresAt = expiry
 			item.Kind, item.PageTitle, item.PageURL = in.Kind, title, page
 			item.PageHash = pageHash
 			h.resources[key] = item
@@ -135,7 +158,7 @@ func (h *browserMediaHub) put(in browserMediaAnnouncement) (browserMediaItem, er
 	if err != nil {
 		return browserMediaItem{}, err
 	}
-	item := browserMediaItem{ID: id, Kind: in.Kind, TabID: in.TabID, ResourceKey: in.ResourceKey, PageHash: pageHash, PageTitle: title, PageURL: page, DetectedAt: now}
+	item := browserMediaItem{ID: id, Kind: in.Kind, TabID: in.TabID, ResourceKey: in.ResourceKey, PageHash: pageHash, PageTitle: title, PageURL: page, DetectedAt: captured, ExpiresAt: expiry}
 	h.resources[id] = item
 	if len(h.resources) > 120 {
 		var oldest string
@@ -150,7 +173,8 @@ func (h *browserMediaHub) put(in browserMediaAnnouncement) (browserMediaItem, er
 }
 func (h *browserMediaHub) prune(now time.Time) {
 	for id, item := range h.resources {
-		if now.Sub(item.DetectedAt) > browserMediaTTL {
+		if now.Sub(item.DetectedAt) > browserMediaTTL ||
+			(!item.ExpiresAt.IsZero() && !item.ExpiresAt.After(now.Add(mediaExpirySafety))) {
 			delete(h.resources, id)
 		}
 	}
@@ -197,6 +221,10 @@ func (h *browserMediaHub) matchPage(rawURL string) (browserMediaItem, bool, bool
 }
 
 func (h *browserMediaHub) matchHash(pageHash string) (browserMediaItem, bool, bool) {
+	return h.matchHashAfter(pageHash, time.Time{})
+}
+
+func (h *browserMediaHub) matchHashAfter(pageHash string, after time.Time) (browserMediaItem, bool, bool) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	h.prune(time.Now())
@@ -204,7 +232,7 @@ func (h *browserMediaHub) matchHash(pageHash string) (browserMediaItem, bool, bo
 	var best browserMediaItem
 	bestRank := 100
 	for _, item := range h.resources {
-		if item.PageHash != pageHash {
+		if item.PageHash != pageHash || (!after.IsZero() && !item.DetectedAt.After(after)) {
 			continue
 		}
 		rank := 100

@@ -284,7 +284,7 @@ func runWithOptions(opts options, platformMuxer mediaMuxer) error {
 	}
 	workDir := filepath.Join(workRoot, workName)
 	segmentDir := filepath.Join(workDir, "segments")
-	if err := os.MkdirAll(segmentDir, 0o755); err != nil {
+	if err := os.MkdirAll(segmentDir, 0o700); err != nil {
 		return err
 	}
 	// Credential adapters are always ephemeral, including when -keep-work is
@@ -423,7 +423,7 @@ func runWithOptions(opts options, platformMuxer mediaMuxer) error {
 		preparedAudioApp.workDir = filepath.Join(workDir, "audio")
 		preparedAudioApp.segmentDir = filepath.Join(preparedAudioApp.workDir, "segments")
 		preparedAudioApp.localPlaylist = filepath.Join(preparedAudioApp.workDir, "local.m3u8")
-		if err := os.MkdirAll(preparedAudioApp.segmentDir, 0o755); err != nil {
+		if err := os.MkdirAll(preparedAudioApp.segmentDir, 0o700); err != nil {
 			return keepWorkError(workDir, err)
 		}
 		audioSegments, err = preparedAudioApp.prepareMediaPlaylist(audioPlaylist, audioRendition.url)
@@ -1381,6 +1381,9 @@ func (a *app) recordedMediaOutputs(record string) ([]MediaOutput, error) {
 }
 
 func (a *app) fetchPlaylist(sourceURL, name string) (string, error) {
+	if mediaURLExpiring(sourceURL, time.Now()) {
+		return "", &mediaAccessError{reason: "media_expired"}
+	}
 	path := filepath.Join(a.workDir, name)
 	fmt.Fprintln(consoleOut, "获取清单：", logURLSummary(sourceURL))
 	var data []byte
@@ -1402,21 +1405,24 @@ func (a *app) fetchPlaylist(sourceURL, name string) (string, error) {
 	if err != nil {
 		switch status {
 		case http.StatusNotFound:
-			return "", fmt.Errorf("HTTP 404：源清单不存在或已下线，请刷新网页后重新抓取（URL=%q）", sourceURL)
+			return "", fmt.Errorf("HTTP 404：源清单不存在或已下线，请刷新网页后重新抓取（来源=%s）", logURLSummary(sourceURL))
 		case http.StatusForbidden:
-			return "", fmt.Errorf("HTTP 403：服务器拒绝访问，可能是会话已失效、防盗链、地区限制或签名过期；请求上下文：%s。请刷新来源页面并重新嗅探后再试（URL=%q）", accessContextSummary(a.opts), sourceURL)
+			if mediaURLExpiring(sourceURL, time.Now()) {
+				return "", &mediaAccessError{reason: "media_expired", status: status}
+			}
+			return "", &mediaAccessError{reason: "media_access_denied", status: status}
 		default:
 			if status >= 400 && status < 500 {
-				return "", fmt.Errorf("HTTP %d：请求被服务器拒绝（URL=%q）", status, sourceURL)
+				return "", fmt.Errorf("HTTP %d：请求被服务器拒绝（来源=%s）", status, logURLSummary(sourceURL))
 			}
-			return "", fmt.Errorf("Go HTTP 获取清单失败（URL=%q）：%w", sourceURL, err)
+			return "", fmt.Errorf("Go HTTP 获取清单失败（来源=%s）：%s", logURLSummary(sourceURL), safeJobError(err.Error()))
 		}
 	}
 	text := strings.TrimPrefix(string(data), "\ufeff")
 	if !strings.HasPrefix(strings.TrimSpace(text), "#EXTM3U") {
-		return "", fmt.Errorf("返回内容不是 M3U8：%s", responsePreview(data))
+		return "", errors.New("返回内容不是有效的 M3U8 清单")
 	}
-	if err := os.WriteFile(path, data, 0o644); err != nil {
+	if err := os.WriteFile(path, data, 0o600); err != nil {
 		return "", err
 	}
 	return text, nil
@@ -1453,7 +1459,7 @@ func (a *app) fetchHTTP(sourceURL string) ([]byte, int, error) {
 			} else if resp.StatusCode >= 200 && resp.StatusCode < 300 {
 				return body, resp.StatusCode, nil
 			} else {
-				lastErr = fmt.Errorf("HTTP %s：%s", resp.Status, responsePreview(body))
+				lastErr = fmt.Errorf("HTTP %s", resp.Status)
 				if !retryableHTTPStatus(resp.StatusCode) {
 					return nil, resp.StatusCode, lastErr
 				}
@@ -1886,7 +1892,7 @@ func (a *app) prepareMediaPlaylist(text, base string) ([]segment, error) {
 	if pendingRangeLine >= 0 {
 		return nil, errors.New("EXT-X-BYTERANGE 后缺少媒体 URI")
 	}
-	if err := os.WriteFile(a.localPlaylist, []byte(strings.Join(lines, "\n")+"\n"), 0o644); err != nil {
+	if err := os.WriteFile(a.localPlaylist, []byte(strings.Join(lines, "\n")+"\n"), 0o600); err != nil {
 		return nil, err
 	}
 	return segments, nil

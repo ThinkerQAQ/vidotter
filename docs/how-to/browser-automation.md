@@ -42,6 +42,14 @@ The wait is limited to **20 minutes**. Bridge restart preserves waiting jobs and
 
 When a worker reports **completed** or **failed**, Bridge sends one best-effort notification over the same local Native Messaging connection used by media capture and waiting notices. The Edge/Chrome extension shows a native notification; no source URL, filename, or cookies are included. Repeated status updates do not duplicate the notification. An extension that is disconnected or has notifications disabled may not display the alert. No new polling service or CDP session is required.
 
+### Temporary media URLs and safe recapture (v1.6.2)
+
+Media expiry recognition is **generic and conservative**: the extension and Go HLS downloader recognize explicitly named expiry parameters (such as `expires`, `exp`, `expiry` and `expiration`) with Unix seconds, milliseconds or standard ISO timestamps. An unknown signature format remains **unknown**, not automatically blocked. A 30-second safety margin prevents expiring captures from being selected. Original browser request timestamps are retained when media metadata is resynchronized.
+
+If an HLS playlist or an MP4 probe returns HTTP 403, or an expiry is confirmed, a browser-origin task that has **not started segment downloads** enters the existing `waiting_for_browser` state. The user must verify playback rights and initiate a **fresh browser media request**. The same task ID and download workflow can then continue. No page polling, automatic challenge solving, access-control bypass or site-specific parser is introduced. For failures after segment downloads have started, the task fails normally to prevent mixing incompatible media checkpoints.
+
+Privacy: `Data/jobs.json` does not persist full browser media URLs, URL query parameters, arbitrary headers, or raw HTTP failure bodies. Browser-origin and query-bearing direct URLs require a new source session after Bridge restart. HLS checkpoint plans may still retain segment URLs locally for resume, protected by restrictive file permissions; do not share `Data/work` directories publicly.
+
 ## When Remote Browser Tool is already connected
 
 If ChatGPT already has a working Remote Browser Tool MCP connection, **reuse that existing browser tool** for opening background tabs and inspecting or playing media. Then use `vidotter_list_browser_media` and `vidotter_download_browser_media` from VidOtter. The VidOtter extension captures media independently of how the tab was opened. **Do not enable or call VidOtter's nested Browser Automation component in this mode**: starting a second CDP client may cause another Edge/Chrome authorization prompt. This two-MCP workflow does not require an additional browser component installation, does not copy Remote Browser Tool source, and preserves the existing browser session.

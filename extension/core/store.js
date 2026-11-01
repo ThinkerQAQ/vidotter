@@ -22,7 +22,11 @@
   async function put(resource) {
     const items = await get(resource.tabId);
     const old = items.find(item => item.id === resource.id);
-    const merged = old ? { ...old, ...resource, detectedAt: Date.now() } : resource;
+    // A store update must never make a replayed network request look fresh.
+    const merged = old
+      ? { ...old, ...resource, detectedAt: Math.max(Number(old.detectedAt || 0),
+          Number(resource.detectedAt || 0)) }
+      : resource;
     const next = [merged, ...items.filter(item => item.id !== resource.id)].slice(0, MAX_ITEMS);
     await chrome.storage.session.set({ [key(resource.tabId)]: next });
     return next;

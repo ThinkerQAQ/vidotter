@@ -409,6 +409,9 @@ func (d *goDownloader) downloadSegmentOnce(s segment) error {
 }
 
 func (a *app) downloadDirectFile(sourceURL, outputPath string) error {
+	if mediaURLExpiring(sourceURL, time.Now()) {
+		return &mediaAccessError{reason: "media_expired"}
+	}
 	proxies := []string{a.opts.proxy}
 	var lastErr error
 	for _, proxy := range proxies {
@@ -457,6 +460,15 @@ func (a *app) downloadDirectFile(sourceURL, outputPath string) error {
 			return nil
 		}
 		lastErr = err
+		var httpErr *downloadHTTPError
+		if errors.As(err, &httpErr) && httpErr.status == http.StatusForbidden &&
+			directCheckpointBytes(outputPath) == 0 {
+			reason := "media_access_denied"
+			if mediaURLExpiring(sourceURL, time.Now()) {
+				reason = "media_expired"
+			}
+			return &mediaAccessError{reason: reason, status: http.StatusForbidden}
+		}
 	}
 	return fmt.Errorf("MP4 下载失败：%w", lastErr)
 }
@@ -953,12 +965,9 @@ func rangeResponseError(resp *http.Response) error {
 }
 
 func responseDownloadError(resp *http.Response) error {
-	body, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
-	message := fmt.Sprintf("HTTP %s", resp.Status)
-	if preview := responsePreview(body); preview != "空响应" {
-		message += "：" + preview
-	}
-	return &downloadHTTPError{status: resp.StatusCode, text: message}
+	// Error pages may echo signed URLs, Authorization values or session tokens.
+	// The status is enough for retries and diagnostics; never retain body text.
+	return &downloadHTTPError{status: resp.StatusCode, text: fmt.Sprintf("HTTP %s", resp.Status)}
 }
 
 func retryableDownloadError(err error) bool {

@@ -33,7 +33,7 @@ func (s *bridgeServer) createBrowserWait(pageURL, title, quality string, subtitl
 	for _, existing := range s.jobs {
 		if existing.Status == "waiting_for_browser" && existing.BrowserPageHash == pageHash &&
 			existing.task.Quality == quality && reflect.DeepEqual(existing.task.Subtitles, subtitles) &&
-			now.Before(existing.CreatedAt.Add(browserWaitLimit)) {
+			now.Before(browserWaitStart(existing).Add(browserWaitLimit)) {
 			id := existing.ID
 			s.mu.Unlock()
 			return id, nil
@@ -55,7 +55,7 @@ func (s *bridgeServer) createBrowserWait(pageURL, title, quality string, subtitl
 		ID: id, Title: title, SourceURL: page, PageURL: page,
 		BrowserPageHash: pageHash, Status: "waiting_for_browser", Phase: "waiting-for-media",
 		Detail:    "请在浏览器中完成必要操作并播放视频，检测到媒体后自动继续",
-		CreatedAt: now, UpdatedAt: now,
+		CreatedAt: now, UpdatedAt: now, BrowserWaitSince: now,
 		task: bridgeTask{Quality: quality, Subtitles: subtitles},
 	}
 	err = s.persistJobsLocked()
@@ -90,7 +90,7 @@ func (s *bridgeServer) claimBrowserWait(task bridgeTask) (string, bool, error) {
 	if job.Status == "queued" || job.Status == "running" || job.Status == "completed" {
 		return job.ID, false, nil
 	}
-	if job.Status != "waiting_for_browser" || time.Now().After(job.CreatedAt.Add(browserWaitLimit)) {
+	if job.Status != "waiting_for_browser" || time.Now().After(browserWaitStart(job).Add(browserWaitLimit)) {
 		return "", false, errors.New("browser wait is no longer active")
 	}
 	// The original MCP request controls quality and subtitles. A media event
@@ -106,6 +106,9 @@ func (s *bridgeServer) claimBrowserWait(task bridgeTask) (string, bool, error) {
 	job.SourceFrameID = task.SourceFrameID
 	job.CookieStoreID = task.CookieStoreID
 	job.Status = "queued"
+	job.WaitReason = ""
+	job.BrowserWaitAfter = time.Time{}
+	job.BrowserWaitSince = time.Time{}
 	job.Phase = "resolving"
 	job.Detail = "已检测到媒体，准备下载"
 	job.UpdatedAt = time.Now()
@@ -124,6 +127,13 @@ func (s *bridgeServer) activateBrowserWait(task bridgeTask) (string, error) {
 		return "", err
 	}
 	return id, nil
+}
+
+func browserWaitStart(job *bridgeJob) time.Time {
+	if !job.BrowserWaitSince.IsZero() {
+		return job.BrowserWaitSince
+	}
+	return job.CreatedAt
 }
 
 func (s *bridgeServer) wakeBrowserWaits() {
@@ -168,6 +178,7 @@ func (s *bridgeServer) processBrowserWaits() {
 		quality   string
 		subtitles SubtitleRequest
 		created   time.Time
+		after     time.Time
 	}
 	now := time.Now()
 	items := []pending{}
@@ -176,7 +187,7 @@ func (s *bridgeServer) processBrowserWaits() {
 		if job.Status != "waiting_for_browser" {
 			continue
 		}
-		if now.After(job.CreatedAt.Add(browserWaitLimit)) {
+		if now.After(browserWaitStart(job).Add(browserWaitLimit)) {
 			job.Status = "failed"
 			job.Phase = "waiting-for-media"
 			job.Detail = "等待媒体超时"
@@ -186,7 +197,8 @@ func (s *bridgeServer) processBrowserWaits() {
 			continue
 		}
 		items = append(items, pending{id: job.ID, hash: job.BrowserPageHash,
-			quality: job.task.Quality, subtitles: job.task.Subtitles, created: job.CreatedAt})
+			quality: job.task.Quality, subtitles: job.task.Subtitles,
+			created: browserWaitStart(job), after: job.BrowserWaitAfter})
 	}
 	s.mu.Unlock()
 	sort.Slice(items, func(i, j int) bool { return items[i].created.Before(items[j].created) })
@@ -200,7 +212,7 @@ func (s *bridgeServer) processBrowserWaits() {
 		if !active {
 			continue
 		}
-		media, matched, online := s.mediaHub().matchHash(item.hash)
+		media, matched, online := s.mediaHub().matchHashAfter(item.hash, item.after)
 		if !matched || !online {
 			continue
 		}

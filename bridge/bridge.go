@@ -470,7 +470,7 @@ func runWorker(workerToken string) error {
 	opts, err := optionsFromBridgeTask(payload.Task, payload.Config)
 	if err != nil {
 		appendRuntimeEvent("ERROR", "worker", "failed", "jobId", payload.JobID, "reason", "invalid_options")
-		reportJobState(payload.JobID, "failed", err.Error())
+		reportJobState(payload.JobID, "failed", safeJobError(err.Error()))
 		return err
 	}
 	if opts.playlistMode == "ask" {
@@ -481,8 +481,8 @@ func runWorker(workerToken string) error {
 	err = runWithOptions(opts, nil)
 	if err != nil {
 		appendRuntimeEvent("ERROR", "worker", "failed", "jobId", payload.JobID, "reason", "download_or_processing")
-		reportJobState(payload.JobID, "failed", err.Error())
-		return err
+		reportJobStateReason(payload.JobID, "failed", safeJobError(err.Error()), mediaFailureReason(err))
+		return errors.New(safeJobError(err.Error()))
 	}
 	appendRuntimeEvent("INFO", "worker", "completed", "jobId", payload.JobID, "durationMs", fmt.Sprint(time.Since(started).Milliseconds()))
 	reportJobState(payload.JobID, "completed", "")
@@ -490,11 +490,15 @@ func runWorker(workerToken string) error {
 }
 
 func reportJobState(jobID, status, message string) {
+	reportJobStateReason(jobID, status, message, "")
+}
+
+func reportJobStateReason(jobID, status, message, reason string) {
 	state, err := readBridgeState()
 	if err != nil {
 		return
 	}
-	body, _ := json.Marshal(map[string]string{"status": status, "error": message})
+	body, _ := json.Marshal(map[string]string{"status": status, "error": safeJobError(message), "reason": reason})
 	request, _ := http.NewRequest(http.MethodPost, state.BaseURL+"/v1/jobs/"+jobID+"/state", bytes.NewReader(body))
 	request.Header.Set("Content-Type", "application/json")
 	request.Header.Set("X-VidOtter-Token", state.Token)

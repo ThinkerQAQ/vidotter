@@ -117,7 +117,7 @@
     return (Array.isArray(resources) ? resources : [])
       .filter(item => item && configAllowsKind(item.kind, config) &&
         Number.isInteger(item.tabId) && item.tabId >= 0 &&
-        validHTTPURL(item.url) &&
+        validHTTPURL(item.url) && !mediaExpiring(item, now) &&
         Number(item.detectedAt) > 0 && Number(item.detectedAt) <= now &&
         now - Number(item.detectedAt) < 10 * 60 * 1000)
       .sort((a, b) => b.detectedAt - a.detectedAt)
@@ -151,6 +151,37 @@
     return result;
   }
 
+  // Only explicit expiry query fields are interpreted. Unrecognized formats
+  // are unknown, never treated as a reason to reject media. No host rules.
+  function mediaExpiryMs(rawURL) {
+    let parsed;
+    try { parsed = new URL(String(rawURL || "")); } catch (_) { return 0; }
+    if (!["http:", "https:"].includes(parsed.protocol)) return 0;
+    let earliest = 0;
+    for (const [name, raw] of parsed.searchParams.entries()) {
+      if (!["expires", "expire", "expiry", "expiration", "exp"].includes(name.toLowerCase())) continue;
+      const value = raw.trim();
+      let expiry = 0;
+      if (/^[0-9]+$/.test(value)) {
+        const n = Number(value);
+        if (Number.isSafeInteger(n)) {
+          expiry = n >= 1e12 && n < 1e13 ? n : n >= 1e9 && n < 1e10 ? n * 1000 : 0;
+        }
+      } else if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/i.test(value)) {
+        expiry = Date.parse(value) || 0;
+      }
+      if (expiry && new Date(expiry).getUTCFullYear() >= 2000 &&
+          new Date(expiry).getUTCFullYear() <= 2100 &&
+          (!earliest || expiry < earliest)) earliest = expiry;
+    }
+    return earliest;
+  }
+
+  function mediaExpiring(resource, now = Date.now()) {
+    const expiry = Number(resource && resource.expiresAt || mediaExpiryMs(resource && resource.url));
+    return Number.isFinite(expiry) && expiry > 0 && expiry <= now + 30 * 1000;
+  }
+
   function makeResource(input, config) {
     const detected = classify(input, config);
     if (!detected) return null;
@@ -168,6 +199,7 @@
       userAgent: String(input.userAgent || ""),
       requestHeaders: sanitizeRequestHeaders(input.requestHeaders),
       statusCode: Number(input.statusCode || 0),
+      expiresAt: mediaExpiryMs(url),
       detectedAt: Number(input.detectedAt || Date.now())
     };
   }
@@ -200,6 +232,8 @@
     normalizeSnifferConfig,
     configAllowsKind,
     recentResourcesForSync,
+    mediaExpiryMs,
+    mediaExpiring,
     classify,
     makeResource,
     displayList,

@@ -275,6 +275,9 @@ async function restartBridge() {
 }
 
 async function buildBridgeTask(resource, page, quality, playlist, subtitles) {
+  if (VidOtterMedia.mediaExpiring(resource)) {
+    throw new Error("媒体链接已过期或即将过期，请刷新页面并重新播放后选择新媒体");
+  }
   const resolveFromPage = resource.kind === "resolved-media-page" || resource.kind === "dash";
   const mediaURL = resolveFromPage ? String(page && page.url || resource.url) : resource.url;
   const pageURL = String(page && page.url || "");
@@ -475,6 +478,8 @@ async function record(input) {
           resourceKey: resource.id,
           tabId: resource.tabId,
           kind: resource.kind,
+          capturedAt: Number(resource.detectedAt || 0),
+          expiresAt: Number(resource.expiresAt || 0),
           pageTitle: tab.title || "",
           pageUrl: tab.url
         })
@@ -516,6 +521,8 @@ async function syncRecentBrowserMedia(pageHash = "") {
           resourceKey: resource.id,
           tabId: tab.id,
           kind: resource.kind,
+          capturedAt: Number(resource.detectedAt || 0),
+          expiresAt: Number(resource.expiresAt || 0),
           pageTitle: tab.title || "",
           pageUrl: tab.url
         })

@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 const bridgeJobStoreVersion = 1
@@ -20,6 +21,9 @@ type persistedBridgeJob struct {
 	Task                 bridgeTask `json:"task"`
 	RequiresFreshSession bool       `json:"requiresFreshSession,omitempty"`
 	BrowserPageHash      string     `json:"browserPageHash,omitempty"`
+	BrowserWaitSince     time.Time  `json:"browserWaitSince,omitempty"`
+	BrowserWaitAfter     time.Time  `json:"browserWaitAfter,omitempty"`
+	WaitReason           string     `json:"waitReason,omitempty"`
 }
 
 func bridgeJobsPath() (string, error) {
@@ -30,6 +34,14 @@ func bridgeJobsPath() (string, error) {
 // download can continue from its work directory; a protected download must be
 // resubmitted by the extension with a fresh browser session.
 func persistentBridgeTask(task bridgeTask) bridgeTask {
+	// The extension owns the original media URL. Persisting it would retain
+	// potentially sensitive query signatures and path tokens indefinitely.
+	if task.PageURL != "" || nonDurableMediaURL(task.URL) {
+		task.URL = ""
+	}
+	task.PageURL = logURLSummary(task.PageURL)
+	task.Referer = logURLSummary(task.Referer)
+	task.Origin = logURLSummary(task.Origin)
 	task.MediaCookies = nil
 	task.PageCookies = nil
 	task.MediaHeaders = persistentHeaderMap(task.MediaHeaders)
@@ -57,14 +69,20 @@ func bridgeTaskHasCredentials(task bridgeTask) bool {
 }
 
 func persistentHeaderMap(values map[string]string) map[string]string {
-	result := make(map[string]string, len(values))
+	// Explicit allowlist prevents arbitrary custom authorization headers from
+	// entering jobs.json. Browser-origin headers are always re-captured.
+	result := make(map[string]string)
 	for name, value := range values {
-		normalized := strings.ToLower(strings.TrimSpace(name))
-		switch normalized {
-		case "authorization", "cookie", "proxy-authorization", "x-api-key", "x-auth-token":
-			continue
+		switch strings.ToLower(strings.TrimSpace(name)) {
+		case "referer", "origin":
+			if sanitized := logURLSummary(value); sanitized != "" {
+				result[name] = sanitized
+			}
+		case "accept", "accept-language", "user-agent":
+			if len(value) <= 512 && !strings.ContainsAny(value, "\r\n") {
+				result[name] = value
+			}
 		}
-		result[name] = value
 	}
 	if len(result) == 0 {
 		return nil
@@ -81,10 +99,19 @@ func saveBridgeJobs(path string, jobs map[string]*bridgeJob) error {
 		if job == nil {
 			continue
 		}
+		savedJob := publicBridgeJob(job)
+		savedJob.SourceURL = logURLSummary(savedJob.SourceURL)
+		savedJob.PageURL = logURLSummary(savedJob.PageURL)
+		savedJob.Error = safeJobError(savedJob.Error)
+		savedJob.Detail = safeJobError(savedJob.Detail)
 		snapshot.Jobs = append(snapshot.Jobs, persistedBridgeJob{
-			Job: publicBridgeJob(job), Task: persistentBridgeTask(job.task),
-			RequiresFreshSession: bridgeTaskHasCredentials(job.task) || job.RequiresFreshSession,
-			BrowserPageHash:      job.BrowserPageHash,
+			Job: savedJob, Task: persistentBridgeTask(job.task),
+			RequiresFreshSession: bridgeTaskHasCredentials(job.task) ||
+				job.RequiresFreshSession || job.task.PageURL != "" || nonDurableMediaURL(job.task.URL),
+			BrowserPageHash:  job.BrowserPageHash,
+			BrowserWaitSince: job.BrowserWaitSince,
+			BrowserWaitAfter: job.BrowserWaitAfter,
+			WaitReason:       job.WaitReason,
 		})
 	}
 	data, err := json.MarshalIndent(snapshot, "", "  ")
@@ -127,6 +154,9 @@ func loadBridgeJobs(path string) (map[string]*bridgeJob, error) {
 		}
 		job.task = saved.Task
 		job.BrowserPageHash = saved.BrowserPageHash
+		job.BrowserWaitSince = saved.BrowserWaitSince
+		job.BrowserWaitAfter = saved.BrowserWaitAfter
+		job.WaitReason = saved.WaitReason
 		job.worker = nil
 		job.workerToken = ""
 		job.runID = 0
