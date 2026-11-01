@@ -48,6 +48,7 @@ type browserDownloadCommand struct {
 	Subtitles   *SubtitleRequest `json:"subtitles,omitempty"`
 	Type        string           `json:"type"`
 	ResumeJobID string           `json:"resumeJobId,omitempty"`
+	JobStatus   string           `json:"jobStatus,omitempty"`
 	CommandID   string           `json:"commandId"`
 	TabID       int              `json:"tabId"`
 	ResourceKey string           `json:"resourceKey"`
@@ -181,7 +182,7 @@ func (h *browserMediaHub) poll(ctx context.Context) (*browserDownloadCommand, er
 			h.mu.Lock()
 			_, exists := h.awaiting[command.CommandID]
 			h.mu.Unlock()
-			if (command.Type != "browser_wait_notice" && !exists) || time.Now().After(command.ExpiresAt) {
+			if (command.Type != "browser_wait_notice" && command.Type != "browser_job_result_notice" && !exists) || time.Now().After(command.ExpiresAt) {
 				continue
 			}
 			return &command, nil
@@ -281,6 +282,29 @@ func (h *browserMediaHub) notifyWaiting(pageHash, jobID string) {
 	command := browserDownloadCommand{
 		Type: "browser_wait_notice", ResumeJobID: jobID, PageHash: pageHash,
 		ExpiresAt: time.Now().Add(25 * time.Second),
+	}
+	select {
+	case h.next <- command:
+	default:
+	}
+}
+
+// Reuses the extension's existing private Native Messaging channel for a
+// best-effort terminal-state notification. It carries no source URLs,
+// filenames, authentication headers or cookies.
+func (h *browserMediaHub) notifyJobResult(jobID, status string) {
+	if !mcpJobID.MatchString(jobID) || (status != "completed" && status != "failed") {
+		return
+	}
+	h.mu.Lock()
+	online := time.Since(h.lastPoll) < 25*time.Second
+	h.mu.Unlock()
+	if !online {
+		return
+	}
+	command := browserDownloadCommand{
+		Type: "browser_job_result_notice", ResumeJobID: jobID,
+		JobStatus: status, ExpiresAt: time.Now().Add(25 * time.Second),
 	}
 	select {
 	case h.next <- command:

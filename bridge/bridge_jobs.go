@@ -230,7 +230,13 @@ func (s *bridgeServer) listJobs() []bridgeJob {
 
 func (s *bridgeServer) setJobStatus(jobID, status, message string) error {
 	s.mu.Lock()
-	defer s.mu.Unlock()
+	notifyResult := false
+	defer func() {
+		s.mu.Unlock()
+		if notifyResult {
+			s.mediaHub().notifyJobResult(jobID, status)
+		}
+	}()
 	job := s.jobs[jobID]
 	if job == nil {
 		return errors.New("task not found")
@@ -261,6 +267,7 @@ func (s *bridgeServer) setJobStatus(jobID, status, message string) error {
 	job.UpdatedAt = time.Now()
 	_ = s.persistJobsLocked()
 	if previousStatus != status {
+		notifyResult = status == "completed" || status == "failed"
 		level := "INFO"
 		if status == "failed" {
 			level = "ERROR"

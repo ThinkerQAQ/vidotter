@@ -237,3 +237,39 @@ func TestBrowserWaitNoticeUsesExistingNativeCommandQueue(t *testing.T) {
 		t.Fatal("notification includes browser resource identity")
 	}
 }
+
+func TestTerminalJobSendsOneBrowserNotification(t *testing.T) {
+	for _, status := range []string{"completed", "failed"} {
+		t.Run(status, func(t *testing.T) {
+			s := newBrowserWaitTestServer(t)
+			const id = "123456789abc"
+			s.jobs[id] = &bridgeJob{ID: id, Status: "running", Title: "Sensitive movie title",
+				SourceURL: "https://example.org/private?token=secret",
+				CreatedAt: time.Now(), UpdatedAt: time.Now()}
+			h := s.mediaHub()
+			h.mu.Lock()
+			h.lastPoll = time.Now()
+			h.mu.Unlock()
+			if err := s.setJobStatus(id, status, ""); err != nil {
+				t.Fatal(err)
+			}
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+			defer cancel()
+			command, err := h.poll(ctx)
+			if err != nil || command == nil || command.Type != "browser_job_result_notice" ||
+				command.JobStatus != status || command.ResumeJobID != id {
+				t.Fatalf("bad terminal command: %+v / %v", command, err)
+			}
+			if command.PageHash != "" || command.ResourceKey != "" || command.TabID != 0 ||
+				command.Quality != "" {
+				t.Fatalf("terminal command leaks media identity: %+v", command)
+			}
+			if err := s.setJobStatus(id, status, ""); err != nil {
+				t.Fatal(err)
+			}
+			if len(h.next) != 0 {
+				t.Fatal("repeated status change produced duplicate notification")
+			}
+		})
+	}
+}

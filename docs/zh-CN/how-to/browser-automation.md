@@ -38,6 +38,10 @@ VidOtter 采用**一个产品、一个 MCP 入口、一条私人 Tunnel**。浏�
 
 等待最长 **20 分钟**。Bridge 重启后保留等待任务；`Data/jobs.json` 仅持久化页面身份 SHA-256 哈希与经清理的页面地址，不保存页面查询参数里的令牌。媒体认证数据仍只由扩展按需处理。扩展在线时通过原有 Native Messaging 尝试发送一次本地通知；通知不会包含 URL，系统通知被关闭时仍可通过 MCP 看到需要人工操作的提示。
 
+### 下载结果通知（v1.6.1）
+
+Worker 上报 **completed** 或 **failed** 时，Bridge 通过现有 Native Messaging 发送一次尽力而为的通知，由 Edge/Chrome 扩展弹出系统通知。通知不包含媒体 URL、文件名、Cookie 或其他私密请求信息；重复状态上报不会重复提醒。若扩展未连接或系统关闭了通知，可能无法显示；不需要新增轮询服务或 CDP 会话。
+
 ## 已连接 Remote Browser Tool 时
 
 如果 ChatGPT 已经连接并正常使用 Remote Browser Tool MCP，**直接复用现有插件**打开后台标签页、查看页面和操作媒体播放，再用 VidOtter 的 `vidotter_list_browser_media` 和 `vidotter_download_browser_media` 完成媒体发现与下载。VidOtter 扩展无需区分页面是由哪个工具打开的。

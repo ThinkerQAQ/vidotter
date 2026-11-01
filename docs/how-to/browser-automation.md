@@ -38,6 +38,10 @@ The webpage-first MCP path does not require a second browser workflow. When medi
 
 The wait is limited to **20 minutes**. Bridge restart preserves waiting jobs and exact page identity as a SHA-256 digest in `Data/jobs.json`, not as a full page URL with query tokens. The browser extension is responsible for media credentials; none are persisted for waiting jobs. It sends an optional one-shot local notification via the existing Native Messaging channel when connected, without leaking the URL in the system notification. OS/browser notification settings may prevent display; MCP still reports the action required. Opening the correct page and playback remain user responsibilities.
 
+### Download result notifications (v1.6.1)
+
+When a worker reports **completed** or **failed**, Bridge sends one best-effort notification over the same local Native Messaging connection used by media capture and waiting notices. The Edge/Chrome extension shows a native notification; no source URL, filename, or cookies are included. Repeated status updates do not duplicate the notification. An extension that is disconnected or has notifications disabled may not display the alert. No new polling service or CDP session is required.
+
 ## When Remote Browser Tool is already connected
 
 If ChatGPT already has a working Remote Browser Tool MCP connection, **reuse that existing browser tool** for opening background tabs and inspecting or playing media. Then use `vidotter_list_browser_media` and `vidotter_download_browser_media` from VidOtter. The VidOtter extension captures media independently of how the tab was opened. **Do not enable or call VidOtter's nested Browser Automation component in this mode**: starting a second CDP client may cause another Edge/Chrome authorization prompt. This two-MCP workflow does not require an additional browser component installation, does not copy Remote Browser Tool source, and preserves the existing browser session.

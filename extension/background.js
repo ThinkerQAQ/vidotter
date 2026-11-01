@@ -25,6 +25,21 @@ async function showBrowserWaitNotice(command) {
   });
 }
 
+async function showBrowserJobResultNotice(command) {
+  if (!/^[a-f0-9]{12}$/.test(command.resumeJobId || "") ||
+      !["completed", "failed"].includes(command.jobStatus) ||
+      !command.expiresAt || Date.now() >= Date.parse(command.expiresAt)) return;
+  const complete = command.jobStatus === "completed";
+  await chrome.notifications.create("vidotter-result-" + command.resumeJobId, {
+    type: "basic", iconUrl: "icons/icon-128.png",
+    title: complete ? "VidOtter 下载完成" : "VidOtter 下载失败",
+    message: complete
+      ? "任务已完成，文件已保存到下载目录。"
+      : "任务未完成，请到下载任务列表查看错误。",
+    priority: 0
+  });
+}
+
 chrome.notifications.onClicked.addListener(notificationId => {
   const pageHash = waitingNoticePageHashes.get(notificationId);
   if (!pageHash) return;
@@ -45,6 +60,10 @@ async function handleBrowserCommand(command) {
   if (!command) return;
   if (command.type === "browser_wait_notice") {
     try { await showBrowserWaitNotice(command); } catch (_) {}
+    return;
+  }
+  if (command.type === "browser_job_result_notice") {
+    try { await showBrowserJobResultNotice(command); } catch (_) {}
     return;
   }
   if (!["browser_media_download", "browser_media_refresh"].includes(command.type)) return;
@@ -106,7 +125,7 @@ function connectBrowserCommands() {
       if (message?.type === "browser_subscribed" && message.ok) {
         syncRecentBrowserMedia().catch(() => {});
       }
-      if (["browser_media_download", "browser_media_refresh", "browser_wait_notice"].includes(message?.type)) {
+      if (["browser_media_download", "browser_media_refresh", "browser_wait_notice", "browser_job_result_notice"].includes(message?.type)) {
         handleBrowserCommand(message).catch(() => {});
       }
     });
