@@ -6,6 +6,7 @@ VidOtter 在浏览器发现媒体，在同一台电脑上执行下载。桌面�
 
 | 目标 | 入口 |
 | --- | --- |
+| 构建 Windows/macOS/Linux 统一图形安装器 | [安装器构建](how-to/build-installers.md) |
 | 安装发行包 | [快速入门](quick-start.md)或[首次使用教程](tutorial/first-run-on-new-machine.md) |
 | 选择资源、确认输出 | [首次下载](tutorial/first-download.md) |
 | 设置工具、代理和模型 | [工具配置](how-to/configure-tools.md) |

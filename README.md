@@ -6,6 +6,10 @@ VidOtter detects media in Chrome/Edge and downloads it with a local Go Bridge. I
 
 ## Install and download
 
+**Installer status:** Cross-platform GUI installer packaging is under development, but no verified installer assets have been published. The archive instructions below are the supported installation path. [Build/status](docs/how-to/build-installers.md).
+
+
+
 **FFmpeg license notice (Windows package):** The Windows download includes a separate **FFmpeg Slim** executable using FFmpeg code under **LGPL-2.1-or-later**; it is not licensed as VidOtter's original Apache-2.0 code. For the current [v1.6.2 release](https://github.com/ThinkerQAQ/vidotter/releases/tag/v1.6.2), the [exact corresponding FFmpeg source archive](https://github.com/ThinkerQAQ/vidotter/releases/download/v1.6.2/FFmpeg-n8.1.2-source.tar.gz) is supplied beside the binaries. The Windows archive includes `COPYING.LGPLv2.1` and `ffmpeg-slim-SOURCE.txt` for license and build/source details. Check the matching assets and notices for each version you download. See [third-party notices](THIRD_PARTY_NOTICES.md) and [FFmpeg's license guidance](https://ffmpeg.org/legal.html).
 
 1. Download the archive for your system and CPU from [Releases](https://github.com/ThinkerQAQ/vidotter/releases). Extract the whole archive to a permanent folder.

@@ -11,3 +11,5 @@
 安装或连接步骤不清楚时，按[首次使用](tutorial/first-run-on-new-machine.md)操作；不确定如何选资源时，看[首次下载](tutorial/first-download.md)。
 
 下一步：[工具与模型](how-to/configure-tools.md) · [字幕](how-to/subtitles.md) · [工作台](how-to/use-web-ui.md) · [任务恢复](how-to/manage-downloads.md) · [故障排查](how-to/troubleshoot.md)。
+
+> 三平台一键图形安装器正在完善，在 Release 中正式发布且完成实机验收前，请继续使用上述压缩包安装步骤。[安装器建设状态](how-to/build-installers.md)。
