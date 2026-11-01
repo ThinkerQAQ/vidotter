@@ -4,6 +4,7 @@ Open **Downloads** in Popup, Side Panel or the workspace. These surfaces show th
 
 | Status | Meaning | Next step |
 | --- | --- | --- |
+| `waiting_for_browser` | Page has not emitted playable media yet | Complete the required browser interaction and play media; the same job resumes automatically (20-minute limit) |
 | `queued` | Submitted, awaiting worker activity | Wait and inspect runtime health if it stalls |
 | `running` | Downloading or processing | Inspect phase; pause if needed |
 | `paused` | Stopped with recoverable task state | Resume while the source remains available |

@@ -205,6 +205,7 @@ button:disabled { opacity: .55; cursor: default; }
 .job-state.running { color: var(--accent); background: var(--accent-soft); }
 .job-state.paused { color: #7a5b12; background: #fff4ce; }
 .job-state.needs-session { color: #7a3e12; background: #ffedd5; }
+.job-state.waiting_for_browser { color: #7a3e12; background: #ffedd5; }
 .job-state.completed { color: #166534; background: #dcfce7; }
 .job-state.failed { color: #a4222b; background: #fee2e2; }
 .job-progress-row { display: flex; align-items: center; gap: 7px; margin-top: 6px; }

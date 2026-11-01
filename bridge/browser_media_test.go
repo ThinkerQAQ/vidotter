@@ -254,8 +254,8 @@ func TestBrowserFirstMissingCaptureNeverFallsBackToYTDLP(t *testing.T) {
 		connect: func(bool) (bridgeState, error) { return bridgeState{BaseURL: handler.URL, Token: "test-token"}, nil },
 	}
 	got, err := c.download(context.Background(), mcpDownloadInput{URL: "https://8.8.8.8/watch"})
-	if err == nil || got.TaskID != "" || !strings.Contains(err.Error(), "browser capture required") {
-		t.Fatalf("silent webpage fallback: %+v %v", got, err)
+	if err != nil || !mcpJobID.MatchString(got.TaskID) || got.Status != "waiting_for_browser" || !got.RequiresUserAction || got.Route != "browser" {
+		t.Fatalf("missing capture should yield a waiting task: %+v %v", got, err)
 	}
 }
 

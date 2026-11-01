@@ -39,13 +39,15 @@ type browserMediaList struct {
 	Resources          []browserMediaItem `json:"resources"`
 }
 type browserDownloadRequest struct {
-	Subtitles  *SubtitleRequest `json:"subtitles,omitempty"`
-	ResourceID string           `json:"resource_id"`
-	Quality    string           `json:"quality,omitempty"`
+	Subtitles   *SubtitleRequest `json:"subtitles,omitempty"`
+	ResourceID  string           `json:"resource_id"`
+	Quality     string           `json:"quality,omitempty"`
+	ResumeJobID string           `json:"resumeJobId,omitempty"`
 }
 type browserDownloadCommand struct {
 	Subtitles   *SubtitleRequest `json:"subtitles,omitempty"`
 	Type        string           `json:"type"`
+	ResumeJobID string           `json:"resumeJobId,omitempty"`
 	CommandID   string           `json:"commandId"`
 	TabID       int              `json:"tabId"`
 	ResourceKey string           `json:"resourceKey"`
@@ -179,7 +181,7 @@ func (h *browserMediaHub) poll(ctx context.Context) (*browserDownloadCommand, er
 			h.mu.Lock()
 			_, exists := h.awaiting[command.CommandID]
 			h.mu.Unlock()
-			if !exists || time.Now().After(command.ExpiresAt) {
+			if (command.Type != "browser_wait_notice" && !exists) || time.Now().After(command.ExpiresAt) {
 				continue
 			}
 			return &command, nil
@@ -190,8 +192,10 @@ func (h *browserMediaHub) poll(ctx context.Context) (*browserDownloadCommand, er
 // matchPage only accepts an exact full-page URL; the public index's redacted
 // path is not sufficient to select media when pages differ by query tokens.
 func (h *browserMediaHub) matchPage(rawURL string) (browserMediaItem, bool, bool) {
-	digest := sha256.Sum256([]byte(rawURL))
-	pageHash := hex.EncodeToString(digest[:])
+	return h.matchHash(browserPageDigest(rawURL))
+}
+
+func (h *browserMediaHub) matchHash(pageHash string) (browserMediaItem, bool, bool) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	h.prune(time.Now())
@@ -265,6 +269,25 @@ func (h *browserMediaHub) refresh(ctx context.Context, pageURL string) error {
 	}
 }
 
+// A best-effort, one-shot notification over the existing Native Messaging
+// connection. No browser navigation or challenge interaction is performed.
+func (h *browserMediaHub) notifyWaiting(pageHash, jobID string) {
+	h.mu.Lock()
+	online := time.Since(h.lastPoll) < 25*time.Second
+	h.mu.Unlock()
+	if !online {
+		return
+	}
+	command := browserDownloadCommand{
+		Type: "browser_wait_notice", ResumeJobID: jobID, PageHash: pageHash,
+		ExpiresAt: time.Now().Add(25 * time.Second),
+	}
+	select {
+	case h.next <- command:
+	default:
+	}
+}
+
 func (h *browserMediaHub) download(ctx context.Context, in browserDownloadRequest) (string, error) {
 	h.mu.Lock()
 	h.prune(time.Now())
@@ -291,7 +314,7 @@ func (h *browserMediaHub) download(ctx context.Context, in browserDownloadReques
 	h.awaiting[id] = reply
 	h.mu.Unlock()
 	defer func() { h.mu.Lock(); delete(h.awaiting, id); h.mu.Unlock() }()
-	command := browserDownloadCommand{Type: "browser_media_download", CommandID: id, TabID: item.TabID, ResourceKey: item.ResourceKey, PageHash: item.PageHash, Quality: in.Quality, Subtitles: in.Subtitles, ExpiresAt: time.Now().Add(browserCommandWait)}
+	command := browserDownloadCommand{Type: "browser_media_download", CommandID: id, TabID: item.TabID, ResourceKey: item.ResourceKey, PageHash: item.PageHash, Quality: in.Quality, Subtitles: in.Subtitles, ResumeJobID: in.ResumeJobID, ExpiresAt: time.Now().Add(browserCommandWait)}
 	select {
 	case h.next <- command:
 	case <-ctx.Done():
@@ -349,6 +372,7 @@ func (s *bridgeServer) handleBrowserMedia(w http.ResponseWriter, r *http.Request
 			writeJSON(w, http.StatusBadRequest, map[string]any{"ok": false, "error": err.Error()})
 			return
 		}
+		s.wakeBrowserWaits()
 		writeJSON(w, http.StatusOK, map[string]any{"ok": true, "id": item.ID})
 	case r.URL.Path == "/v1/browser/media" && r.Method == http.MethodGet:
 		if r.URL.Query().Get("refresh") == "1" {
@@ -360,6 +384,7 @@ func (s *bridgeServer) handleBrowserMedia(w http.ResponseWriter, r *http.Request
 	case r.URL.Path == "/v1/browser/media/by-page/download" && r.Method == http.MethodPost:
 		var in struct {
 			PageURL   string          `json:"pageUrl"`
+			Title     string          `json:"title"`
 			Quality   string          `json:"quality"`
 			Subtitles SubtitleRequest `json:"subtitles"`
 		}
@@ -378,7 +403,12 @@ func (s *bridgeServer) handleBrowserMedia(w http.ResponseWriter, r *http.Request
 			item, matched, online = h.matchPage(in.PageURL)
 		}
 		if !matched || !online {
-			writeJSON(w, http.StatusOK, map[string]any{"matched": false, "extensionConnected": online})
+			jobID, err := s.createBrowserWait(in.PageURL, in.Title, in.Quality, in.Subtitles)
+			if err != nil {
+				writeJSON(w, http.StatusInternalServerError, map[string]any{"ok": false, "error": "cannot create waiting task"})
+				return
+			}
+			writeJSON(w, http.StatusAccepted, map[string]any{"matched": false, "extensionConnected": online, "taskId": jobID, "status": "waiting_for_browser"})
 			return
 		}
 		job, err := h.download(r.Context(), browserDownloadRequest{ResourceID: item.ID, Quality: in.Quality, Subtitles: &in.Subtitles})

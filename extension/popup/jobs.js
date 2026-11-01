@@ -9,6 +9,7 @@
   const fileExpansionPreferences = new Map();
   const stateLabels = {
     queued: "等待中",
+    waiting_for_browser: "等待浏览器操作",
     running: "下载中",
     paused: "已暂停",
     "needs-session": "需重新授权",
@@ -245,7 +246,7 @@
         primaryAction.hidden = false;
         primaryAction.textContent = job.status === "needs-session" ? "重新授权并继续" : "继续";
         primaryAction.addEventListener("click", () => runAction(primaryAction, job, "resume"));
-      } else if (job.status === "failed") {
+      } else if (job.status === "failed" && job.phase !== "waiting-for-media") {
         primaryAction.hidden = false;
         primaryAction.textContent = "重试";
         primaryAction.addEventListener("click", () => runAction(primaryAction, job, "retry"));

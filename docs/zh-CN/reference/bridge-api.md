@@ -67,6 +67,8 @@ Web UI 操作通过扩展白名单中继，HTTP 页面不获取 Token。Worker �
 
 ### 浏览器媒体集成（仅本地认证 API）
 
+网页下载接口在已捕获媒体时返回普通下载任务 ID；否则返回 `202 {matched:false, taskId, status:"waiting_for_browser"}`。等待任务存储在既有 `jobs.json`，以页面 SHA-256 哈希精确匹配，**不持久化带查询参数的完整页面 URL**；扩展通过原有媒体事件唤醒等待任务，并在内部向 `POST /v1/tasks` 附带 `resumeJobId`，复用原任务 ID 和原生下载队列。这不是新增公开 MCP 工具。等待期限为 20 分钟；本地通知尽力发送，网站验证由用户手动完成。
+
 下列接口均需通过回环地址提供 `X-VidOtter-Token`，**不得直接暴露到公网**。浏览器索引仅在 Bridge 内存中保留十分钟。MCP 无法获取媒体签名 URL、Cookie 或鉴权请求头。
 
 | HTTP 接口 | 用途 |

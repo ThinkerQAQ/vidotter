@@ -32,6 +32,12 @@ VidOtter 采用**一个产品、一个 MCP 入口、一条私人 Tunnel**。浏�
 
 升级到 v1.5.1 后，使用公开的 [hls.js 演示页](https://hlsjs.video-dev.org/demo/) 验证：Edge 扩展发现多条 HLS 资源，直接调用 `vidotter_download(url="https://hlsjs.video-dev.org/demo/", quality="480")` 返回 `route=browser`，任务 `77ce068babe5` 随后达到 `completed`、100%、1 个输出文件，**未调用 yt-dlp 网页解析器**。另以 W3Schools 公开 HTML Video 页验证网页匹配 MP4 后通过原生下载器完成。此结果仅代表所列样例通过，不保证所有站点或编码兼容。
 
+### 人工介入与自动续接（v1.6.0）
+
+默认网页下载没有新增第二套浏览器流程：尚未发现媒体时，Bridge 持久化 `waiting_for_browser` 任务并向 MCP 返回 `requires_user_action`。用户按网站要求自行完成操作（包括真人验证），正常点击播放；**原有扩展的媒体发现事件** 会唤醒任务，原有 `submitBridgeTask()` 携带新的浏览器会话向 `/v1/tasks` 提交，原任务 ID 进入正常下载队列。VidOtter 不尝试自动解决真人验证；Remote Browser MCP 继续作为独立、可选的浏览器操作组件。
+
+等待最长 **20 分钟**。Bridge 重启后保留等待任务；`Data/jobs.json` 仅持久化页面身份 SHA-256 哈希与经清理的页面地址，不保存页面查询参数里的令牌。媒体认证数据仍只由扩展按需处理。扩展在线时通过原有 Native Messaging 尝试发送一次本地通知；通知不会包含 URL，系统通知被关闭时仍可通过 MCP 看到需要人工操作的提示。
+
 ## 已连接 Remote Browser Tool 时
 
 如果 ChatGPT 已经连接并正常使用 Remote Browser Tool MCP，**直接复用现有插件**打开后台标签页、查看页面和操作媒体播放，再用 VidOtter 的 `vidotter_list_browser_media` 和 `vidotter_download_browser_media` 完成媒体发现与下载。VidOtter 扩展无需区分页面是由哪个工具打开的。

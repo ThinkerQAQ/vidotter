@@ -45,6 +45,7 @@ type bridgeTask struct {
 	Playlist      string            `json:"playlist"`
 	ResolvePage   bool              `json:"resolvePage"`
 	ViaMCP        bool              `json:"viaMcp,omitempty"`
+	ResumeJobID   string            `json:"resumeJobId,omitempty"`
 	MediaHeaders  map[string]string `json:"mediaHeaders"`
 	PageHeaders   map[string]string `json:"pageHeaders"`
 	MediaCookies  []browserCookie   `json:"mediaCookies"`
@@ -81,6 +82,7 @@ type bridgeServer struct {
 	browserMedia     *browserMediaHub
 	browserInstallMu sync.Mutex
 	browserAgent     *browserAutomationProxy
+	browserWake      chan struct{}
 	httpServer       *http.Server
 	restart          func()
 }
@@ -155,6 +157,7 @@ func runBridge() error {
 		pending:      make(map[string]pendingBridgeTask),
 		jobs:         jobs,
 		jobStorePath: jobStorePath,
+		browserWake:  make(chan struct{}, 1),
 		config:       loadBridgeConfig(),
 		tools:        newDesktopToolRegistry(),
 	}
@@ -215,6 +218,9 @@ func runBridge() error {
 		_ = listener.Close()
 		return err
 	}
+	doneBrowserWaits := make(chan struct{})
+	go server.monitorBrowserWaits(doneBrowserWaits)
+	defer close(doneBrowserWaits)
 	fmt.Fprintf(os.Stderr, "Bridge 已就绪：pid=%d address=%s\n", server.state.PID, bridgeAddress)
 	appendRuntimeLog("bridge", "ready")
 	err = httpServer.Serve(listener)
@@ -304,6 +310,15 @@ func (s *bridgeServer) handleTasks(response http.ResponseWriter, request *http.R
 	if _, err := optionsFromBridgeTask(task, config); err != nil {
 		appendRuntimeEvent("WARN", "bridge", "task_rejected", "reason", "invalid_options")
 		writeJSON(response, http.StatusBadRequest, map[string]any{"ok": false, "error": err.Error()})
+		return
+	}
+	if task.ResumeJobID != "" {
+		jobID, err := s.activateBrowserWait(task)
+		if err != nil {
+			writeJSON(response, http.StatusConflict, map[string]any{"ok": false, "error": "waiting browser task cannot be resumed"})
+			return
+		}
+		writeJSON(response, http.StatusAccepted, map[string]any{"ok": true, "taskId": jobID})
 		return
 	}
 	jobID, err := s.enqueueTask(task)

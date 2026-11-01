@@ -112,12 +112,21 @@ type mcpJobSummary struct {
 	RequiresFreshSession bool   `json:"requires_fresh_browser_session,omitempty"`
 	OutputFiles          int    `json:"output_files"`
 	SubtitleFiles        int    `json:"subtitle_files"`
+	RequiresUserAction   bool   `json:"requires_user_action,omitempty"`
+	ActionMessage        string `json:"action_message,omitempty"`
 }
 
 func summarizeMCPJob(j bridgeJob) mcpJobSummary {
 	s := mcpJobSummary{ID: j.ID, Title: j.Title, Status: j.Status, Phase: j.Phase, Progress: j.Progress,
 		DownloadedBytes: j.DownloadedBytes, TotalBytes: j.TotalBytes,
 		RequiresFreshSession: j.RequiresFreshSession, OutputFiles: len(j.OutputPaths)}
+	if j.Status == "waiting_for_browser" {
+		s.RequiresUserAction = true
+		s.ActionMessage = "请在浏览器中完成必要操作并播放视频；媒体出现后会自动继续下载。"
+	} else if j.Status == "failed" && j.Phase == "waiting-for-media" {
+		s.RequiresUserAction = true
+		s.ActionMessage = "等待媒体已超时，请重新打开页面并提交下载。"
+	}
 	for _, path := range j.OutputPaths {
 		if isSubtitleFile(path) {
 			s.SubtitleFiles++
@@ -177,9 +186,11 @@ type mcpDownloadInput struct {
 }
 
 type mcpDownloadResult struct {
-	Route  string `json:"route,omitempty"`
-	TaskID string `json:"task_id"`
-	Status string `json:"status"`
+	Route              string `json:"route,omitempty"`
+	TaskID             string `json:"task_id"`
+	Status             string `json:"status"`
+	RequiresUserAction bool   `json:"requires_user_action,omitempty"`
+	ActionMessage      string `json:"action_message,omitempty"`
 }
 
 func (c *mcpBridgeClient) download(ctx context.Context, in mcpDownloadInput) (mcpDownloadResult, error) {
@@ -235,13 +246,15 @@ func (c *mcpBridgeClient) download(ctx context.Context, in mcpDownloadInput) (mc
 			Matched            bool   `json:"matched"`
 			ExtensionConnected bool   `json:"extensionConnected"`
 			TaskID             string `json:"taskId"`
+			Status             string `json:"status"`
 		}
 		err := c.request(ctx, true, http.MethodPost, "/v1/browser/media/by-page/download",
 			struct {
 				PageURL   string          `json:"pageUrl"`
+				Title     string          `json:"title"`
 				Quality   string          `json:"quality"`
 				Subtitles SubtitleRequest `json:"subtitles"`
-			}{PageURL: in.URL, Quality: in.Quality, Subtitles: subtitles}, &captured)
+			}{PageURL: in.URL, Title: in.Title, Quality: in.Quality, Subtitles: subtitles}, &captured)
 		if err != nil {
 			return mcpDownloadResult{}, errors.New("browser media submission failed; ensure VidOtter extension is connected and retry")
 		}
@@ -251,10 +264,15 @@ func (c *mcpBridgeClient) download(ctx context.Context, in mcpDownloadInput) (mc
 			}
 			return mcpDownloadResult{TaskID: captured.TaskID, Status: "queued", Route: "browser"}, nil
 		}
-		if !captured.ExtensionConnected {
-			return mcpDownloadResult{}, errors.New("browser capture required: connect the VidOtter extension, play the video, then retry; use strategy=page only for yt-dlp-supported webpages")
+		if !mcpJobID.MatchString(captured.TaskID) || captured.Status != "waiting_for_browser" {
+			return mcpDownloadResult{}, errors.New("Bridge returned invalid waiting task")
 		}
-		return mcpDownloadResult{}, errors.New("no matching recent HLS/MP4 media captured for this exact page; start playback in Edge/Chrome and retry (or use strategy=page for yt-dlp-supported webpages)")
+		message := "请在 Edge/Chrome 中打开该页面、完成必要操作并播放视频；检测到媒体后会自动继续。"
+		if !captured.ExtensionConnected {
+			message = "请先在 Edge/Chrome 中启用 VidOtter 扩展，再打开页面并播放视频；连接恢复后自动继续。"
+		}
+		return mcpDownloadResult{TaskID: captured.TaskID, Status: "waiting_for_browser", Route: "browser",
+			RequiresUserAction: true, ActionMessage: message}, nil
 	}
 	task := bridgeTask{
 		URL: in.URL, Title: in.Title, Quality: in.Quality, Playlist: "single", ResolvePage: resolvePage,

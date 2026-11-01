@@ -39,6 +39,7 @@ type bridgeJob struct {
 	SourceTabID          int             `json:"sourceTabId,omitempty"`
 	SourceFrameID        int             `json:"sourceFrameId,omitempty"`
 	PageURL              string          `json:"pageUrl,omitempty"`
+	BrowserPageHash      string          `json:"-"`
 	CreatedAt            time.Time       `json:"createdAt"`
 	UpdatedAt            time.Time       `json:"updatedAt"`
 	task                 bridgeTask
@@ -686,7 +687,7 @@ func (s *bridgeServer) handleJobs(response http.ResponseWriter, request *http.Re
 		}
 		s.mu.Lock()
 		job := s.jobs[jobID]
-		canRetry := job != nil && job.Status == "failed"
+		canRetry := job != nil && job.Status == "failed" && job.Phase != "waiting-for-media"
 		if canRetry {
 			if err := applyRefreshedJobCredentials(&job.task, refreshed); err != nil {
 				s.mu.Unlock()

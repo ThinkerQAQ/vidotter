@@ -67,6 +67,8 @@ Worker-only `progress`, `output`, `files`, `state` actions under `/v1/jobs/{id}/
 
 ### Browser media integration (local authenticated API)
 
+The webpage-first endpoint returns either a submitted task ID or `202 {matched:false, taskId, status:"waiting_for_browser"}`. A waiting job is persisted and is resumed by the original extension media event; `POST /v1/tasks` may carry a private `resumeJobId` during that handoff. This is not a new public MCP tool and cannot be used to select arbitrary browser sessions. The original job ID is reused. Waiting lasts 20 minutes; the stored page identity is a SHA-256 hash (not the full query-bearing URL). Browser notifications are best effort, and user completion of site challenges is manual.
+
 The following endpoints require `X-VidOtter-Token` on loopback and are **not** public Internet APIs. Browser media indexes expire after ten minutes and never contain signed media URLs or Cookie headers.
 
 | HTTP route | Responsibility |

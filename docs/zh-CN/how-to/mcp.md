@@ -21,7 +21,7 @@ VidOtter 在现有桌面 Go 程序中增加**13 个可选 MCP 工具**。浏览�
 | `vidotter_browser_click` | 仅本地显式启用自动点击后才能操作已有控件 |
 | `vidotter_browser_close` | 关闭组件自己创建的后台标签页 |
 
-**普通网页默认走浏览器优先。** 在 Edge/Chrome 后台标签页打开网页、正常播放后，调用 `vidotter_download(url=...)`。VidOtter 在 Bridge 内按**完整页面 URL** 匹配短期媒体索引，匹配到 HLS/MP4 后，交由原生下载队列处理；浏览器 Cookie 和请求头仅在提交下载时由扩展读取，不会通过 MCP 返回。未检测到匹配资源时明确返回需要播放的提示，**不会自动回退 yt-dlp**。普通 MP4/M3U8 直链仍可直接下载；只有明确选择 `strategy=page` 才尝试 yt-dlp 解析兼容的公开网页。`strategy=browser` 表示严格要求浏览器捕获。
+**普通网页默认走浏览器优先。** 在 Edge/Chrome 后台标签页打开网页、正常播放后，调用 `vidotter_download(url=...)`。VidOtter 在 Bridge 内按**完整页面 URL** 匹配短期媒体索引，匹配到 HLS/MP4 后，交由原生下载队列处理；浏览器 Cookie 和请求头仅在提交下载时由扩展读取，不会通过 MCP 返回。未捕获到匹配媒体时，立即返回 `status=waiting_for_browser`、原任务 `task_id` 及 `requires_user_action=true`。用户在浏览器完成必要的人工操作并点击播放后，扩展通过原有媒体事件唤醒等待任务，**沿用同一个任务 ID 和原生下载流程**，无需再次提交 URL。扩展在线时尝试发送一次 Edge/Chrome 本地通知；不自动处理真人验证。最长等待 20 分钟，超时后需要重新提交。**不会自动回退 yt-dlp**。普通 MP4/M3U8 直链仍可直接下载；只有明确选择 `strategy=page` 才尝试 yt-dlp 解析兼容的公开网页。`strategy=browser` 表示严格要求浏览器捕获。
 
 Bridge 重启或内存索引丢失时，扩展在重新连接及 MCP 请求时**补报十分钟内捕获的非敏感媒体索引**。MCP 列表仍去除页面查询参数；Bridge 内部使用完整页面身份做精确匹配，避免同路径不同视频误选。若同一页面同时有 HLS 和 MP4，优先选择 HLS；只有 DASH/分离轨道时，仍需用户显式选择适用的通用页面解析方式。
 

@@ -19,6 +19,7 @@ type persistedBridgeJob struct {
 	Job                  bridgeJob  `json:"job"`
 	Task                 bridgeTask `json:"task"`
 	RequiresFreshSession bool       `json:"requiresFreshSession,omitempty"`
+	BrowserPageHash      string     `json:"browserPageHash,omitempty"`
 }
 
 func bridgeJobsPath() (string, error) {
@@ -83,6 +84,7 @@ func saveBridgeJobs(path string, jobs map[string]*bridgeJob) error {
 		snapshot.Jobs = append(snapshot.Jobs, persistedBridgeJob{
 			Job: publicBridgeJob(job), Task: persistentBridgeTask(job.task),
 			RequiresFreshSession: bridgeTaskHasCredentials(job.task) || job.RequiresFreshSession,
+			BrowserPageHash:      job.BrowserPageHash,
 		})
 	}
 	data, err := json.MarshalIndent(snapshot, "", "  ")
@@ -124,6 +126,7 @@ func loadBridgeJobs(path string) (map[string]*bridgeJob, error) {
 			continue
 		}
 		job.task = saved.Task
+		job.BrowserPageHash = saved.BrowserPageHash
 		job.worker = nil
 		job.workerToken = ""
 		job.runID = 0

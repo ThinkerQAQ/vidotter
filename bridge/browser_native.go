@@ -40,7 +40,7 @@ func runNativeBrowserCommands(state bridgeState) error {
 		if json.Unmarshal(raw, &envelope) != nil || !envelope.OK {
 			return errors.New("invalid Bridge command reply")
 		}
-		if envelope.Command == nil || (envelope.Command.Type != "browser_media_download" && envelope.Command.Type != "browser_media_refresh") {
+		if envelope.Command == nil || (envelope.Command.Type != "browser_media_download" && envelope.Command.Type != "browser_media_refresh" && envelope.Command.Type != "browser_wait_notice") {
 			continue
 		}
 		if err := writeNativeMessage(os.Stdout, envelope.Command); err != nil {
