@@ -5,7 +5,7 @@ on:
       release_tag:
         description: Existing release with complete native archives
         required: true
-        default: v1.6.2
+        default: v1.6.3
   pull_request:
     paths:
       - '.github/workflows/installer-smoke.yml'
@@ -45,7 +45,7 @@ jobs:
       - name: Build verified release installer
         env:
           GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: ${{ inputs.release_tag || 'v1.6.2' }}
+          RELEASE_TAG: ${{ inputs.release_tag || 'v1.6.3' }}
         shell: bash
         run: |
           preview=()
@@ -61,12 +61,12 @@ jobs:
         if: github.event_name == 'pull_request'
         shell: bash
         env:
-          RELEASE_TAG: ${{ inputs.release_tag || 'v1.6.2' }}
+          RELEASE_TAG: ${{ inputs.release_tag || 'v1.6.3' }}
         run: python scripts/smoke-pr-extension-bundle.py "$RUNNER_TEMP/release-work/extracted/vidotter-$RELEASE_TAG-${{ matrix.slug }}/extension"
       - name: Build synthetic next-version update repository (CI only)
         shell: bash
         env:
-          RELEASE_TAG: ${{ inputs.release_tag || 'v1.6.2' }}
+          RELEASE_TAG: ${{ inputs.release_tag || 'v1.6.3' }}
         run: |
           python scripts/make-synthetic-upgrade.py \
             --stage "$RUNNER_TEMP/release-work/extracted/vidotter-$RELEASE_TAG-${{ matrix.slug }}" \
@@ -77,24 +77,24 @@ jobs:
         shell: bash
         env:
           VIDOTTER_TEST_UPDATE_REPO: ${{ runner.temp }}/update-test-work/update-test-repo
-        run: bash scripts/smoke-offline-installer.sh "$RUNNER_TEMP/installer-output/VidOtter-Setup-${{ inputs.release_tag || 'v1.6.2' }}-linux-amd64.run"
+        run: bash scripts/smoke-offline-installer.sh "$RUNNER_TEMP/installer-output/VidOtter-Setup-${{ inputs.release_tag || 'v1.6.3' }}-linux-amd64.run"
       - name: Linux GUI wizard and Finish options (virtual platform)
         if: runner.os == 'Linux'
         shell: bash
-        run: bash scripts/smoke-installer-gui.sh "$RUNNER_TEMP/installer-output/VidOtter-Setup-${{ inputs.release_tag || 'v1.6.2' }}-linux-amd64.run"
+        run: bash scripts/smoke-installer-gui.sh "$RUNNER_TEMP/installer-output/VidOtter-Setup-${{ inputs.release_tag || 'v1.6.3' }}-linux-amd64.run"
       - name: Windows headless install/uninstall & Data preservation
         if: runner.os == 'Windows'
         shell: pwsh
         env:
           VIDOTTER_TEST_UPDATE_REPO: ${{ runner.temp }}/update-test-work/update-test-repo
-          RELEASE_TAG: ${{ inputs.release_tag || 'v1.6.2' }}
+          RELEASE_TAG: ${{ inputs.release_tag || 'v1.6.3' }}
         run: ./scripts/smoke-offline-installer.ps1
       - name: macOS headless install/uninstall & Data preservation
         if: runner.os == 'macOS'
         shell: bash
         env:
           VIDOTTER_TEST_UPDATE_REPO: ${{ runner.temp }}/update-test-work/update-test-repo
-          RELEASE_TAG: ${{ inputs.release_tag || 'v1.6.2' }}
+          RELEASE_TAG: ${{ inputs.release_tag || 'v1.6.3' }}
         run: bash scripts/smoke-offline-installer-macos.sh "$RUNNER_TEMP/installer-output/VidOtter-Setup-$RELEASE_TAG-macos-amd64.dmg"
       - uses: actions/upload-artifact@v4
         with:

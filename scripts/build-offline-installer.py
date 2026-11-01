@@ -55,7 +55,7 @@ def secure_extract(archive, outdir, expected_root):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--tag", default="v1.6.2")
+    parser.add_argument("--tag", default="v1.6.3")
     parser.add_argument("--tools-root", type=Path, required=True)
     parser.add_argument("--working-dir", type=Path, required=True)
     parser.add_argument("--output-dir", type=Path, required=True)
@@ -67,7 +67,7 @@ def main():
 
     go_os, name, qt_host, arch = platform_info()
     if not a.tag.startswith("v") or not all(s.isdigit() for s in a.tag[1:].split(".")):
-        raise ValueError("Expected a release tag such as v1.6.2")
+        raise ValueError("Expected a release tag such as v1.6.3")
     base = f"vidotter-{a.tag}-{name}-{arch}"
     filename = base + (".zip" if go_os == "windows" else ".tar.gz")
     release_dir = a.working_dir.resolve() / "release"
@@ -100,7 +100,7 @@ def main():
             "--os", go_os, "--arch", arch, "--output", program)
         shutil.copytree("extension", stage / "extension", dirs_exist_ok=True,
                         ignore=shutil.ignore_patterns("test", ".DS_Store"))
-        # Preview packages used to advertise the production 1.6.2 manifest
+        # Preview packages used to advertise a stale production manifest
         # despite having a new popup and worker. This caused Edge/Chrome to
         # keep an old MV3 service worker while reading the new popup files.
         # Give every CI preview a distinct 4-part Chrome-compatible version.
@@ -128,7 +128,7 @@ def main():
         for helper in ("Setup-VidOtter-MCP.ps1", "setup-mcp.sh",
                        "Manage-VidOtter-MCP.ps1", "manage-mcp.sh"):
             shutil.copy2(Path("scripts") / helper, stage / "scripts" / helper)
-        print("PR preview: Bridge and extension overlaid on official verified v1.6.2 dependency bundle")
+        print(f"PR preview: current source overlaid on verified {a.tag} dependency bundle")
 
     tools_root = a.tools_root.resolve()
     run(sys.executable, "-m", "aqt", "install-tool", "-O", tools_root,

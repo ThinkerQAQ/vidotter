@@ -8,7 +8,7 @@ on:
       release_tag:
         description: Existing non-prerelease GitHub Release (SHA256 validated)
         required: true
-        default: v1.6.2
+        default: v1.6.3
 
 permissions:
   contents: read
