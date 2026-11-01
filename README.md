@@ -74,3 +74,5 @@ go -C tools/vidotterdev run . build
 Build outputs go to `.build/out/`. This does not install the application. Follow the [development tutorial](docs/tutorial/development.md) and [maintenance guide](docs/architecture/maintenance.md) for deployment and release packaging. Agent instructions are in [AGENTS.md](AGENTS.md).
 
 VidOtter code and documentation use [Apache-2.0](LICENSE). Third-party components have separate terms: [NOTICE](NOTICE), [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+
+**Uninstall (Windows installer):** New installer candidates provide **Start → VidOtter → Uninstall VidOtter**, or launch VidOtter-Maintenance.exe from the installed directory and choose **Remove all components**. The Qt maintenance tool removes managed program files and Native Messaging registration while preserving local Data/. Older installer candidates may not have the Start Menu shortcut. VidOtter-Maintenance.exe.new is not the ordinary uninstaller.

@@ -173,3 +173,9 @@ Linux/macOS 也可在安装完成后打开扩展目录和安装教程；首次�
 ### ChatGPT 可选连接由设置页管理（开发分支）
 
 扩展通过 Native Messaging 连接本地 Bridge，用户点击“配置 ChatGPT 连接”并确认后，Bridge 才调用受信任的本地脚本，设置用户级 Tunnel。Tunnel ID/密钥只在本机终端输入，绝不经过扩展。用户需另行安装官方 tunnel-client。设置页若显示“已配置”，只能证明本地有配置文件，不代表 Tunnel 正在运行。正式验收需 doctor、health 和 ChatGPT 调用。该界面需要同时更新 Bridge 与扩展，旧 v1.6.2 正式包尚不具备。
+
+### Windows 卸载入口
+
+新安装器会创建 **开始菜单 → VidOtter → Uninstall VidOtter**，指向同一套 Qt Maintenance Tool，不引入第二套卸载程序。打开后选择 **Remove all components** 并确认。卸载会清理 Bridge、扩展程序文件和 Native Messaging 注册，保留 Data/ 用户配置、任务和下载文件。旧测试安装包若没有快捷方式，可在安装目录运行 VidOtter-Maintenance.exe。
+
+如果看到 VidOtter-Maintenance.exe.new，它可能是 Qt IFW 在 Windows 更新维护工具时暂存的文件，不是新的卸载程序。不要在更新进行时手动删除；如果更新失败，先查看安装目录的 InstallationLog.txt。

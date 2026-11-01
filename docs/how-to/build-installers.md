@@ -217,3 +217,9 @@ published v1.6.2 archive or earlier CI installer candidates.
 ### Optional ChatGPT integration in Settings
 
 The development branch moves the optional Tunnel setup to **Settings → AI integrations → ChatGPT MCP**. After the user confirms locally, the extension asks the authenticated Bridge to open a fixed, bundled setup script. Credentials stay in the local terminal, not in extension messages. The official tunnel-client must be installed separately. Presence of a Tunnel profile is **not proof of an online connection**; run doctor/health and a real ChatGPT MCP call before reporting success. This requires both an updated Bridge and extension; earlier v1.6.2 installers do not include this UI.
+
+### Windows uninstall entry
+
+New installers always add **Start → VidOtter → Uninstall VidOtter**, pointing to the same Qt Maintenance Tool. Select **Remove all components** and confirm. This removes managed program files and Native Messaging registration without silently deleting the user's Data/ directory. Older candidates can open VidOtter-Maintenance.exe from the installation directory instead.
+
+VidOtter-Maintenance.exe.new may be a deferred Windows maintenance-tool update artifact; it is not the standard uninstall entry. Consult InstallationLog.txt before troubleshooting or deleting a pending file.

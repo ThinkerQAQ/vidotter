@@ -74,3 +74,5 @@ go -C tools/vidotterdev run . build
 产物位于 `.build/out/`，构建不会自动安装。部署与打包见[开发教程](docs/zh-CN/tutorial/development.md)及[工程维护](docs/zh-CN/architecture/maintenance.md)。Agent 约定见 [AGENTS.md](AGENTS.md)。
 
 项目代码和文档采用 [Apache-2.0](LICENSE)；第三方组件采用各自的许可，见 [NOTICE](NOTICE) 和 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+
+**卸载（Windows 图形安装器）**：新版开始菜单 → VidOtter → **Uninstall VidOtter**，也可以直接打开安装目录里的 VidOtter-Maintenance.exe，选择 **Remove all components（删除所有组件）** 并确认。Qt 维护工具会清理程序和 Native Messaging 注册，但保留 Data/ 用户配置和下载。旧测试包如果没有开始菜单卸载入口，使用安装目录中的维护工具即可；不要把 VidOtter-Maintenance.exe.new 当作卸载器。

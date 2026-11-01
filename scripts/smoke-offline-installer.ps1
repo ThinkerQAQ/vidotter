@@ -23,11 +23,30 @@ if ($helperText -notmatch 'Start-Process -FilePath \$guide' -or $helperText -not
 }
 
 $startMenu = Join-Path ([Environment]::GetFolderPath('Programs')) 'VidOtter'
-foreach ($shortcut in @('Install Browser Extension.lnk')) {
+foreach ($shortcut in @('Install Browser Extension.lnk', 'Uninstall VidOtter.lnk')) {
     if (!(Test-Path (Join-Path $startMenu $shortcut))) {
         throw "Missing Start Menu setup shortcut: $shortcut"
     }
 }
+
+# Check uninstall shortcut opens the maintenance executable in this install.
+$uninstallLink = Join-Path $startMenu 'Uninstall VidOtter.lnk'
+$wsh = New-Object -ComObject WScript.Shell
+$linkTarget = $wsh.CreateShortcut($uninstallLink).TargetPath
+$maintenance = Join-Path $target 'VidOtter-Maintenance.exe'
+if (![string]::Equals($linkTarget, $maintenance, [System.StringComparison]::OrdinalIgnoreCase)) {
+    throw "Unexpected uninstall shortcut target: $linkTarget"
+}
+$uninstallRoots = @(
+    'HKCU:/Software/Microsoft/Windows/CurrentVersion/Uninstall',
+    'HKLM:/Software/Microsoft/Windows/CurrentVersion/Uninstall',
+    'HKLM:/Software/WOW6432Node/Microsoft/Windows/CurrentVersion/Uninstall'
+)
+$registered = @($uninstallRoots |
+    ForEach-Object { Get-ChildItem -Path $_ -ErrorAction SilentlyContinue } |
+    ForEach-Object { Get-ItemProperty -Path $_.PSPath -ErrorAction SilentlyContinue } |
+    Where-Object { $_.DisplayName -like 'VidOtter*' })
+Write-Host "Windows installed-app entries: $($registered.Count)"
 
 python scripts/smoke-mcp-stdio.py (Join-Path $target "bin/vidotter-windows-amd64.exe")
 if ($LASTEXITCODE -ne 0) { throw "Installed MCP failed" }
@@ -51,6 +70,7 @@ if ($env:VIDOTTER_TEST_UPDATE_REPO) {
 }
 & (Join-Path $target "VidOtter-Maintenance.exe") --confirm-command remove com.thinkerqaq.vidotter
 if ($LASTEXITCODE -ne 0) { throw "Windows uninstall failed" }
+if (Test-Path $uninstallLink) { throw "Uninstall shortcut was not removed" }
 if (!(Test-Path (Join-Path $data "config.toml"))) { throw "Config lost on uninstall" }
 if (!(Test-Path (Join-Path $data "downloads/keep.txt"))) { throw "Downloads lost on uninstall" }
 if (Test-Path $key) { throw "Native Messaging registry not removed" }

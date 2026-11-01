@@ -228,7 +228,7 @@ func TestPrepareInstallerFirstRunOnboarding(t *testing.T) {
 				if _, err := os.Stat(powershell); err != nil {
 					t.Fatal(err)
 				}
-				for _, shortcut := range []string{"Install Browser Extension.lnk"} {
+				for _, shortcut := range []string{"Install Browser Extension.lnk", "Uninstall VidOtter.lnk"} {
 					if !strings.Contains(string(script), shortcut) {
 						t.Fatalf("missing Start menu item %s", shortcut)
 					}
