@@ -227,7 +227,7 @@ func Deploy(root, target, targetOS, targetArch string) error {
 	if err := run(filepath.Join(root, "tools", "vidotterdev"), []string{"CGO_ENABLED=0", "GOOS=" + targetOS, "GOARCH=" + targetArch}, "go", "build", "-trimpath", "-o", filepath.Join(destination, "bin", "vidotterdev"+ext), "."); err != nil {
 		return err
 	}
-	for _, dir := range []string{"extension", "docs"} {
+	for _, dir := range []string{"extension", "assets"} {
 		if err := copyTree(filepath.Join(root, dir), filepath.Join(destination, dir), nil); err != nil {
 			return err
 		}

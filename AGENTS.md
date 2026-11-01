@@ -11,7 +11,7 @@ go -C tools/vidotterdev run . verify
 go -C tools/vidotterdev run . build
 ```
 
-The Go maintenance tool in `tools/vidotterdev/` is the **only** implementation of project build, verification, packaging, deployment and tool installation. Inspect `docs/architecture/maintenance.md` for all commands and platform requirements; do not add a second build wrapper.
+The Go maintenance tool in `tools/vidotterdev/` is the **only** implementation of project build, verification, packaging, deployment and tool installation. Use the **Development** section of root `README.md` (and its Chinese counterpart) for supported commands and prerequisites; do not add a second build wrapper.
 
 ## Code intelligence and direct tools
 
@@ -21,7 +21,7 @@ Prefer native LSP capabilities when your editor or Agent exposes an LSP client:
 | --- | --- | --- |
 | Go | `gopls serve` | `bridge/`, `tools/vidotterdev/` (separate Go modules); symbols, definitions, references, implementations, rename and diagnostics |
 | JavaScript/HTML/CSS | Editor's installed language servers, if available | `extension/`; navigation, references and diagnostics (check which languages and features the client supports) |
-| Markdown | `marksman server` | `README*.md`, `AGENTS.md`, `docs/`; headings, links, definitions and references |
+| Markdown | `marksman server` | `README.md`, `README_ZH.md`, `AGENTS.md`; headings, links, definitions and references |
 
 These servers use the Language Server Protocol over standard I/O and require an **LSP client**. Do not treat the binaries as one-shot analysis commands, or claim a provider is configured when it is not. For Go, `gopls symbols`, `gopls definition`, `gopls references` and `gopls check` can also be used directly after checking their argument formats. For browsers without an installed JS language server, use source reads, `rg`, `node --check` and the existing JS tests rather than creating a new adapter. Review long Markdown files section by section; a symbol outline alone is not a complete review.
 
@@ -44,8 +44,8 @@ Use standard `git status/diff/log`, `rg`, and file reads/edits for repository wo
 - Browser host, UI and tests: `extension/background.js`, `extension/popup/`, `extension/test/`
 - Android: `mobile/android/`
 - Native Go maintenance and release logic: `tools/vidotterdev/`
-- Entry documentation: [English](docs/index.md) · [中文](docs/zh-CN/index.md)
-- API reference: [Bridge API](docs/reference/bridge-api.md)
+- User entry and all how-to instructions: [English](README.md) · [中文](README_ZH.md)
+- API implementation: `bridge/bridge.go` and the individual Bridge route handlers; do not duplicate a drifting endpoint catalogue.
 
 ## Build, verification and deployment
 
@@ -71,7 +71,7 @@ The Go installer registers Native Messaging and the URL protocol. Installing, de
 
 ## Documentation changes
 
-Keep English `docs/` and Chinese `docs/zh-CN/` pages aligned. README is the product entry; tutorials lead to a checked result; how-to pages cover individual operations; reference pages list current fields/routes; architecture pages explain ownership and implementation. Check commands against `tools/vidotterdev/main.go`, settings against `bridge/bridge_config.go`, and UI labels against extension sources. Preserve screenshot provenance and distinguish automated checks from browser/device acceptance. Installation guides must distinguish a release archive from a source build and state which operations preserve, move or delete user data.
+**README-Only policy:** Keep user-facing documentation in the root `README.md` (English) and `README_ZH.md` (Simplified Chinese), aligned in structure and verified against source. Do not create `docs/` or another standalone tutorial, how-to, reference, architecture, example, migration or quick-start document. The screenshot is a retained asset in `assets/`. Keep legally required LICENSE/NOTICE/third-party notices and machine-readable build data in place. Check commands against `tools/vidotterdev/main.go`, settings against `bridge/bridge_config.go`, and UI labels against extension code. `scripts/check-readme-links.py` verifies both README links and structure. Clearly distinguish release archives from unreleased installers, automated tests from browser/device acceptance, and operations that preserve or remove user data.
 
 
 ### Browser Automation Component security
