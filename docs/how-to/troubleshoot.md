@@ -37,6 +37,16 @@ Open **Downloads** and inspect the failed stage and error. Check whether FFmpeg 
 
 Do not press Download repeatedly for a timed-out task. Check whether a job already exists, then use the supported Retry/Resume action. Review logs in `Data/logs/` without posting credentials or signed media URLs.
 
+## Temporary media expired or HTTP 403
+
+For a browser-captured HLS/MP4 resource, a link may have a short-lived URL signature. VidOtter v1.6.2 recognizes explicit expiry timestamps where possible and avoids starting downloads with known-expired links. Unknown signature formats are **not** assumed to be expired.
+
+If a browser-origin download fails while resolving an HLS playlist or probing an MP4 with HTTP 403, it may change to **Waiting for browser** instead of immediately failing. Return to the intended playback page, confirm you are authorized to access it, and play normally so the extension captures a **new media request**. The existing task resumes automatically with the **same task ID**; do not resubmit the expired URL or repeatedly retry the old resource.
+
+HTTP 403 can also mean unavailable access rights, region restrictions or other server policy; VidOtter does not bypass these restrictions. If segment downloads have already started, VidOtter does **not** automatically mix a new media source into the existing checkpoint. The task may remain failed and require a separate authorized download.
+
+Never share the entire `Data/` folder, `Data/work/`, raw browser requests or signed media URLs when reporting problems. Logs and screenshots should be reviewed and redacted before sharing.
+
 ## Workspace opens but cannot perform actions
 
 The Web UI at `http://127.0.0.1:17891/console/` uses the browser extension as a relay for privileged requests. Open it with **Open workspace** in the extension. The page itself does not hold the Bridge token. Check extension permissions and connection state before treating a static page as a functioning downloader.
