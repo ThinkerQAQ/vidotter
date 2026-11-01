@@ -206,15 +206,11 @@ func TestPrepareInstallerFirstRunOnboarding(t *testing.T) {
 			if strings.Contains(string(ui), "openExtensionCheckBox") {
 				t.Fatal("browser activation is required, not an optional checkbox")
 			}
-			html, err := os.ReadFile(filepath.Join(base, "data", "docs", "extension-install.html"))
-			if err != nil {
-				t.Fatal(err)
+			if _, err := os.Stat(filepath.Join(base, "data", "docs")); !os.IsNotExist(err) {
+				t.Fatal("Qt payload must not carry a separate docs directory")
 			}
-			if !strings.Contains(string(html), "edge://extensions") || !strings.Contains(string(html), "chrome://extensions") || !strings.Contains(string(html), "manifest.json") {
-				t.Fatal("offline guide must explain both browsers and the exact extension folder")
-			}
-			if !strings.Contains(string(html), `href="../extension/"`) {
-				t.Fatal("offline extension directory must be directly clickable")
+			if !strings.Contains(string(script), "/README.md") {
+				t.Fatal("installer finish must open root README for activation instructions")
 			}
 			if !strings.Contains(string(script), "VIDOTTER_EXTENSION_GUIDE_REQUIRED") {
 				t.Fatal("installer finish must always open browser activation guide")

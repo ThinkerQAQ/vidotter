@@ -8,7 +8,7 @@ if ($Mode -eq 'extension') {
     if (!(Test-Path (Join-Path $folder 'manifest.json'))) {
         throw "VidOtter extension is missing: $folder"
     }
-    $guide = Join-Path $root 'docs/extension-install.html'
+    $guide = Join-Path $root 'README_ZH.md'
     if (!(Test-Path $guide)) {
         throw "VidOtter offline extension guide is missing: $guide"
     }

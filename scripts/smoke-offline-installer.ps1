@@ -10,12 +10,13 @@ if ($env:GITHUB_EVENT_NAME -eq 'pull_request') {
     python scripts/smoke-pr-extension-bundle.py (Join-Path $target 'extension')
     if ($LASTEXITCODE -ne 0) { throw 'Installed popup / service worker mismatch' }
 }
-$offlineGuide = Join-Path $target "docs/extension-install.html"
+$offlineGuide = Join-Path $target "README_ZH.md"
 if (!(Test-Path $offlineGuide)) { throw "Offline browser extension guide missing from installer" }
 $guideText = Get-Content -Raw -Encoding UTF8 $offlineGuide
 if ($guideText -notmatch "edge://extensions" -or $guideText -notmatch "chrome://extensions" -or $guideText -notmatch "manifest.json") {
-    throw "Offline extension guide is missing required browser steps"
+    throw "README is missing required browser activation steps"
 }
+if (Test-Path (Join-Path $target 'docs')) { throw "Installed docs/ is forbidden by README-Only" }
 $manage = Join-Path $target "scripts/Manage-VidOtter-MCP.ps1"
 if (!(Test-Path $manage)) { throw "Tunnel service manager missing from installed Windows release" }
 $syntaxTokens = $null
