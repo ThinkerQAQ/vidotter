@@ -79,8 +79,10 @@ including explicit target-directory registration and retained `Data/`.
 On 2026-11-01, native CI built **Windows x64, macOS Intel, and Linux x64**
 installers successfully from the complete v1.6.2 release. Linux amd64 also
 passed command-line install/uninstall and local Data preservation.
-Windows/macOS command-line acceptance is in progress; native GUI and browser
-extension onboarding are **not yet verified**.
+Windows x64, macOS Intel and Linux x64 all passed native command-line
+install/uninstall tests with Data preservation in GitHub Actions
+[run #41284068572](https://github.com/ThinkerQAQ/vidotter/actions/runs/41284068572).
+Native GUI and browser extension onboarding are **not yet verified**.
 
 **Offline update limitation:** Trying to run a newer Qt IFW offline installer
 against an existing installation directory returns `TargetDirectoryInUse`.

@@ -68,8 +68,10 @@ Release 下载正式归档，核验 SHA-256，然后在 Windows、macOS Intel、
 
 2026-11-01 已在 CI 中使用完整 v1.6.2 发行包成功构建 Windows x64、
 macOS Intel、Linux x64 三个平台的安装器；Linux amd64 通过真实命令行
-安装/卸载与数据保留测试。Windows/macOS 命令行验收、图形界面与浏览器
-扩展首次安装仍未完成验证。
+安装/卸载与数据保留测试。Windows x64、macOS Intel、Linux x64 已在 GitHub Actions
+[运行 #41284068572](https://github.com/ThinkerQAQ/vidotter/actions/runs/41284068572)
+全部通过原生平台命令行安装/卸载与 Data 保留测试。
+图形安装界面及浏览器扩展首次启用仍未完成验证。
 
 **离线升级限制：** 已实测 Qt IFW 的新版离线安装器不能直接安装进
 已存在旧版本的目录（报 `TargetDirectoryInUse`）。在完成安全的更新/迁移
