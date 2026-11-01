@@ -73,12 +73,21 @@ on Windows, macOS Intel, and Linux amd64. It uses pinned Qt IFW **4.7** via
 `aqtinstall` for reproducible open-source CI; Qt IFW 4.11 is available through
 the official Qt Online Installer and needs separate release validation.
 Candidates are temporary workflow artifacts, **not published Releases**.
-The Linux CI also performs an isolated command-line install/uninstall smoke test,
+Native CI additionally exercises isolated command-line install/uninstall smoke tests,
 including explicit target-directory registration and retained `Data/`.
 
-A Linux amd64 command-line build/install/uninstall test using the complete
-v1.6.2 release archive passed on 2026-11-01. Windows, macOS GUI, and browser
+On 2026-11-01, native CI built **Windows x64, macOS Intel, and Linux x64**
+installers successfully from the complete v1.6.2 release. Linux amd64 also
+passed command-line install/uninstall and local Data preservation.
+Windows/macOS command-line acceptance is in progress; native GUI and browser
 extension onboarding are **not yet verified**.
+
+**Offline update limitation:** Trying to run a newer Qt IFW offline installer
+against an existing installation directory returns `TargetDirectoryInUse`.
+Do not instruct users to overwrite the old installation this way. Until a
+verified update/migration path exists, use the documented archive upgrade
+procedure. For existing Qt IFW installations, removing components via the
+Maintenance Tool preserves Data, but it is **not** a verified one-click upgrade.
 
 ## Release acceptance checklist
 

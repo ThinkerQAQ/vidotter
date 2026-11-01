@@ -63,10 +63,18 @@ Release 下载正式归档，核验 SHA-256，然后在 Windows、macOS Intel、
 构建离线安装器候选文件。CI 为了可复现使用 `aqtinstall` 安装固定版本
 **Qt IFW 4.7**；正式的 Qt IFW 4.11 工具可通过 Qt Online Installer 安装，
 还需要另行验收。所有 CI 产物只是短期 Actions 附件，**不会自动发布 Release**。
-Linux CI 还会在临时 HOME 下执行真实安装、卸载和 Data 保留测试。
+三个平台均增加了临时目录的命令行安装、卸载和 Data 保留验证；
+其中 Linux 已通过，Windows/macOS 验收正在进行。
 
-2026-11-01 已使用完整 v1.6.2 发行包通过 Linux amd64 命令行安装/卸载测试；
-Windows、macOS 图形界面和浏览器扩展首次安装仍未完成实机验收。
+2026-11-01 已在 CI 中使用完整 v1.6.2 发行包成功构建 Windows x64、
+macOS Intel、Linux x64 三个平台的安装器；Linux amd64 通过真实命令行
+安装/卸载与数据保留测试。Windows/macOS 命令行验收、图形界面与浏览器
+扩展首次安装仍未完成验证。
+
+**离线升级限制：** 已实测 Qt IFW 的新版离线安装器不能直接安装进
+已存在旧版本的目录（报 `TargetDirectoryInUse`）。在完成安全的更新/迁移
+流程前，不得宣传一键升级；现阶段请继续使用手动升级文档中的方法。
+Qt IFW Maintenance Tool 卸载组件时可以保留 Data，但这不等于一键升级。
 
 ## 发布前必须验收
 

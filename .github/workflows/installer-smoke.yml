@@ -57,6 +57,18 @@ jobs:
         if: runner.os == 'Linux'
         shell: bash
         run: bash scripts/smoke-offline-installer.sh "$RUNNER_TEMP/installer-output/VidOtter-Setup-${{ inputs.release_tag || 'v1.6.2' }}-linux-amd64.run"
+      - name: Windows headless install/uninstall & Data preservation
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          RELEASE_TAG: ${{ inputs.release_tag || 'v1.6.2' }}
+        run: ./scripts/smoke-offline-installer.ps1
+      - name: macOS headless install/uninstall & Data preservation
+        if: runner.os == 'macOS'
+        shell: bash
+        env:
+          RELEASE_TAG: ${{ inputs.release_tag || 'v1.6.2' }}
+        run: bash scripts/smoke-offline-installer-macos.sh "$RUNNER_TEMP/installer-output/VidOtter-Setup-$RELEASE_TAG-macos-amd64.dmg"
       - uses: actions/upload-artifact@v4
         with:
           name: installer-candidate-${{ matrix.slug }}
