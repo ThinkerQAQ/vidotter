@@ -106,8 +106,6 @@ Next, connect the browser to the installed service:
 4. Open VidOtter from the browser toolbar's extensions menu; optionally pin it to the toolbar.
 5. Go to **Settings → Connection & runtime** and confirm **Browser and download service connected**. If it cannot connect, follow the registration steps below and resolve the connection before downloading.
 
-This installs the browser extension, separately from the local Bridge registration in 2.2. The extension is currently distributed as local files; the installer provides activation instructions, but you still complete loading in the browser.
-
 **Registration repair only if the connection fails:** if the Native Messaging host cannot be found, copy the 32-character extension ID from the extensions page and register it again from the installation root:
 
 ```powershell
