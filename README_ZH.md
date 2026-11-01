@@ -43,6 +43,9 @@ Popup、Side Panel 和 Web UI 共用任务与设置。从扩展点击“打开�
 
 ## 可选的 AI / MCP 接入
 
+新版设置流程：在扩展 **设置 → AI 集成 → ChatGPT MCP** 页面直接输入 **Tunnel ID**，点击“配置并启动 Tunnel”。首次需要在本机终端输入权限为 Tunnels Read + Use 的 Runtime API Key；仅有 Tunnel ID 不能通过认证。按钮不会自动跳转其他网站，“查看 VidOtter 配置文档”则打开[完整步骤](docs/zh-CN/how-to/mcp.md)。未安装官方 tunnel-client 会在原页面提示，不会偷偷启用远程连接。
+
+
 桌面端提供 13 个 MCP 工具，让 ChatGPT 提交公开媒体下载、查询进度、控制任务和读取已完成字幕。MCP 直接复用现有下载引擎，不新建业务服务；浏览器 Cookie 仍只由扩展管理。扩展捕获的媒体通过短期资源 ID 供 MCP 查询；可选安装独立的 Remote Browser Tool 组件，通过同一条 VidOtter Tunnel 操作受限的后台标签页。详见[浏览器自动化组件](docs/zh-CN/how-to/browser-automation.md)。详见 [MCP 接入与安全说明](docs/zh-CN/how-to/mcp.md)。
 
 可选的 Browser Automation 组件现已通过 **Windows 单 MCP 端到端验证**：新建独立后台标签页、由扩展发现公开 MP4、按资源 ID 提交下载、查询完成状态、关闭测试页。测试仅使用 MDN CC0 公开素材；HLS/DASH 下载及自动播放未纳入此次验收。详见[实测流程](docs/zh-CN/how-to/browser-automation.md#已验证单-vidotter-mcp-完整链路windows)。

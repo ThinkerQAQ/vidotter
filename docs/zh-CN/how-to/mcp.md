@@ -106,8 +106,15 @@ Linux/macOS 使用对应的 `bin/vidotter-linux-...` 或 `bin/vidotter-macos-...
 
 官方说明：[Secure MCP Tunnels](https://developers.openai.com/api/docs/guides/secure-mcp-tunnels)。
 
-### VidOtter 设置页中的可选 ChatGPT 连接
+### 在 VidOtter 设置页配置并启动 Tunnel（新版）
 
-新开发版本的入口是 **设置 → AI 集成 → ChatGPT MCP → 配置 ChatGPT 连接**。MCP Server 已经随 Bridge 安装；用户确认后，扩展通过 Native Messaging 向本地已认证的 Bridge 发起固定配置动作，在系统终端启动可信的配置脚本。Tunnel ID 和运行密钥不经过扩展，也不允许浏览器下发任意命令。
+1. 在 [OpenAI Platform Tunnels](https://platform.openai.com/settings/organization/tunnels) 创建或查看私人 Tunnel，复制 Tunnel ID。
+2. 在 [OpenAI Platform API Keys](https://platform.openai.com/settings/organization/api-keys) 创建 Restricted Runtime API Key，权限只需 Tunnels Read + Use。Tunnel ID 不是身份凭证，单靠它无法启动服务。
+3. 在本机安装官方 [tunnel-client](https://github.com/openai/tunnel-client/releases/latest)，将程序放入 PATH 或用户 .local/bin 目录。
+4. 打开 VidOtter 浏览器扩展 → 设置 → AI 集成 → ChatGPT MCP；在该页面内填写 Tunnel ID，点击「配置并启动 Tunnel」。这个按钮不会跳转到外部网页。旁边的「查看 VidOtter 配置文档」才会主动打开本教程。
+5. VidOtter 验证 Tunnel ID 和客户端后，在本机系统终端运行绑定的配置脚本；首次使用时在那里输入 Runtime API Key。密钥不会交给浏览器扩展，也不会通过命令行参数传递。
+6. 脚本初始化和诊断 Tunnel，设置用户级登录自动启动：Windows Startup 快捷方式、macOS LaunchAgent，或 Linux systemd --user。最后在 ChatGPT Plugins 中创建采用同一个 Tunnel 的自定义 MCP 插件，并执行一次真实工具调用验证。
 
-官方 tunnel-client 仍需用户单独安装；脚本可在当前用户权限下创建登录自启动服务。Native Host 只负责启动配置向导，本身不承担 Tunnel 常驻进程。设置页目前识别“配置存在”，不冒充“已连接”；实际连接还须完成 doctor/health 和 ChatGPT 工具调用验收。新版安装器和开始菜单取消 ChatGPT 配置入口。
+说明：本地 MCP Server 随 VidOtter 安装，无须另装。配置文件存在不等于 Tunnel 已连通，也不等于 ChatGPT 已授权。设置页会如实显示“连接待验证”；请使用 doctor/health 和 ChatGPT 实际调用确认。
+
+如果缺少官方 Tunnel Client，设置页会展示提示和文档链接，不会自动跳转或下载第三方程序；已经配置不同 Tunnel ID 时，脚本会拒绝静默覆盖。

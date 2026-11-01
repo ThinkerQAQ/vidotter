@@ -13,7 +13,7 @@ if (-not $client) { throw 'Install official openai/tunnel-client first: https://
 $clientPath = $client.Source
 if (-not $clientPath) { $clientPath = $client.FullName }
 if (-not $TunnelId) { $TunnelId = Read-Host 'VidOtter Tunnel ID' }
-if ($TunnelId -notmatch '^tunnel_[a-zA-Z0-9]+$') { throw 'Invalid Tunnel ID' }
+if ($TunnelId -notmatch '^tunnel_([a-z0-9]{32}|[a-z0-9]{4}_[a-z0-9]{32})$') { throw 'Invalid Tunnel ID' }
 $private = Join-Path $env:LOCALAPPDATA 'VidOtter\MCP'
 New-Item -ItemType Directory -Force -Path $private | Out-Null
 $keyFile = Join-Path $private 'runtime-key.dpapi'
@@ -27,6 +27,12 @@ if (-not (Test-Path $keyFile)) {
     $secure | ConvertFrom-SecureString | Set-Content -Encoding UTF8 -Path $keyFile
 }
 $profile = Join-Path $private 'vidotter.yaml'
+if (Test-Path $profile) {
+    $existing = Get-Content -Raw -Path $profile
+    if ($existing -notmatch ([regex]::Escape($TunnelId))) {
+        throw 'Tunnel ID differs from existing VidOtter profile. Use its original ID or update the profile explicitly.'
+    }
+}
 if (-not (Test-Path $profile)) {
     $mcpCommand = '"' + $binary + '" --mcp-stdio'
     & $clientPath init --sample sample_mcp_stdio_local --profile-dir $private --profile vidotter --tunnel-id $TunnelId --mcp-command $mcpCommand --health-listen-addr '127.0.0.1:0'

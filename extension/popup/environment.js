@@ -398,15 +398,6 @@
       button.textContent = action.label || action.id;
       button.title = action.description || "";
       button.addEventListener("click", async () => {
-        if (tool.name === "chatgpt-mcp" && action.id === "setup") {
-          const accepted = window.confirm(
-            "配置 ChatGPT MCP 连接？\n\n" +
-            "MCP Server 已包含在 VidOtter 中。继续将打开本机配置向导，" +
-            "需要你主动提供个人 Tunnel ID 和受限运行密钥。\n\n" +
-            "此操作不会将密钥发送给浏览器扩展。未完成向导前不会开启云端连接。"
-          );
-          if (!accepted) return;
-        }
         if (tool.name === "browser-automation" && action.id === "enable-interaction") {
           // A separate, local user decision is mandatory. MCP cannot enable
           // interactive browser control on its own.
@@ -424,7 +415,6 @@
           await api.send("bridge.tool.action", { tool: tool.name, toolAction: action.id });
           const success = action.id === "restart" ? "Bridge 已重启并重新连接。"
             : action.id === "open-output" ? "已打开下载目录。"
-            : tool.name === "chatgpt-mcp" ? "已打开本地 ChatGPT 配置向导。完成后可在此刷新状态。"
             : tool.name === "browser-automation" ? ("浏览器自动化：" + (action.label || action.id) + "已完成。")
             : (tool.displayName || tool.name) + " 已安装。";
           await refresh();
@@ -438,6 +428,73 @@
       actionRow.appendChild(button);
     }
     body.appendChild(actionRow);
+  }
+
+  function renderChatGPTMCP(body, tool, health) {
+    // Inline setup: the browser collects only a non-secret Tunnel identifier.
+    // The restricted API key is entered only into the local OS terminal.
+    const form = document.createElement("form");
+    form.className = "mcp-setup-form";
+    const label = document.createElement("label");
+    label.className = "tool-field wide";
+    label.textContent = "Tunnel ID";
+    const tunnelInput = document.createElement("input");
+    tunnelInput.name = "tunnelId";
+    tunnelInput.type = "text";
+    tunnelInput.autocomplete = "off";
+    tunnelInput.spellcheck = false;
+    tunnelInput.placeholder = "tunnel_0123456789abcdef0123456789abcdef";
+    tunnelInput.setAttribute("aria-label", "Tunnel ID");
+    tunnelInput.required = true;
+    label.appendChild(tunnelInput);
+
+    const hint = document.createElement("p");
+    hint.className = "settings-help";
+    hint.textContent = "输入 OpenAI Platform 创建的 Tunnel ID。首次连接还需要 Runtime API Key（Tunnels Read + Use），密钥只在本机终端输入。";
+    const controls = document.createElement("div");
+    controls.className = "tool-actions mcp-actions";
+    const button = document.createElement("button");
+    button.type = "submit";
+    button.className = "primary";
+    button.textContent = "配置并启动 Tunnel";
+    const docs = document.createElement("a");
+    docs.className = "secondary mcp-doc-link";
+    docs.href = "https://github.com/ThinkerQAQ/vidotter/blob/main/docs/zh-CN/how-to/mcp.md";
+    docs.target = "_blank";
+    docs.rel = "noopener noreferrer";
+    docs.textContent = "查看 VidOtter 配置文档";
+    const message = document.createElement("small");
+    message.className = "mcp-setup-message";
+    message.setAttribute("role", "status");
+    controls.append(button, docs);
+    form.append(label, hint, controls, message);
+    form.addEventListener("submit", async event => {
+      event.preventDefault();
+      const tunnelId = tunnelInput.value.trim();
+      if (!/^tunnel_(?:[a-z0-9]{32}|[a-z0-9]{4}_[a-z0-9]{32})$/.test(tunnelId)) {
+        message.textContent = "Tunnel ID 格式不正确，请检查后再试。";
+        return;
+      }
+      const accepted = root.confirm(
+        "确认配置此 Tunnel？\n\n" +
+        "VidOtter 将打开本地配置终端并尝试安装用户级自启动服务。" +
+        "Runtime API Key 只在终端中输入，不会保存到浏览器扩展。"
+      );
+      if (!accepted) return;
+      button.disabled = true;
+      message.textContent = "正在打开本地配置终端…";
+      try {
+        await api.send("bridge.tool.action", { tool: "chatgpt-mcp", toolAction: "setup", tunnelId });
+        message.textContent = "已启动本机配置终端。请完成 Runtime API Key 授权；配置完成后刷新检查状态。";
+        api.setMessage("environmentMessage", message.textContent, "ok");
+      } catch (error) {
+        message.textContent = error.message || String(error);
+        api.setMessage("environmentMessage", message.textContent, "error");
+      } finally {
+        button.disabled = false;
+      }
+    });
+    body.appendChild(form);
   }
 
   function renderDetail(list, tool, editing) {
@@ -484,10 +541,14 @@
         line.textContent = detail;
         body.appendChild(line);
       }
-      renderConfigView(body, tool);
-      renderModelManager(body, tool);
+      if (tool.name === "chatgpt-mcp") {
+        renderChatGPTMCP(body, tool, health);
+      } else {
+        renderConfigView(body, tool);
+        renderModelManager(body, tool);
+      }
       if (visibleConfigFields(tool, true).length) renderEditControls(body, tool, card, false);
-      toolActions(body, tool, health);
+      if (tool.name !== "chatgpt-mcp") toolActions(body, tool, health);
     }
     card.append(header, body);
     list.appendChild(card);

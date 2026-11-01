@@ -753,7 +753,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       return true;
     }
     if (tool === "chatgpt-mcp" && action === "setup") {
-      bridgeFetch("/v1/mcp/setup", { method: "POST" })
+      bridgeFetch("/v1/mcp/setup", {
+        method: "POST",
+        body: JSON.stringify({ tunnelId: String(message.tunnelId || "") })
+      })
         .then(result => sendResponse(result), error =>
           sendResponse({ ok: false, error: error.message || String(error) }));
       return true;

@@ -108,6 +108,12 @@ The profile and runtime key belong in private OS storage, **not** this public Gi
 
 See [Secure MCP Tunnels](https://developers.openai.com/api/docs/guides/secure-mcp-tunnels) for access and account requirements.
 
-### Optional ChatGPT connection in VidOtter Settings
+### Configure and start ChatGPT Tunnel inside VidOtter Settings
 
-Use **Settings → AI integrations → ChatGPT MCP** in the new development build. The local MCP server is bundled into VidOtter, and the extension calls one authenticated Bridge action after local user consent to open the bundled setup script. No user key is passed through extension messaging, and the installed Native Messaging host is not the Tunnel daemon. The official tunnel-client is an independently installed, optional component. The existing local helper configures user-login startup when requested. A local profile does not prove the Tunnel is healthy; verify doctor/health and an end-to-end ChatGPT tool call. The previous installer and Start Menu entry to configure MCP have been removed.
+1. Copy your Tunnel ID from [OpenAI Platform Tunnels](https://platform.openai.com/settings/organization/tunnels) and create a Restricted Runtime API Key with Tunnels Read + Use at [API Keys](https://platform.openai.com/settings/organization/api-keys). The ID alone does not authenticate the daemon.
+2. Install official [tunnel-client](https://github.com/openai/tunnel-client/releases/latest) on the same host as VidOtter and place it on PATH or in the user .local/bin directory.
+3. Open VidOtter Settings → AI integrations → ChatGPT MCP. Enter the Tunnel ID in the inline field and click Configure and start Tunnel. This action does not open an external browser page. Only the separate VidOtter documentation link opens the setup guide.
+4. The authenticated local Bridge validates the ID and launches a fixed local setup script. Enter the Runtime API Key inside the system terminal, not into the extension. The helper initializes the profile, runs doctor, and arranges per-user login-time startup (Windows Startup shortcut, macOS LaunchAgent or Linux systemd user unit).
+5. Add the same Tunnel as a custom MCP plugin in ChatGPT. Verify client health/ready and perform a real tool call.
+
+If the Tunnel Client is absent, VidOtter reports the missing dependency in Settings without redirecting to other sites. An existing profile for a different Tunnel ID is not silently replaced. Local configuration presence is never proof of a healthy connection. See the [official Secure MCP Tunnel guide](https://developers.openai.com/api/docs/guides/secure-mcp-tunnels).

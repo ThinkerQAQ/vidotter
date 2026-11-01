@@ -92,7 +92,11 @@ console.log("extension popup tests passed");
 // an installer checkbox or an arbitrary shell command from the extension.
 assert.match(environmentSource, /chatgpt-mcp/);
 assert.match(environmentSource, /integration/);
-assert.match(environmentSource, /window\.confirm/);
+assert.match(environmentSource, /renderChatGPTMCP/);
+assert.match(environmentSource, /tunnelInput\.name = "tunnelId"/);
+assert.match(environmentSource, /查看 VidOtter 配置文档/);
+assert.doesNotMatch(environmentSource, /tool.name === "chatgpt-mcp" && action.id === "setup"/);
 const backgroundSource = fs.readFileSync(path.join(__dirname, "../background.js"), "utf8");
 assert.match(backgroundSource, /tool === "chatgpt-mcp" && action === "setup"/);
 assert.match(backgroundSource, /bridgeFetch\("\/v1\/mcp\/setup"/);
+assert.match(backgroundSource, /JSON\.stringify\(\{ tunnelId: String\(message\.tunnelId/);

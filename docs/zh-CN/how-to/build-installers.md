@@ -172,7 +172,7 @@ Linux/macOS 也可在安装完成后打开扩展目录和安装教程；首次�
 
 ### ChatGPT 可选连接由设置页管理（开发分支）
 
-扩展通过 Native Messaging 连接本地 Bridge，用户点击“配置 ChatGPT 连接”并确认后，Bridge 才调用受信任的本地脚本，设置用户级 Tunnel。Tunnel ID/密钥只在本机终端输入，绝不经过扩展。用户需另行安装官方 tunnel-client。设置页若显示“已配置”，只能证明本地有配置文件，不代表 Tunnel 正在运行。正式验收需 doctor、health 和 ChatGPT 调用。该界面需要同时更新 Bridge 与扩展，旧 v1.6.2 正式包尚不具备。
+扩展通过 Native Messaging 连接本地 Bridge，用户在设置页输入 Tunnel ID 并点击“配置并启动 Tunnel”确认后，Bridge 才调用受信任的本地脚本，设置用户级 Tunnel。Tunnel ID 在设置页填写，运行密钥只在本机终端输入，不经过扩展。用户需另行安装官方 tunnel-client。设置页若显示“已配置”，只能证明本地有配置文件，不代表 Tunnel 正在运行。正式验收需 doctor、health 和 ChatGPT 调用。该界面需要同时更新 Bridge 与扩展，旧 v1.6.2 正式包尚不具备。
 
 ### Windows 卸载入口
 

@@ -213,6 +213,9 @@ func TestPrepareInstallerFirstRunOnboarding(t *testing.T) {
 			if !strings.Contains(string(html), "edge://extensions") || !strings.Contains(string(html), "chrome://extensions") || !strings.Contains(string(html), "manifest.json") {
 				t.Fatal("offline guide must explain both browsers and the exact extension folder")
 			}
+			if !strings.Contains(string(html), `href="../extension/"`) {
+				t.Fatal("offline extension directory must be directly clickable")
+			}
 			if !strings.Contains(string(script), "VIDOTTER_EXTENSION_GUIDE_REQUIRED") {
 				t.Fatal("installer finish must always open browser activation guide")
 			}

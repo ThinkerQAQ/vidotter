@@ -38,25 +38,44 @@ func TestMCPSetupLaunchesOnlyBundledScripts(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	win, err := mcpSetupCommand("windows", root)
+	validID := "tunnel_0123456789abcdef0123456789abcdef"
+	win, err := mcpSetupCommand("windows", root, validID)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(win.Args[len(win.Args)-4:], []string{"-File", filepath.Join(scripts, "VidOtter-FirstRun.ps1"), "-Mode", "mcp"}) {
+	if !reflect.DeepEqual(win.Args[len(win.Args)-4:], []string{"-File", filepath.Join(scripts, "Setup-VidOtter-MCP.ps1"), "-TunnelId", validID}) {
 		t.Fatalf("unexpected Windows setup args: %#v", win.Args)
 	}
-	if strings.Contains(strings.Join(win.Args, " "), "tunnel_") {
+	if strings.Contains(strings.Join(win.Args, " "), "sk-") {
 		t.Fatal("setup must never receive credentials via its process arguments")
 	}
-	mac, err := mcpSetupCommand("darwin", root)
+	mac, err := mcpSetupCommand("darwin", root, validID)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if filepath.Base(mac.Args[0]) != "osascript" || !strings.Contains(mac.Args[len(mac.Args)-1], "setup-mcp.sh") {
 		t.Fatalf("unexpected macOS setup command: %#v", mac.Args)
 	}
-	if _, err := mcpSetupCommand(runtime.GOOS, filepath.Join(root, "missing")); err == nil {
+	if _, err := mcpSetupCommand(runtime.GOOS, filepath.Join(root, "missing"), validID); err == nil {
 		t.Fatal("must reject missing scripts")
+	}
+}
+
+func TestTunnelIDValidation(t *testing.T) {
+	good := []string{"tunnel_0123456789abcdef0123456789abcdef",
+		"tunnel_ab12_0123456789abcdef0123456789abcdef"}
+	for _, id := range good {
+		if !validTunnelID(id) {
+			t.Fatalf("unexpected invalid Tunnel ID")
+		}
+	}
+	bad := []string{"", "tunnel_", "tunnel_abc", "tunnel_0123456789ABCDEF0123456789abcdef",
+		"tunnel_0123456789abcdef0123456789abcdef;curl",
+		"tunnel_abcd_0123456789abcdef0123456789abcdef_more"}
+	for _, id := range bad {
+		if validTunnelID(id) {
+			t.Fatalf("unsafe ID accepted: %q", id)
+		}
 	}
 }
 
@@ -84,6 +103,24 @@ func TestMCPSetupRejectsUnauthorizedRequests(t *testing.T) {
 		server.handleMCPSetup(recorder, request)
 		if recorder.Code != http.StatusUnauthorized {
 			t.Fatalf("method=%s got=%d", method, recorder.Code)
+		}
+	}
+	cases := []string{
+		`{}`,
+		`{"tunnelId":"tunnel_"}`,
+		`{"tunnelId":"tunnel_0123456789abcdef0123456789abcdef;evil"}`,
+		`{"tunnelId":"tunnel_0123456789abcdef0123456789abcdef","apiKey":"sk-never"}`,
+	}
+	for _, body := range cases {
+		request := httptest.NewRequest(http.MethodPost, "/v1/mcp/setup", strings.NewReader(body))
+		request.Header.Set("X-VidOtter-Token", "test-secret")
+		recorder := httptest.NewRecorder()
+		server.handleMCPSetup(recorder, request)
+		if recorder.Code != http.StatusBadRequest {
+			t.Fatalf("invalid body accepted: status=%d", recorder.Code)
+		}
+		if strings.Contains(recorder.Body.String(), "sk-never") {
+			t.Fatal("secret must never appear in response")
 		}
 	}
 }
