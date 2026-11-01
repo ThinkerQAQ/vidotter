@@ -6,6 +6,18 @@ New-Item -ItemType Directory -Force -Path $sandbox | Out-Null
 & $setup --root $target --accept-licenses --confirm-command install
 if ($LASTEXITCODE -ne 0) { throw "Windows installer failed" }
 if (!(Test-Path (Join-Path $target "bin/vidotter-windows-amd64.exe"))) { throw "Bridge not installed" }
+$firstRun = Join-Path $target "scripts/VidOtter-FirstRun.ps1"
+if (!(Test-Path $firstRun)) { throw "First-run helper missing from installation" }
+$parseErrors = $null
+[System.Management.Automation.Language.Parser]::ParseFile($firstRun, [ref]$null, [ref]$parseErrors) | Out-Null
+if ($parseErrors.Count -gt 0) { throw "Windows first-run PowerShell script has syntax errors: $parseErrors" }
+$startMenu = Join-Path ([Environment]::GetFolderPath('Programs')) 'VidOtter'
+foreach ($shortcut in @('Install Browser Extension.lnk', 'Connect ChatGPT MCP.lnk')) {
+    if (!(Test-Path (Join-Path $startMenu $shortcut))) {
+        throw "Missing Start Menu setup shortcut: $shortcut"
+    }
+}
+
 python scripts/smoke-mcp-stdio.py (Join-Path $target "bin/vidotter-windows-amd64.exe")
 if ($LASTEXITCODE -ne 0) { throw "Installed MCP failed" }
 $key = "HKCU:\Software\Google\Chrome\NativeMessagingHosts\com.vidotter.bridge"

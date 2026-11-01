@@ -160,3 +160,66 @@ func TestInstallerUpdateShortcuts(t *testing.T) {
 		}
 	}
 }
+
+// Every platform gets one-product GUI and a finish-page activation guide.
+// Windows additionally ships a re-openable setup helper and Start shortcuts.
+// No test opens a browser or enables a Tunnel.
+func TestPrepareInstallerFirstRunOnboarding(t *testing.T) {
+	release := t.TempDir()
+	if err := os.WriteFile(filepath.Join(release, "LICENSE"), []byte("Apache-2.0"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	for _, platform := range []string{"windows", "darwin", "linux"} {
+		t.Run(platform, func(t *testing.T) {
+			dir := t.TempDir()
+			if err := prepareInstallerWithUpdateURL(dir, release, "1.6.2", platform, ""); err != nil {
+				t.Fatal(err)
+			}
+			base := filepath.Join(dir, "packages", "com.thinkerqaq.vidotter")
+			cfg, err := os.ReadFile(filepath.Join(dir, "config", "config.xml"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !strings.Contains(string(cfg), "<ControlScript>controller.qs</ControlScript>") {
+				t.Fatal("missing top-level Qt controller")
+			}
+			controller, err := os.ReadFile(filepath.Join(dir, "config", "controller.qs"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !strings.Contains(string(controller), "setDefaultPageVisible(QInstaller.ComponentSelection, false)") {
+				t.Fatal("redundant component selection must be hidden")
+			}
+			ui, err := os.ReadFile(filepath.Join(base, "meta", "first-run.ui"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			for _, id := range []string{"openExtensionCheckBox", "configureMcpCheckBox"} {
+				if !strings.Contains(string(ui), id) {
+					t.Fatalf("missing checkbox %q", id)
+				}
+			}
+			script, err := os.ReadFile(filepath.Join(base, "meta", "installscript.qs"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !strings.Contains(string(script), "addWizardPageItem") ||
+				!strings.Contains(string(script), "finishButtonClicked.connect") {
+				t.Fatal("installer finish page lacks activation hook")
+			}
+			powershell := filepath.Join(base, "data", "scripts", "VidOtter-FirstRun.ps1")
+			if platform == "windows" {
+				if _, err := os.Stat(powershell); err != nil {
+					t.Fatal(err)
+				}
+				for _, shortcut := range []string{"Install Browser Extension.lnk", "Connect ChatGPT MCP.lnk"} {
+					if !strings.Contains(string(script), shortcut) {
+						t.Fatalf("missing Start menu item %s", shortcut)
+					}
+				}
+			} else if _, err := os.Stat(powershell); !os.IsNotExist(err) {
+				t.Fatalf("unexpected Windows-specific script on %s", platform)
+			}
+		})
+	}
+}

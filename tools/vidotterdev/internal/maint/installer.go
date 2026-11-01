@@ -107,6 +107,8 @@ type installerConfig struct {
 	Name                string                 `xml:"Name"`
 	Version             string                 `xml:"Version"`
 	Title               string                 `xml:"Title"`
+	ControlScript       string                 `xml:"ControlScript,omitempty"`
+	WizardShowPageList  string                 `xml:"WizardShowPageList"`
 	Publisher           string                 `xml:"Publisher"`
 	StartMenuDir        string                 `xml:"StartMenuDir"`
 	TargetDir           string                 `xml:"TargetDir"`
@@ -123,6 +125,9 @@ type installerRepository struct {
 	Enabled     string `xml:"Enabled"`
 	DisplayName string `xml:"DisplayName"`
 }
+type installerUserInterfaces struct {
+	Names []string `xml:"UserInterface"`
+}
 type installerLicense struct {
 	Name string `xml:"name,attr"`
 	File string `xml:"file,attr"`
@@ -133,14 +138,15 @@ type installerLicenses struct {
 }
 
 type installerPackage struct {
-	XMLName     xml.Name          `xml:"Package"`
-	DisplayName string            `xml:"DisplayName"`
-	Description string            `xml:"Description"`
-	Version     string            `xml:"Version"`
-	ReleaseDate string            `xml:"ReleaseDate"`
-	Default     string            `xml:"Default"`
-	Script      string            `xml:"Script"`
-	Licenses    installerLicenses `xml:"Licenses"`
+	XMLName        xml.Name                `xml:"Package"`
+	DisplayName    string                  `xml:"DisplayName"`
+	Description    string                  `xml:"Description"`
+	Version        string                  `xml:"Version"`
+	ReleaseDate    string                  `xml:"ReleaseDate"`
+	Default        string                  `xml:"Default"`
+	Script         string                  `xml:"Script"`
+	UserInterfaces installerUserInterfaces `xml:"UserInterfaces"`
+	Licenses       installerLicenses       `xml:"Licenses"`
 }
 
 // prepareInstaller only repackages verified release files. Data/ is never
@@ -157,6 +163,7 @@ func prepareInstallerWithUpdateURL(destination, stage, ver, targetOS, updateURL 
 	}
 	config := installerConfig{
 		Name: "VidOtter", Version: ver, Title: "VidOtter Setup",
+		ControlScript: "controller.qs", WizardShowPageList: "false",
 		Publisher: "ThinkerQAQ", StartMenuDir: "VidOtter",
 		TargetDir: "@HomeDir@/VidOtter", MaintenanceToolName: "VidOtter-Maintenance",
 		RemoveTargetDir: "false",
@@ -173,7 +180,8 @@ func prepareInstallerWithUpdateURL(destination, stage, ver, targetOS, updateURL 
 		DisplayName: "VidOtter", Description: "VidOtter browser extension and local Bridge",
 		Version: ver, ReleaseDate: time.Now().UTC().Format("2006-01-02"),
 		Default: "true", Script: "installscript.qs",
-		Licenses: installerLicenses{License: installerLicense{Name: "Apache-2.0 (VidOtter original code)", File: "license.txt"}},
+		UserInterfaces: installerUserInterfaces{Names: []string{"first-run.ui"}},
+		Licenses:       installerLicenses{License: installerLicense{Name: "Apache-2.0 (VidOtter original code)", File: "license.txt"}},
 	}
 	meta := filepath.Join(destination, "packages", "com.thinkerqaq.vidotter", "meta")
 	if err := installerXML(filepath.Join(meta, "package.xml"), pkg); err != nil {
@@ -192,6 +200,19 @@ func prepareInstallerWithUpdateURL(destination, stage, ver, targetOS, updateURL 
 	if targetOS == "windows" {
 		shortcutOperations = `    component.addStopProcessForUpdateRequest("vidotter-windows-amd64.exe");`
 	}
+	if targetOS == "windows" {
+		shortcutOperations += `
+    component.addOperation("Mkdir", "@UserStartMenuProgramsPath@/VidOtter");
+    component.addOperation("CreateShortcut",
+        installer.environmentVariable("SystemRoot") + "/System32/WindowsPowerShell/v1.0/powershell.exe",
+        "@UserStartMenuProgramsPath@/VidOtter/Install Browser Extension.lnk",
+        "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File \"@TargetDir@/scripts/VidOtter-FirstRun.ps1\" -Mode extension");
+    component.addOperation("CreateShortcut",
+        installer.environmentVariable("SystemRoot") + "/System32/WindowsPowerShell/v1.0/powershell.exe",
+        "@UserStartMenuProgramsPath@/VidOtter/Connect ChatGPT MCP.lnk",
+        "-NoProfile -ExecutionPolicy Bypass -NoExit -File \"@TargetDir@/scripts/VidOtter-FirstRun.ps1\" -Mode mcp");
+`
+	}
 	if updateURL != "" {
 		switch targetOS {
 		case "windows":
@@ -201,25 +222,19 @@ func prepareInstallerWithUpdateURL(destination, stage, ver, targetOS, updateURL 
 			shortcutOperations = `    component.addOperation("CreateDesktopEntry", "vidotter-update.desktop", "Type=Application\nName=VidOtter Updater\nExec=\"@TargetDir@/VidOtter-Maintenance\"\nTerminal=false\nCategories=Utility;");`
 		}
 	}
-	script := fmt.Sprintf(`function Component() {}
-
-Component.prototype.createOperations = function() {
-    component.createOperations();
-    component.addOperation("Execute",
-        "@TargetDir@/bin/%s", "install", "--root", "@TargetDir@",
-        "UNDOEXECUTE", "@TargetDir@/bin/%s", "uninstall", "--root", "@TargetDir@");
-%s
-}
-`, bridgeInstaller, bridgeInstaller, shortcutOperations)
+	script := firstRunComponentScript(bridgeInstaller, shortcutOperations)
 	if err := os.WriteFile(filepath.Join(meta, "installscript.qs"), []byte(script), 0o644); err != nil {
 		return err
 	}
 	payload := filepath.Join(destination, "packages", "com.thinkerqaq.vidotter", "data")
-	return copyTree(stage, payload, func(relative string, isDir bool) bool {
+	if err := copyTree(stage, payload, func(relative string, isDir bool) bool {
 		name := filepath.ToSlash(relative)
 		return name != "Data" && !strings.HasPrefix(name, "Data/") &&
 			name != ".build" && !strings.HasPrefix(name, ".build/")
-	})
+	}); err != nil {
+		return err
+	}
+	return writeInstallerOnboarding(destination, meta, payload, targetOS)
 }
 
 func installerXML(path string, value any) error {

@@ -107,3 +107,13 @@ The profile and runtime key belong in private OS storage, **not** this public Gi
 - The local Bridge HTTP API must remain on loopback; never expose port `17891` to the internet. Tunnel only the restricted MCP stdio server.
 
 See [Secure MCP Tunnels](https://developers.openai.com/api/docs/guides/secure-mcp-tunnels) for access and account requirements.
+
+### Windows installer entry point
+
+With the revised GUI installer, **MCP Server is already bundled** and does
+not have a standalone enable switch. For cloud ChatGPT use, open Windows
+**Start → VidOtter → Connect ChatGPT MCP**. The helper starts
+`scripts/Setup-VidOtter-MCP.ps1` when the official `tunnel-client` is
+available, otherwise opens the official client and setup documentation.
+It still requires **your** Tunnel ID and restricted runtime key, and remote
+access is never enabled by the normal VidOtter installation.

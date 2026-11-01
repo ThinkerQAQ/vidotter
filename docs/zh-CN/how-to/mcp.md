@@ -105,3 +105,12 @@ Linux/macOS 使用对应的 `bin/vidotter-linux-...` 或 `bin/vidotter-macos-...
 - 不要把本地 Bridge 的 `127.0.0.1:17891` 直接公开映射到互联网；远程只转发受限 MCP。
 
 官方说明：[Secure MCP Tunnels](https://developers.openai.com/api/docs/guides/secure-mcp-tunnels)。
+
+### Windows 图形安装器的 MCP 入口
+
+新安装器已经带上 MCP Server，无需单独打开一个服务开关。
+如果要接入云端 ChatGPT，在 **Windows 开始菜单 → VidOtter →
+Connect ChatGPT MCP** 进入可选配置。存在官方 tunnel-client
+时会打开本地 `scripts/Setup-VidOtter-MCP.ps1` 向导；未安装时
+会打开官方客户端安装说明。仍需要你自己的 Tunnel ID 和权限受限的
+运行密钥；普通 VidOtter 安装不会自动开放远程连接。

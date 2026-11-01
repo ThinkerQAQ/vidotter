@@ -191,3 +191,32 @@ all 13 VidOtter tools are discoverable. The test runs after installation and
 again after an in-place update, without any Tunnel, API key or cloud connection.
 Only users who explicitly enable the optional ChatGPT Tunnel need to configure
 the external tunnel-client/login-time service.
+
+### First-run GUI onboarding (installer candidates)
+
+The single-product installer hides the redundant Component Selection page and the
+extra Start Menu group-selection page, but keeps the license and installation
+directory pages. After a successful **GUI** installation, the Finish page offers:
+
+- **Open browser extensions and the VidOtter extension folder** (selected by
+  default). On Windows, the user-approved action opens the Edge extensions
+  manager (or Chrome if Edge is unavailable) plus Explorer at the exact
+  `extension/` folder. The user still enables Developer mode and selects
+  **Load unpacked**; a desktop installer cannot silently bypass that action.
+- **Configure ChatGPT MCP Tunnel** (disabled by default). The MCP server itself
+  was already installed with the Bridge and exposes 13 tools via
+  `--mcp-stdio`. This option opens the optional Tunnel setup **only by
+  request**. If the official tunnel-client is not present, the helper opens
+  its installation instructions; it does not fetch a runtime credential or
+  enable remote access.
+
+On Windows the Start Menu has **Install Browser Extension** and
+**Connect ChatGPT MCP** entries, so the user can return to setup after closing
+the installer. The helper is located at
+`scripts/VidOtter-FirstRun.ps1` inside the installed directory. Linux/macOS
+open the extension directory plus the manual setup guide; they still need
+their browser-specific user action.
+
+Headless installs do not open browsers, folders, or Tunnel setup. This
+onboarding is present in **new installer candidates**, not in the already
+published v1.6.2 archive or earlier CI installer candidates.

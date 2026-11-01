@@ -146,3 +146,28 @@ Linux 应用菜单提供 **VidOtter Updater**；macOS 可打开安装目录中�
 完成 MCP 初始化并检查 13 个工具，升级后再检查一次。此测试不需要
 Tunnel、运行密钥或云端连接。普通用户无需手动启动本地 MCP 服务，
 只有主动开启 ChatGPT Tunnel 的用户需要配置独立 tunnel-client 和登录时自启。
+
+### 首次安装引导（新版安装器候选）
+
+安装包只有一个 VidOtter 产品，因此取消无意义的“选择 VidOtter
+组件”和重复的开始菜单目录选择页，仍保留软件许可、安装目录和进度。
+
+**Windows 图形安装完成页**有两个独立选项：
+
+- **打开浏览器扩展安装引导**（默认勾选）：自动打开 Edge
+  （若没有则使用 Chrome）的扩展管理页面，同时由资源管理器打开实际
+  安装目录的 `extension/`。用户只需启用开发者模式并点击
+  “加载解压缩的扩展”，浏览器安装授权无法静默跳过。
+- **配置 ChatGPT MCP Tunnel**（默认不勾选）：MCP Server
+  已经随 Bridge 安装，无需另装服务。用户主动选择时才启动
+  Tunnel 配置。如果缺少官方 tunnel-client，先打开其官方说明，
+  不会默默安装额外软件、生成或上传密钥。
+
+以后还能从 Windows 开始菜单的 **Install Browser Extension**
+和 **Connect ChatGPT MCP** 重新打开引导，不必重装 VidOtter。
+安装脚本位于 `scripts/VidOtter-FirstRun.ps1`。
+
+Linux/macOS 也可在安装完成后打开扩展目录和安装教程；首次加载仍
+须由浏览器用户确认。命令行/CI 安装不会启动浏览器或配置 Tunnel。
+以上属于新的安装器候选版本，早先的 v1.6.2 ZIP/Actions 安装器
+**没有这些新入口**。
