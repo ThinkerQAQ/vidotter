@@ -72,7 +72,7 @@ func Package(root, requested string, allowMissing bool, source string) error {
 		}); err != nil {
 			return err
 		}
-		if err := copyTree(filepath.Join(root, "docs"), filepath.Join(stage, "docs"), nil); err != nil {
+		if err := copyTree(filepath.Join(root, "assets"), filepath.Join(stage, "assets"), nil); err != nil {
 			return err
 		}
 		if err := copyTree(filepath.Join(root, "scripts"), filepath.Join(stage, "scripts"), nil); err != nil {

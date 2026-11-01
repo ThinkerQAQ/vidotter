@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-//go:embed assets/controller.qs assets/first-run.ui assets/first-run.ps1 assets/extension-install.html
+//go:embed assets/controller.qs assets/first-run.ui assets/first-run.ps1
 var onboardingAssets embed.FS
 
 func writeInstallerAsset(from, to string) error {
@@ -34,9 +34,6 @@ func writeInstallerOnboarding(dir, meta, payload string, targetOS string) error 
 		if err := writeInstallerAsset(file.asset, file.path); err != nil {
 			return err
 		}
-	}
-	if err := writeInstallerAsset("extension-install.html", filepath.Join(payload, "docs", "extension-install.html")); err != nil {
-		return err
 	}
 	if targetOS == "windows" {
 		if err := writeInstallerAsset("first-run.ps1", filepath.Join(payload, "scripts", "VidOtter-FirstRun.ps1")); err != nil {
@@ -72,7 +69,7 @@ Component.prototype.finishFirstRun = function() {
 
         } else {
             QDesktopServices.openUrl("file:///" + target + "/extension");
-            QDesktopServices.openUrl("file:///" + target + "/docs/extension-install.html");
+            QDesktopServices.openUrl("file:///" + target + "/README.md");
 
         }
     } catch (e) { console.log("VidOtter setup helper: " + e); }

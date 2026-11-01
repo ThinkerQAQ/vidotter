@@ -62,3 +62,19 @@ The Android project includes the Gradle Wrapper under Apache-2.0 and uses JUnit 
 `vidotterdev licenses` collects full upstream license artifacts and a versioned dependency report for every desktop target using pinned go-licenses v2.0.1. Formal packaging includes them in `THIRD_PARTY_LICENSES/` alongside the Go runtime license; a collection failure stops packaging. FFmpeg, Whisper, Llama and LLVM OpenMP remain separately licensed sidecars with their own full license and source/build notices.
 
 Go 维护入口按桌面目标平台生成完整许可及版本清单，并随包放入 THIRD_PARTY_LICENSES；收集失败停止打包。正式 Windows 包同时要求 FFmpeg、Whisper、Llama、LLVM OpenMP 的许可与来源文件齐全。
+
+## Qt Installer Framework (GUI installers only)
+
+The standalone Windows `.exe`, macOS `.dmg` and Linux `.run` installers are
+generated using **Qt Installer Framework 4.7** (`binarycreator`). The generated
+installer includes Qt installer runtime components and is separate from the
+original VidOtter Go application code. Qt IFW is offered under GPL-3.0 with
+the **Qt Company GPL Exception 1.0**; its terms must not be conflated with
+VidOtter's Apache-2.0 license or the licenses of the media dependencies.
+
+Corresponding unmodified upstream installer source and the GPL exception:
+<https://github.com/qtproject/installer-framework/tree/4.7> and
+<https://github.com/qtproject/installer-framework/blob/4.7/LICENSE.GPL3-EXCEPT>.
+The installer-generation scripts are open source under this repository.
+The installer runtime is **not** code-signed or Apple-notarized in the first
+public 1.6.3 release; users may see an operating-system reputation prompt.
