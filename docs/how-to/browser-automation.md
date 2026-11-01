@@ -28,6 +28,28 @@ On October 31, 2026, a Windows installation completed a **real end-to-end smoke 
 
 A newly installed user only needs the VidOtter extension, Bridge, local browser-debugging consent and the optional Browser Automation component. The component is opt-in, and interactive clicking remains off by default. If the browser is already showing the selected media, use `vidotter_list_browser_media` directly; opening a fresh tab or clicking Play is **not required** when the resource is already captured.
 
+### Additional browser-first HLS acceptance (Windows, October 31, 2026)
+
+After the v1.5.1 browser-first MCP change, an independent test used the public [hls.js demo](https://hlsjs.video-dev.org/demo/) as a webpage input: the Edge extension captured multiple HLS resources, `vidotter_download(url="https://hlsjs.video-dev.org/demo/", quality="480")` returned `route=browser`, and job `77ce068babe5` reached `completed`/100% with one media file. No yt-dlp webpage extractor was used. A second public HTML video test on W3Schools also completed with `route=browser` and one MP4 file. These are smoke tests, not a claim that all HLS sites or codecs work.
+
+### Manual intervention and automatic continuation (v1.6.0)
+
+The webpage-first MCP path does not require a second browser workflow. When media is not yet available, Bridge persists a `waiting_for_browser` job and returns `requires_user_action`. Complete the website's normal steps manually (including any human verification) and play the video. The **existing** extension media event awakens the job; the standard `submitBridgeTask()` sends fresh browser context to `/v1/tasks`, which activates the original job ID and runs the standard downloader. The Bridge never attempts to solve verification challenges, and Remote Browser MCP remains an independent optional browser adapter.
+
+The wait is limited to **20 minutes**. Bridge restart preserves waiting jobs and exact page identity as a SHA-256 digest in `Data/jobs.json`, not as a full page URL with query tokens. The browser extension is responsible for media credentials; none are persisted for waiting jobs. It sends an optional one-shot local notification via the existing Native Messaging channel when connected, without leaking the URL in the system notification. OS/browser notification settings may prevent display; MCP still reports the action required. Opening the correct page and playback remain user responsibilities.
+
+### Download result notifications (v1.6.1)
+
+When a worker reports **completed** or **failed**, Bridge sends one best-effort notification over the same local Native Messaging connection used by media capture and waiting notices. The Edge/Chrome extension shows a native notification; no source URL, filename, or cookies are included. Repeated status updates do not duplicate the notification. An extension that is disconnected or has notifications disabled may not display the alert. No new polling service or CDP session is required.
+
+### Temporary media URLs and safe recapture (v1.6.2)
+
+Media expiry recognition is **generic and conservative**: the extension and Go HLS downloader recognize explicitly named expiry parameters (such as `expires`, `exp`, `expiry` and `expiration`) with Unix seconds, milliseconds or standard ISO timestamps. An unknown signature format remains **unknown**, not automatically blocked. A 30-second safety margin prevents expiring captures from being selected. Original browser request timestamps are retained when media metadata is resynchronized.
+
+If an HLS playlist or an MP4 probe returns HTTP 403, or an expiry is confirmed, a browser-origin task that has **not started segment downloads** enters the existing `waiting_for_browser` state. The user must verify playback rights and initiate a **fresh browser media request**. The same task ID and download workflow can then continue. No page polling, automatic challenge solving, access-control bypass or site-specific parser is introduced. For failures after segment downloads have started, the task fails normally to prevent mixing incompatible media checkpoints.
+
+Privacy: `Data/jobs.json` does not persist full browser media URLs, URL query parameters, arbitrary headers, or raw HTTP failure bodies. Browser-origin and query-bearing direct URLs require a new source session after Bridge restart. HLS checkpoint plans may still retain segment URLs locally for resume, protected by restrictive file permissions; do not share `Data/work` directories publicly.
+
 ## When Remote Browser Tool is already connected
 
 If ChatGPT already has a working Remote Browser Tool MCP connection, **reuse that existing browser tool** for opening background tabs and inspecting or playing media. Then use `vidotter_list_browser_media` and `vidotter_download_browser_media` from VidOtter. The VidOtter extension captures media independently of how the tab was opened. **Do not enable or call VidOtter's nested Browser Automation component in this mode**: starting a second CDP client may cause another Edge/Chrome authorization prompt. This two-MCP workflow does not require an additional browser component installation, does not copy Remote Browser Tool source, and preserves the existing browser session.

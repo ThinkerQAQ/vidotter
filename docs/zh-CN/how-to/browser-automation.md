@@ -28,6 +28,28 @@ VidOtter 采用**一个产品、一个 MCP 入口、一条私人 Tunnel**。浏�
 
 新用户只需要安装 VidOtter 扩展和 Bridge、授权本机浏览器调试，并按需安装 Browser Automation 组件；不用另外安装 ChatGPT 浏览器插件。组件默认关闭，自动点击需要另行手动启用。**资源已经被扩展捕获时，直接查询资源 ID 下载即可，不需要重新打开网页或点击播放器。**
 
+### 补充验收：浏览器优先 HLS 下载（Windows，2026-10-31）
+
+升级到 v1.5.1 后，使用公开的 [hls.js 演示页](https://hlsjs.video-dev.org/demo/) 验证：Edge 扩展发现多条 HLS 资源，直接调用 `vidotter_download(url="https://hlsjs.video-dev.org/demo/", quality="480")` 返回 `route=browser`，任务 `77ce068babe5` 随后达到 `completed`、100%、1 个输出文件，**未调用 yt-dlp 网页解析器**。另以 W3Schools 公开 HTML Video 页验证网页匹配 MP4 后通过原生下载器完成。此结果仅代表所列样例通过，不保证所有站点或编码兼容。
+
+### 人工介入与自动续接（v1.6.0）
+
+默认网页下载没有新增第二套浏览器流程：尚未发现媒体时，Bridge 持久化 `waiting_for_browser` 任务并向 MCP 返回 `requires_user_action`。用户按网站要求自行完成操作（包括真人验证），正常点击播放；**原有扩展的媒体发现事件** 会唤醒任务，原有 `submitBridgeTask()` 携带新的浏览器会话向 `/v1/tasks` 提交，原任务 ID 进入正常下载队列。VidOtter 不尝试自动解决真人验证；Remote Browser MCP 继续作为独立、可选的浏览器操作组件。
+
+等待最长 **20 分钟**。Bridge 重启后保留等待任务；`Data/jobs.json` 仅持久化页面身份 SHA-256 哈希与经清理的页面地址，不保存页面查询参数里的令牌。媒体认证数据仍只由扩展按需处理。扩展在线时通过原有 Native Messaging 尝试发送一次本地通知；通知不会包含 URL，系统通知被关闭时仍可通过 MCP 看到需要人工操作的提示。
+
+### 下载结果通知（v1.6.1）
+
+Worker 上报 **completed** 或 **failed** 时，Bridge 通过现有 Native Messaging 发送一次尽力而为的通知，由 Edge/Chrome 扩展弹出系统通知。通知不包含媒体 URL、文件名、Cookie 或其他私密请求信息；重复状态上报不会重复提醒。若扩展未连接或系统关闭了通知，可能无法显示；不需要新增轮询服务或 CDP 会话。
+
+### 临时媒体地址与安全重新捕获（v1.6.2）
+
+媒体 URL 有效期检查是**通用且保守**的：浏览器扩展与 Go 下载器识别明确表示过期时间的参数（如 `expires`、`exp`、`expiry`、`expiration`），支持 Unix 秒、毫秒及标准 ISO 时间；无法识别的签名始终保持**未知**，不擅自判定失效。距过期时间小于 30 秒的资源不再提交。扩展重同步元数据时保留真实网络请求捕获时间，不会把旧链接伪装成新请求。
+
+HLS 清单或 MP4 探测出现 HTTP 403，或确定媒体链接已过期时，**尚未开始下载分片**的浏览器任务使用已有 `waiting_for_browser` 等待状态。用户自行检查播放权限并正常重新播放；只有捕获到**新的浏览器媒体请求**后，才复用原任务 ID 和原生下载队列继续。不会自动绕过访问控制、自动处理真人验证，也不新增网站专用解析器。已进入分片下载阶段的失败不会自动拼接新旧清单。
+
+隐私：`Data/jobs.json` 不再保存浏览器捕获的完整媒体 URL、查询令牌、任意自定义请求头或原始 HTTP 错误页面。Bridge 重启后，浏览器来源任务和带查询参数的直链需要重新提供有效媒体会话。HLS 断点续传计划仍可能在 `Data/work` 中保留媒体分片 URL，因此采用更严格的文件权限，**不要公开分享工作目录**。
+
 ## 已连接 Remote Browser Tool 时
 
 如果 ChatGPT 已经连接并正常使用 Remote Browser Tool MCP，**直接复用现有插件**打开后台标签页、查看页面和操作媒体播放，再用 VidOtter 的 `vidotter_list_browser_media` 和 `vidotter_download_browser_media` 完成媒体发现与下载。VidOtter 扩展无需区分页面是由哪个工具打开的。

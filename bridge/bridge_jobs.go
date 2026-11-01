@@ -39,6 +39,10 @@ type bridgeJob struct {
 	SourceTabID          int             `json:"sourceTabId,omitempty"`
 	SourceFrameID        int             `json:"sourceFrameId,omitempty"`
 	PageURL              string          `json:"pageUrl,omitempty"`
+	BrowserPageHash      string          `json:"-"`
+	BrowserWaitSince     time.Time       `json:"-"`
+	BrowserWaitAfter     time.Time       `json:"-"`
+	WaitReason           string          `json:"waitReason,omitempty"`
 	CreatedAt            time.Time       `json:"createdAt"`
 	UpdatedAt            time.Time       `json:"updatedAt"`
 	task                 bridgeTask
@@ -228,8 +232,23 @@ func (s *bridgeServer) listJobs() []bridgeJob {
 }
 
 func (s *bridgeServer) setJobStatus(jobID, status, message string) error {
+	return s.setJobStatusReason(jobID, status, message, "")
+}
+
+func (s *bridgeServer) setJobStatusReason(jobID, status, message, reason string) error {
 	s.mu.Lock()
-	defer s.mu.Unlock()
+	notifyResult := false
+	notifyWait := ""
+	defer func() {
+		s.mu.Unlock()
+		if notifyWait != "" {
+			s.mediaHub().notifyWaiting(notifyWait, jobID)
+			s.wakeBrowserWaits()
+		}
+		if notifyResult {
+			s.mediaHub().notifyJobResult(jobID, status)
+		}
+	}()
 	job := s.jobs[jobID]
 	if job == nil {
 		return errors.New("task not found")
@@ -242,9 +261,32 @@ func (s *bridgeServer) setJobStatus(jobID, status, message string) error {
 	default:
 		return errors.New("invalid task status")
 	}
+	// Only a fresh, user-driven browser capture may recover a media access
+	// failure. Do not automatically retry a 403 or reuse an old HLS plan:
+	// recovery is limited to failures before segment downloads start.
+	if status == "failed" && (reason == "media_expired" || reason == "media_access_denied") &&
+		job.Phase == "resolving" && job.PageURL != "" && job.SourceTabID >= 0 {
+		if _, err := redactedBrowserPage(job.PageURL); err == nil {
+			now := time.Now()
+			job.Status = "waiting_for_browser"
+			job.Phase = "waiting-for-media"
+			job.WaitReason = reason
+			job.BrowserPageHash = browserPageDigest(job.PageURL)
+			job.BrowserWaitSince = now
+			job.BrowserWaitAfter = now
+			job.Error = safeJobError(strings.TrimSpace(message))
+			job.Detail = "媒体访问已失效，请在浏览器重新播放，发现新资源后继续原任务"
+			job.SpeedBytesPerSecond = 0
+			job.UpdatedAt = now
+			_ = s.persistJobsLocked()
+			notifyWait = job.BrowserPageHash
+			appendRuntimeEvent("WARN", "bridge", "job_waiting_media", "jobId", jobID, "reason", reason)
+			return nil
+		}
+	}
 	previousStatus := job.Status
 	job.Status = status
-	job.Error = strings.TrimSpace(message)
+	job.Error = safeJobError(strings.TrimSpace(message))
 	if status == "running" && job.Detail == "等待启动" {
 		job.Detail = "正在准备下载"
 	}
@@ -260,6 +302,7 @@ func (s *bridgeServer) setJobStatus(jobID, status, message string) error {
 	job.UpdatedAt = time.Now()
 	_ = s.persistJobsLocked()
 	if previousStatus != status {
+		notifyResult = status == "completed" || status == "failed"
 		level := "INFO"
 		if status == "failed" {
 			level = "ERROR"
@@ -668,11 +711,12 @@ func (s *bridgeServer) handleJobs(response http.ResponseWriter, request *http.Re
 		var update struct {
 			Status string `json:"status"`
 			Error  string `json:"error"`
+			Reason string `json:"reason"`
 		}
 		if decodeBridgeJSON(response, request, &update) != nil {
 			return
 		}
-		if err := s.setJobStatus(jobID, update.Status, update.Error); err != nil {
+		if err := s.setJobStatusReason(jobID, update.Status, update.Error, update.Reason); err != nil {
 			writeJSON(response, http.StatusBadRequest, map[string]any{"ok": false, "error": err.Error()})
 			return
 		}
@@ -686,7 +730,7 @@ func (s *bridgeServer) handleJobs(response http.ResponseWriter, request *http.Re
 		}
 		s.mu.Lock()
 		job := s.jobs[jobID]
-		canRetry := job != nil && job.Status == "failed"
+		canRetry := job != nil && job.Status == "failed" && job.Phase != "waiting-for-media"
 		if canRetry {
 			if err := applyRefreshedJobCredentials(&job.task, refreshed); err != nil {
 				s.mu.Unlock()

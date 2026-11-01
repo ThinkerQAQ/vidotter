@@ -112,12 +112,24 @@ type mcpJobSummary struct {
 	RequiresFreshSession bool   `json:"requires_fresh_browser_session,omitempty"`
 	OutputFiles          int    `json:"output_files"`
 	SubtitleFiles        int    `json:"subtitle_files"`
+	RequiresUserAction   bool   `json:"requires_user_action,omitempty"`
+	ActionMessage        string `json:"action_message,omitempty"`
 }
 
 func summarizeMCPJob(j bridgeJob) mcpJobSummary {
 	s := mcpJobSummary{ID: j.ID, Title: j.Title, Status: j.Status, Phase: j.Phase, Progress: j.Progress,
 		DownloadedBytes: j.DownloadedBytes, TotalBytes: j.TotalBytes,
 		RequiresFreshSession: j.RequiresFreshSession, OutputFiles: len(j.OutputPaths)}
+	if j.Status == "waiting_for_browser" {
+		s.RequiresUserAction = true
+		s.ActionMessage = "请在浏览器中完成必要操作并播放视频；媒体出现后会自动继续下载。"
+		if j.WaitReason == "media_expired" || j.WaitReason == "media_access_denied" {
+			s.ActionMessage = "媒体访问失败，请检查网站播放权限并重新播放；仅捕获到新媒体后才会继续原任务。"
+		}
+	} else if j.Status == "failed" && j.Phase == "waiting-for-media" {
+		s.RequiresUserAction = true
+		s.ActionMessage = "等待媒体已超时，请重新打开页面并提交下载。"
+	}
 	for _, path := range j.OutputPaths {
 		if isSubtitleFile(path) {
 			s.SubtitleFiles++
@@ -166,6 +178,7 @@ func (c *mcpBridgeClient) job(ctx context.Context, id string) (mcpJobSummary, er
 }
 
 type mcpDownloadInput struct {
+	Strategy         string   `json:"strategy,omitempty" jsonschema:"auto (default browser-first), browser (require capture), or page (explicit yt-dlp webpage extraction)"`
 	URL              string   `json:"url" jsonschema:"Public HTTP/HTTPS video or media URL; no private network addresses"`
 	Title            string   `json:"title,omitempty" jsonschema:"Optional file title"`
 	Quality          string   `json:"quality,omitempty" jsonschema:"best, 1080, 720, 480; empty uses configured preference"`
@@ -176,8 +189,11 @@ type mcpDownloadInput struct {
 }
 
 type mcpDownloadResult struct {
-	TaskID string `json:"task_id"`
-	Status string `json:"status"`
+	Route              string `json:"route,omitempty"`
+	TaskID             string `json:"task_id"`
+	Status             string `json:"status"`
+	RequiresUserAction bool   `json:"requires_user_action,omitempty"`
+	ActionMessage      string `json:"action_message,omitempty"`
 }
 
 func (c *mcpBridgeClient) download(ctx context.Context, in mcpDownloadInput) (mcpDownloadResult, error) {
@@ -219,12 +235,51 @@ func (c *mcpBridgeClient) download(ctx context.Context, in mcpDownloadInput) (mc
 		!mcpLanguage(in.SubtitleLanguage) || !mcpLanguage(in.TargetLanguage) {
 		return mcpDownloadResult{}, errors.New("invalid subtitle language")
 	}
+	switch in.Strategy {
+	case "", "auto", "browser", "page":
+	default:
+		return mcpDownloadResult{}, errors.New("unsupported download strategy")
+	}
 	parsed, _ := url.Parse(in.URL)
 	ext := strings.ToLower(filepath.Ext(parsed.Path))
 	resolvePage := ext != ".mp4" && ext != ".m3u8"
+	subtitles := SubtitleRequest{Mode: mode, Languages: in.SiteLanguages, ASRLanguage: in.SubtitleLanguage, TargetLanguage: in.TargetLanguage}
+	if resolvePage && in.Strategy != "page" {
+		var captured struct {
+			Matched            bool   `json:"matched"`
+			ExtensionConnected bool   `json:"extensionConnected"`
+			TaskID             string `json:"taskId"`
+			Status             string `json:"status"`
+		}
+		err := c.request(ctx, true, http.MethodPost, "/v1/browser/media/by-page/download",
+			struct {
+				PageURL   string          `json:"pageUrl"`
+				Title     string          `json:"title"`
+				Quality   string          `json:"quality"`
+				Subtitles SubtitleRequest `json:"subtitles"`
+			}{PageURL: in.URL, Title: in.Title, Quality: in.Quality, Subtitles: subtitles}, &captured)
+		if err != nil {
+			return mcpDownloadResult{}, errors.New("browser media submission failed; ensure VidOtter extension is connected and retry")
+		}
+		if captured.Matched {
+			if !mcpJobID.MatchString(captured.TaskID) {
+				return mcpDownloadResult{}, errors.New("Bridge returned invalid browser task ID")
+			}
+			return mcpDownloadResult{TaskID: captured.TaskID, Status: "queued", Route: "browser"}, nil
+		}
+		if !mcpJobID.MatchString(captured.TaskID) || captured.Status != "waiting_for_browser" {
+			return mcpDownloadResult{}, errors.New("Bridge returned invalid waiting task")
+		}
+		message := "请在 Edge/Chrome 中打开该页面、完成必要操作并播放视频；检测到媒体后会自动继续。"
+		if !captured.ExtensionConnected {
+			message = "请先在 Edge/Chrome 中启用 VidOtter 扩展，再打开页面并播放视频；连接恢复后自动继续。"
+		}
+		return mcpDownloadResult{TaskID: captured.TaskID, Status: "waiting_for_browser", Route: "browser",
+			RequiresUserAction: true, ActionMessage: message}, nil
+	}
 	task := bridgeTask{
 		URL: in.URL, Title: in.Title, Quality: in.Quality, Playlist: "single", ResolvePage: resolvePage,
-		Subtitles: SubtitleRequest{Mode: mode, Languages: in.SiteLanguages, ASRLanguage: in.SubtitleLanguage, TargetLanguage: in.TargetLanguage},
+		Subtitles: subtitles,
 	}
 	var resp struct {
 		TaskID string `json:"taskId"`
@@ -235,7 +290,11 @@ func (c *mcpBridgeClient) download(ctx context.Context, in mcpDownloadInput) (mc
 	if !mcpJobID.MatchString(resp.TaskID) {
 		return mcpDownloadResult{}, errors.New("Bridge returned invalid task ID")
 	}
-	return mcpDownloadResult{TaskID: resp.TaskID, Status: "queued"}, nil
+	route := "native"
+	if resolvePage {
+		route = "page"
+	}
+	return mcpDownloadResult{TaskID: resp.TaskID, Status: "queued", Route: route}, nil
 }
 
 var mcpLanguageRE = regexp.MustCompile(`^[a-zA-Z0-9]+(?:-[a-zA-Z0-9]+)*$`)
@@ -344,7 +403,7 @@ func (c *mcpBridgeClient) subtitle(ctx context.Context, id string, index int) (m
 
 func (c *mcpBridgeClient) browserMedia(ctx context.Context) (browserMediaList, error) {
 	var result browserMediaList
-	err := c.request(ctx, false, http.MethodGet, "/v1/browser/media", nil, &result)
+	err := c.request(ctx, false, http.MethodGet, "/v1/browser/media?refresh=1", nil, &result)
 	return result, err
 }
 func (c *mcpBridgeClient) downloadBrowserMedia(ctx context.Context, id, quality string) (mcpDownloadResult, error) {

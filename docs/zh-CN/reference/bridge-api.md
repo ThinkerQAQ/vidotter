@@ -65,19 +65,23 @@ Web UI 操作通过扩展白名单中继，HTTP 页面不获取 Token。Worker �
 `/v1/jobs/{id}/` 下的 `progress`、`output`、`files`、`state` 供 Worker 上报结果，不是用户控制。字段见 `bridge/bridge.go`、`bridge/bridge_jobs.go`、`bridge/subtitle.go`、`bridge/bridge_preferences.go`。中继契约见 `extension/background.js` 和 `extension/console-relay.js`，中继动作与 HTTP 路由不同。
 
 
-### Browser media integration (local authenticated API)
+### 浏览器媒体集成（仅本地认证 API）
 
-The following endpoints require `X-VidOtter-Token` on loopback and are **not** public Internet APIs. Browser media indexes expire after ten minutes and never contain signed media URLs or Cookie headers.
+网页下载接口在已捕获媒体时返回普通下载任务 ID；否则返回 `202 {matched:false, taskId, status:"waiting_for_browser"}`。等待任务存储在既有 `jobs.json`，以页面 SHA-256 哈希精确匹配，**不持久化带查询参数的完整页面 URL**；扩展通过原有媒体事件唤醒等待任务，并在内部向 `POST /v1/tasks` 附带 `resumeJobId`，复用原任务 ID 和原生下载队列。这不是新增公开 MCP 工具。等待期限为 20 分钟；本地通知尽力发送，网站验证由用户手动完成。
 
-| HTTP route | Responsibility |
+下列接口均需通过回环地址提供 `X-VidOtter-Token`，**不得直接暴露到公网**。浏览器索引仅在 Bridge 内存中保留十分钟。MCP 无法获取媒体签名 URL、Cookie 或鉴权请求头。
+
+| HTTP 接口 | 用途 |
 | --- | --- |
-| `POST /v1/browser/media` | Extension announces page identity, tab-scoped resource key and media kind; no raw media URL or Cookie. |
-| `GET /v1/browser/media` | Returns short-lived opaque media IDs and sanitized page information. |
-| `POST /v1/browser/media/{id}/download` | MCP requests the extension to submit the matched resource. |
-| `GET /v1/browser/commands/next` | Persistent Native Messaging host long-polls for pending commands. |
-| `POST /v1/browser/commands/result` | Extension acknowledges the submitted task ID; no session details. |
-| `GET /v1/browser/automation` | Return optional browser component install/enable/interaction status. |
-| `POST /v1/browser/automation` | Local component install and explicit permission action. |
-| `POST /v1/browser/automation/call` | Fixed allowlist for the optional child MCP; interactive clicking is separately opt-in. |
+| `POST /v1/browser/media` | 扩展提交页面身份、标签页内资源键和媒体类型，仅包含索引元数据。 |
+| `GET /v1/browser/media` | 返回短期不透明媒体 ID 与已去除查询参数的页面信息。 |
+| `GET /v1/browser/media?refresh=1` | 通过原有 Native Messaging 通道请求扩展补报近期非敏感媒体索引，再返回列表。 |
+| `POST /v1/browser/media/{id}/download` | 请求扩展按不透明媒体 ID 提交下载。 |
+| `POST /v1/browser/media/by-page/download` | Bridge 内部按完整页面身份匹配；必要时定向补报索引，再通过扩展提交捕获的 HLS/MP4，不向 MCP 返回敏感信息。 |
+| `GET /v1/browser/commands/next` | 原生消息进程长轮询下载和媒体索引补报命令。 |
+| `POST /v1/browser/commands/result` | 扩展回复执行结果及下载任务 ID，不包含浏览器会话数据。 |
+| `GET /v1/browser/automation` | 可选浏览器组件的安装、启用与交互授权状态。 |
+| `POST /v1/browser/automation` | 本地组件安装与交互权限操作。 |
+| `POST /v1/browser/automation/call` | 仅允许受限浏览器操作；点击须由本地显式授权。 |
 
-The optional browser component downloads pinned and SHA-256 checked upstream release artifacts into local private Data. The AI-facing interface neither manages independent ChatGPT Tunnels nor exposes cookies or arbitrary browser operations.
+可选浏览器组件安装的是固定版本、经过 SHA-256 校验的上游发行包，存放于私有 `Data` 目录。AI 接口不管理额外 Tunnel，不提供 Cookie 读取、任意网络请求或通用 JavaScript 执行。

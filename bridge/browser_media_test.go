@@ -2,6 +2,8 @@ package vidotter
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -121,5 +123,163 @@ func TestBrowserMediaHTTPAuthorizationAndMetadata(t *testing.T) {
 	s.handleBrowserMedia(w, r)
 	if strings.Contains(w.Body.String(), "private") || strings.Contains(w.Body.String(), "resourceKey") {
 		t.Fatalf("leak: %s", w.Body.String())
+	}
+}
+
+func TestBrowserFirstMCPUsesHLSWithoutYTDLP(t *testing.T) {
+	const pageURL = "https://8.8.8.8/watch?token=private-a"
+	const jobID = "123456789abc"
+	s := &bridgeServer{state: bridgeState{Token: "test-token"}}
+	h := s.mediaHub()
+	// Exact page identity matters even when the MCP listing strips query data.
+	_, _ = h.put(browserMediaAnnouncement{TabID: 12, ResourceKey: "wrong-page", Kind: "hls", PageURL: "https://8.8.8.8/watch?token=private-b"})
+	_, _ = h.put(browserMediaAnnouncement{TabID: 15, ResourceKey: "mp4-item", Kind: "mp4", PageURL: pageURL})
+	_, _ = h.put(browserMediaAnnouncement{TabID: 15, ResourceKey: "hls-item", Kind: "hls", PageURL: pageURL})
+	if _, matched, _ := h.matchPage("https://8.8.8.8/watch?token=private-c"); matched {
+		t.Fatal("incorrectly matched another page's query")
+	}
+	handler := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/v1/tasks" {
+			t.Error("browser-first requests must not submit a yt-dlp task")
+			http.Error(w, "unexpected", http.StatusInternalServerError)
+			return
+		}
+		s.handleBrowserMedia(w, r)
+	}))
+	defer handler.Close()
+	client := &mcpBridgeClient{
+		httpClient: handler.Client(),
+		connect:    func(bool) (bridgeState, error) { return bridgeState{BaseURL: handler.URL, Token: "test-token"}, nil },
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 4*time.Second)
+	defer cancel()
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		command, err := h.poll(ctx)
+		if err != nil || command == nil {
+			t.Errorf("native command missing: %v", err)
+			return
+		}
+		if command.Type != "browser_media_download" || command.TabID != 15 || command.ResourceKey != "hls-item" {
+			t.Errorf("did not select captured HLS: %+v", command)
+		}
+		if command.Subtitles == nil || command.Subtitles.Mode != "site" || command.Subtitles.Languages[0] != "en" {
+			t.Errorf("subtitle options lost: %+v", command.Subtitles)
+		}
+		if !h.complete(browserDownloadReply{CommandID: command.CommandID, OK: true, TaskID: jobID}) {
+			t.Error("failed native acknowledgement")
+		}
+	}()
+	for i := 0; i < 50; i++ {
+		h.mu.Lock()
+		ready := !h.lastPoll.IsZero()
+		h.mu.Unlock()
+		if ready {
+			break
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+	got, err := client.download(ctx, mcpDownloadInput{URL: pageURL, Quality: "best", SubtitleMode: "site", SiteLanguages: []string{"en"}})
+	if err != nil || got.TaskID != jobID || got.Route != "browser" {
+		t.Fatalf("browser download: %+v %v", got, err)
+	}
+	<-done
+}
+
+func TestBrowserFirstMCPRequestsTargetedRefresh(t *testing.T) {
+	const pageURL = "https://8.8.8.8/new-video"
+	s := &bridgeServer{state: bridgeState{Token: "test-token"}}
+	h := s.mediaHub()
+	handler := httptest.NewServer(http.HandlerFunc(s.handleBrowserMedia))
+	defer handler.Close()
+	client := &mcpBridgeClient{httpClient: handler.Client(),
+		connect: func(bool) (bridgeState, error) { return bridgeState{BaseURL: handler.URL, Token: "test-token"}, nil },
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 4*time.Second)
+	defer cancel()
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		command, err := h.poll(ctx)
+		if err != nil || command == nil {
+			t.Errorf("missing refresh: %v", err)
+			return
+		}
+		digest := sha256.Sum256([]byte(pageURL))
+		if command.Type != "browser_media_refresh" || command.PageHash != hex.EncodeToString(digest[:]) {
+			t.Errorf("refresh was not scoped to requested page: %+v", command)
+			return
+		}
+		_, _ = h.put(browserMediaAnnouncement{TabID: 4, ResourceKey: "fresh-hls", Kind: "hls", PageURL: pageURL})
+		h.complete(browserDownloadReply{CommandID: command.CommandID, OK: true})
+		command, err = h.poll(ctx)
+		if err != nil || command == nil {
+			t.Errorf("missing download after refresh: %v", err)
+			return
+		}
+		if command.Type != "browser_media_download" || command.ResourceKey != "fresh-hls" {
+			t.Errorf("bad download command %+v", command)
+		}
+		h.complete(browserDownloadReply{CommandID: command.CommandID, OK: true, TaskID: "123456789abc"})
+	}()
+	for i := 0; i < 50; i++ {
+		h.mu.Lock()
+		online := !h.lastPoll.IsZero()
+		h.mu.Unlock()
+		if online {
+			break
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+	got, err := client.download(ctx, mcpDownloadInput{URL: pageURL})
+	if err != nil || got.Route != "browser" {
+		t.Fatalf("download after refresh: %+v %v", got, err)
+	}
+	<-done
+}
+
+func TestBrowserFirstMissingCaptureNeverFallsBackToYTDLP(t *testing.T) {
+	s := &bridgeServer{state: bridgeState{Token: "test-token"}}
+	handler := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/v1/tasks" {
+			t.Error("unexpected yt-dlp fallback")
+			http.Error(w, "invalid", 500)
+			return
+		}
+		s.handleBrowserMedia(w, r)
+	}))
+	defer handler.Close()
+	c := &mcpBridgeClient{httpClient: handler.Client(),
+		connect: func(bool) (bridgeState, error) { return bridgeState{BaseURL: handler.URL, Token: "test-token"}, nil },
+	}
+	got, err := c.download(context.Background(), mcpDownloadInput{URL: "https://8.8.8.8/watch"})
+	if err != nil || !mcpJobID.MatchString(got.TaskID) || got.Status != "waiting_for_browser" || !got.RequiresUserAction || got.Route != "browser" {
+		t.Fatalf("missing capture should yield a waiting task: %+v %v", got, err)
+	}
+}
+
+func TestExplicitYTDLPPageStrategy(t *testing.T) {
+	handler := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/v1/tasks" {
+			t.Errorf("unexpected path: %s", r.URL.Path)
+			return
+		}
+		var task bridgeTask
+		if err := json.NewDecoder(r.Body).Decode(&task); err != nil {
+			t.Errorf("decode: %v", err)
+		}
+		if !task.ResolvePage {
+			t.Error("explicit webpage strategy must use page resolver")
+		}
+		_ = json.NewEncoder(w).Encode(map[string]string{"taskId": "123456789abc"})
+	}))
+	defer handler.Close()
+	c := &mcpBridgeClient{httpClient: handler.Client(),
+		connect: func(bool) (bridgeState, error) { return bridgeState{BaseURL: handler.URL, Token: "test-token"}, nil },
+	}
+	got, err := c.download(context.Background(), mcpDownloadInput{URL: "https://8.8.8.8/watch", Strategy: "page"})
+	if err != nil || got.Route != "page" {
+		t.Fatalf("page strategy: %+v %v", got, err)
 	}
 }

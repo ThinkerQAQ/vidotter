@@ -15,6 +15,7 @@ import (
 
 const browserMediaTTL = 10 * time.Minute
 const browserCommandWait = 13 * time.Second
+const browserRefreshWait = 8 * time.Second
 
 type browserMediaAnnouncement struct {
 	ResourceKey string
@@ -22,12 +23,15 @@ type browserMediaAnnouncement struct {
 	Kind        string
 	PageTitle   string
 	PageURL     string
+	CapturedAt  int64
+	ExpiresAt   int64
 }
 type browserMediaItem struct {
 	ID          string    `json:"id"`
 	Kind        string    `json:"kind"`
 	PageTitle   string    `json:"page_title"`
 	PageURL     string    `json:"page_url"`
+	ExpiresAt   time.Time `json:"expires_at,omitempty"`
 	DetectedAt  time.Time `json:"detected_at"`
 	TabID       int       `json:"-"`
 	ResourceKey string    `json:"-"`
@@ -38,17 +42,22 @@ type browserMediaList struct {
 	Resources          []browserMediaItem `json:"resources"`
 }
 type browserDownloadRequest struct {
-	ResourceID string `json:"resource_id"`
-	Quality    string `json:"quality,omitempty"`
+	Subtitles   *SubtitleRequest `json:"subtitles,omitempty"`
+	ResourceID  string           `json:"resource_id"`
+	Quality     string           `json:"quality,omitempty"`
+	ResumeJobID string           `json:"resumeJobId,omitempty"`
 }
 type browserDownloadCommand struct {
-	Type        string    `json:"type"`
-	CommandID   string    `json:"commandId"`
-	TabID       int       `json:"tabId"`
-	ResourceKey string    `json:"resourceKey"`
-	PageHash    string    `json:"pageHash"`
-	Quality     string    `json:"quality,omitempty"`
-	ExpiresAt   time.Time `json:"expiresAt"`
+	Subtitles   *SubtitleRequest `json:"subtitles,omitempty"`
+	Type        string           `json:"type"`
+	ResumeJobID string           `json:"resumeJobId,omitempty"`
+	JobStatus   string           `json:"jobStatus,omitempty"`
+	CommandID   string           `json:"commandId"`
+	TabID       int              `json:"tabId"`
+	ResourceKey string           `json:"resourceKey"`
+	PageHash    string           `json:"pageHash"`
+	Quality     string           `json:"quality,omitempty"`
+	ExpiresAt   time.Time        `json:"expiresAt"`
 }
 type browserDownloadReply struct {
 	CommandID string `json:"commandId"`
@@ -57,11 +66,13 @@ type browserDownloadReply struct {
 	Error     string `json:"error,omitempty"`
 }
 type browserMediaHub struct {
-	mu        sync.Mutex
-	resources map[string]browserMediaItem
-	next      chan browserDownloadCommand
-	awaiting  map[string]chan browserDownloadReply
-	lastPoll  time.Time
+	mu               sync.Mutex
+	resources        map[string]browserMediaItem
+	next             chan browserDownloadCommand
+	awaiting         map[string]chan browserDownloadReply
+	lastPoll         time.Time
+	lastRefresh      time.Time
+	lastRefreshScope string
 }
 
 func newBrowserMediaHub() *browserMediaHub {
@@ -107,6 +118,20 @@ func (h *browserMediaHub) put(in browserMediaAnnouncement) (browserMediaItem, er
 		return browserMediaItem{}, err
 	}
 	now := time.Now()
+	captured := now
+	if in.CapturedAt > 0 {
+		captured = time.UnixMilli(in.CapturedAt)
+		if captured.After(now) {
+			captured = now
+		}
+	}
+	var expiry time.Time
+	if in.ExpiresAt > 0 {
+		expiry = time.UnixMilli(in.ExpiresAt)
+		if expiry.Year() < 2000 || expiry.Year() > 2100 {
+			expiry = time.Time{}
+		}
+	}
 	title := strings.TrimSpace(in.PageTitle)
 	if len([]rune(title)) > 90 {
 		title = string([]rune(title)[:90])
@@ -116,7 +141,13 @@ func (h *browserMediaHub) put(in browserMediaAnnouncement) (browserMediaItem, er
 	h.prune(now)
 	for key, item := range h.resources {
 		if item.TabID == in.TabID && item.ResourceKey == in.ResourceKey {
-			item.DetectedAt = now
+			// A Bridge reconnect or metadata resync cannot make a historical
+			// capture look new. Only the original webRequest timestamp wins.
+			if !captured.After(item.DetectedAt) {
+				return item, nil
+			}
+			item.DetectedAt = captured
+			item.ExpiresAt = expiry
 			item.Kind, item.PageTitle, item.PageURL = in.Kind, title, page
 			item.PageHash = pageHash
 			h.resources[key] = item
@@ -127,7 +158,7 @@ func (h *browserMediaHub) put(in browserMediaAnnouncement) (browserMediaItem, er
 	if err != nil {
 		return browserMediaItem{}, err
 	}
-	item := browserMediaItem{ID: id, Kind: in.Kind, TabID: in.TabID, ResourceKey: in.ResourceKey, PageHash: pageHash, PageTitle: title, PageURL: page, DetectedAt: now}
+	item := browserMediaItem{ID: id, Kind: in.Kind, TabID: in.TabID, ResourceKey: in.ResourceKey, PageHash: pageHash, PageTitle: title, PageURL: page, DetectedAt: captured, ExpiresAt: expiry}
 	h.resources[id] = item
 	if len(h.resources) > 120 {
 		var oldest string
@@ -142,7 +173,8 @@ func (h *browserMediaHub) put(in browserMediaAnnouncement) (browserMediaItem, er
 }
 func (h *browserMediaHub) prune(now time.Time) {
 	for id, item := range h.resources {
-		if now.Sub(item.DetectedAt) > browserMediaTTL {
+		if now.Sub(item.DetectedAt) > browserMediaTTL ||
+			(!item.ExpiresAt.IsZero() && !item.ExpiresAt.After(now.Add(mediaExpirySafety))) {
 			delete(h.resources, id)
 		}
 	}
@@ -174,13 +206,140 @@ func (h *browserMediaHub) poll(ctx context.Context) (*browserDownloadCommand, er
 			h.mu.Lock()
 			_, exists := h.awaiting[command.CommandID]
 			h.mu.Unlock()
-			if !exists || time.Now().After(command.ExpiresAt) {
+			if (command.Type != "browser_wait_notice" && command.Type != "browser_job_result_notice" && !exists) || time.Now().After(command.ExpiresAt) {
 				continue
 			}
 			return &command, nil
 		}
 	}
 }
+
+// matchPage only accepts an exact full-page URL; the public index's redacted
+// path is not sufficient to select media when pages differ by query tokens.
+func (h *browserMediaHub) matchPage(rawURL string) (browserMediaItem, bool, bool) {
+	return h.matchHash(browserPageDigest(rawURL))
+}
+
+func (h *browserMediaHub) matchHash(pageHash string) (browserMediaItem, bool, bool) {
+	return h.matchHashAfter(pageHash, time.Time{})
+}
+
+func (h *browserMediaHub) matchHashAfter(pageHash string, after time.Time) (browserMediaItem, bool, bool) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	h.prune(time.Now())
+	online := time.Since(h.lastPoll) < 25*time.Second
+	var best browserMediaItem
+	bestRank := 100
+	for _, item := range h.resources {
+		if item.PageHash != pageHash || (!after.IsZero() && !item.DetectedAt.After(after)) {
+			continue
+		}
+		rank := 100
+		switch item.Kind {
+		case "hls":
+			rank = 0
+		case "mp4":
+			rank = 1
+		}
+		if rank < bestRank || rank == bestRank && item.DetectedAt.After(best.DetectedAt) {
+			best, bestRank = item, rank
+		}
+	}
+	return best, bestRank < 100, online
+}
+
+// refresh requests a metadata-only resync from the connected extension. It
+// never sends session headers or resource URLs through MCP.
+func (h *browserMediaHub) refresh(ctx context.Context, pageURL string) error {
+	scope := ""
+	if pageURL != "" {
+		digest := sha256.Sum256([]byte(pageURL))
+		scope = hex.EncodeToString(digest[:])
+	}
+	h.mu.Lock()
+	online := time.Since(h.lastPoll) < 25*time.Second
+	if !online || (scope == h.lastRefreshScope && time.Since(h.lastRefresh) < 3*time.Second) {
+		h.mu.Unlock()
+		return nil
+	}
+	h.lastRefresh = time.Now()
+	h.lastRefreshScope = scope
+	h.mu.Unlock()
+	id, err := randomToken()
+	if err != nil {
+		return err
+	}
+	reply := make(chan browserDownloadReply, 1)
+	h.mu.Lock()
+	h.awaiting[id] = reply
+	h.mu.Unlock()
+	defer func() { h.mu.Lock(); delete(h.awaiting, id); h.mu.Unlock() }()
+	command := browserDownloadCommand{Type: "browser_media_refresh", CommandID: id, PageHash: scope, ExpiresAt: time.Now().Add(browserRefreshWait)}
+	select {
+	case h.next <- command:
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+		return errors.New("browser command queue full")
+	}
+	timer := time.NewTimer(browserRefreshWait)
+	defer timer.Stop()
+	select {
+	case result := <-reply:
+		if !result.OK {
+			return errors.New("extension media refresh failed")
+		}
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-timer.C:
+		return errors.New("extension media refresh timed out")
+	}
+}
+
+// A best-effort, one-shot notification over the existing Native Messaging
+// connection. No browser navigation or challenge interaction is performed.
+func (h *browserMediaHub) notifyWaiting(pageHash, jobID string) {
+	h.mu.Lock()
+	online := time.Since(h.lastPoll) < 25*time.Second
+	h.mu.Unlock()
+	if !online {
+		return
+	}
+	command := browserDownloadCommand{
+		Type: "browser_wait_notice", ResumeJobID: jobID, PageHash: pageHash,
+		ExpiresAt: time.Now().Add(25 * time.Second),
+	}
+	select {
+	case h.next <- command:
+	default:
+	}
+}
+
+// Reuses the extension's existing private Native Messaging channel for a
+// best-effort terminal-state notification. It carries no source URLs,
+// filenames, authentication headers or cookies.
+func (h *browserMediaHub) notifyJobResult(jobID, status string) {
+	if !mcpJobID.MatchString(jobID) || (status != "completed" && status != "failed") {
+		return
+	}
+	h.mu.Lock()
+	online := time.Since(h.lastPoll) < 25*time.Second
+	h.mu.Unlock()
+	if !online {
+		return
+	}
+	command := browserDownloadCommand{
+		Type: "browser_job_result_notice", ResumeJobID: jobID,
+		JobStatus: status, ExpiresAt: time.Now().Add(25 * time.Second),
+	}
+	select {
+	case h.next <- command:
+	default:
+	}
+}
+
 func (h *browserMediaHub) download(ctx context.Context, in browserDownloadRequest) (string, error) {
 	h.mu.Lock()
 	h.prune(time.Now())
@@ -207,7 +366,7 @@ func (h *browserMediaHub) download(ctx context.Context, in browserDownloadReques
 	h.awaiting[id] = reply
 	h.mu.Unlock()
 	defer func() { h.mu.Lock(); delete(h.awaiting, id); h.mu.Unlock() }()
-	command := browserDownloadCommand{Type: "browser_media_download", CommandID: id, TabID: item.TabID, ResourceKey: item.ResourceKey, PageHash: item.PageHash, Quality: in.Quality, ExpiresAt: time.Now().Add(browserCommandWait)}
+	command := browserDownloadCommand{Type: "browser_media_download", CommandID: id, TabID: item.TabID, ResourceKey: item.ResourceKey, PageHash: item.PageHash, Quality: in.Quality, Subtitles: in.Subtitles, ResumeJobID: in.ResumeJobID, ExpiresAt: time.Now().Add(browserCommandWait)}
 	select {
 	case h.next <- command:
 	case <-ctx.Done():
@@ -265,9 +424,51 @@ func (s *bridgeServer) handleBrowserMedia(w http.ResponseWriter, r *http.Request
 			writeJSON(w, http.StatusBadRequest, map[string]any{"ok": false, "error": err.Error()})
 			return
 		}
+		s.wakeBrowserWaits()
 		writeJSON(w, http.StatusOK, map[string]any{"ok": true, "id": item.ID})
 	case r.URL.Path == "/v1/browser/media" && r.Method == http.MethodGet:
+		if r.URL.Query().Get("refresh") == "1" {
+			refreshCtx, cancel := context.WithTimeout(r.Context(), browserRefreshWait)
+			_ = h.refresh(refreshCtx, "")
+			cancel()
+		}
 		writeJSON(w, http.StatusOK, h.list())
+	case r.URL.Path == "/v1/browser/media/by-page/download" && r.Method == http.MethodPost:
+		var in struct {
+			PageURL   string          `json:"pageUrl"`
+			Title     string          `json:"title"`
+			Quality   string          `json:"quality"`
+			Subtitles SubtitleRequest `json:"subtitles"`
+		}
+		if decodeBridgeJSON(w, r, &in) != nil {
+			return
+		}
+		if err := validateMCPMediaURL(r.Context(), in.PageURL); err != nil {
+			writeJSON(w, http.StatusBadRequest, map[string]any{"ok": false, "error": "invalid public page"})
+			return
+		}
+		item, matched, online := h.matchPage(in.PageURL)
+		if !matched && online {
+			refreshCtx, cancel := context.WithTimeout(r.Context(), browserRefreshWait)
+			_ = h.refresh(refreshCtx, in.PageURL)
+			cancel()
+			item, matched, online = h.matchPage(in.PageURL)
+		}
+		if !matched || !online {
+			jobID, err := s.createBrowserWait(in.PageURL, in.Title, in.Quality, in.Subtitles)
+			if err != nil {
+				writeJSON(w, http.StatusInternalServerError, map[string]any{"ok": false, "error": "cannot create waiting task"})
+				return
+			}
+			writeJSON(w, http.StatusAccepted, map[string]any{"matched": false, "extensionConnected": online, "taskId": jobID, "status": "waiting_for_browser"})
+			return
+		}
+		job, err := h.download(r.Context(), browserDownloadRequest{ResourceID: item.ID, Quality: in.Quality, Subtitles: &in.Subtitles})
+		if err != nil {
+			writeJSON(w, http.StatusConflict, map[string]any{"ok": false, "error": "browser media download not accepted"})
+			return
+		}
+		writeJSON(w, http.StatusAccepted, map[string]any{"matched": true, "taskId": job})
 	case strings.HasPrefix(r.URL.Path, "/v1/browser/media/") && r.Method == http.MethodPost && strings.HasSuffix(r.URL.Path, "/download"):
 		id := strings.TrimSuffix(strings.TrimPrefix(r.URL.Path, "/v1/browser/media/"), "/download")
 		if len(id) != 64 || strings.Contains(id, "/") {

@@ -26,6 +26,14 @@ assert.equal(media.resourceName({ url: "https://cdn.test/path/playlist.m3u8?toke
 assert.equal(media.resourceName({ url: "https://cdn.test/video?filename=%E8%A7%86%E9%A2%91.mp4", kind: "mp4" }), "视频.mp4");
 assert.equal(media.resourceName({ url: "https://cdn.test/", kind: "hls" }), "playlist.m3u8");
 
+const now = Date.now();
+const recentHls = media.makeResource({ url: "https://cdn.test/master.m3u8", tabId: 5, detectedAt: now - 2000 });
+const expiredMp4 = media.makeResource({ url: "https://cdn.test/old.mp4", tabId: 5, detectedAt: now - 11 * 60 * 1000 });
+const validMp4 = media.makeResource({ url: "https://cdn.test/new.mp4", tabId: 5, detectedAt: now - 1000 });
+assert.deepEqual(media.recentResourcesForSync([recentHls, expiredMp4, validMp4], {}, now).map(item => item.kind), ["mp4", "hls"]);
+assert.deepEqual(media.recentResourcesForSync([recentHls, expiredMp4, validMp4], { detectHls: false }, now).map(item => item.kind), ["mp4"]);
+assert.equal(media.recentResourcesForSync([expiredMp4], {}, now).length, 0);
+
 const page = { url: "https://page.test/watch/42", title: "标题", userAgent: "UA" };
 const list = media.displayList([
   media.makeResource({ url: "https://video.cdn.test/v.m4s", tabId: 1 }),
