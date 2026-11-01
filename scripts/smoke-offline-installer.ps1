@@ -6,6 +6,8 @@ New-Item -ItemType Directory -Force -Path $sandbox | Out-Null
 & $setup --root $target --accept-licenses --confirm-command install
 if ($LASTEXITCODE -ne 0) { throw "Windows installer failed" }
 if (!(Test-Path (Join-Path $target "bin/vidotter-windows-amd64.exe"))) { throw "Bridge not installed" }
+python scripts/smoke-mcp-stdio.py (Join-Path $target "bin/vidotter-windows-amd64.exe")
+if ($LASTEXITCODE -ne 0) { throw "Installed MCP failed" }
 $key = "HKCU:\Software\Google\Chrome\NativeMessagingHosts\com.vidotter.bridge"
 if (!(Test-Path $key)) { throw "Chrome Native Messaging host missing" }
 $data = Join-Path $target "Data"
@@ -21,6 +23,8 @@ if ($env:VIDOTTER_TEST_UPDATE_REPO) {
     if (-not ((Get-Content -Raw (Join-Path $target "components.xml")) -match "<Version>$($env:VIDOTTER_TEST_UPDATE_VERSION)</Version>")) { throw "Installed component version did not update" }
     if (!(Test-Path (Join-Path $data "config.toml"))) { throw "Config lost on update" }
     if (!(Test-Path $key)) { throw "MCP Native Messaging registration lost on update" }
+    python scripts/smoke-mcp-stdio.py (Join-Path $target "bin/vidotter-windows-amd64.exe")
+    if ($LASTEXITCODE -ne 0) { throw "MCP failed after update" }
 }
 & (Join-Path $target "VidOtter-Maintenance.exe") --confirm-command remove com.thinkerqaq.vidotter
 if ($LASTEXITCODE -ne 0) { throw "Windows uninstall failed" }

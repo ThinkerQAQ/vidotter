@@ -139,3 +139,10 @@ Linux 应用菜单提供 **VidOtter Updater**；macOS 可打开安装目录中�
 管理。Linux 已在隔离目录用原有配置哨兵测试通过，Windows/macOS
 也已加入 CI 回归。不会静默寻找或覆盖旧目录；若改装到新目录，
 则不会自动迁移原目录的用户数据。
+
+### MCP 安装验收
+
+安装器跨平台验收现在会直接启动**已经安装的** Bridge，使用 `--mcp-stdio`
+完成 MCP 初始化并检查 13 个工具，升级后再检查一次。此测试不需要
+Tunnel、运行密钥或云端连接。普通用户无需手动启动本地 MCP 服务，
+只有主动开启 ChatGPT Tunnel 的用户需要配置独立 tunnel-client 和登录时自启。

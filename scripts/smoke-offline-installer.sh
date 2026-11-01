@@ -10,6 +10,7 @@ target="$sandbox/install with spaces"
 "$installer" --root "$target" --accept-licenses --confirm-command install
 test -f "$target/extension/manifest.json"
 test -x "$target/bin/vidotter-linux-amd64"
+python3 scripts/smoke-mcp-stdio.py "$target/bin/vidotter-linux-amd64"
 manifest="$HOME/.config/google-chrome/NativeMessagingHosts/com.vidotter.bridge.json"
 test -f "$manifest"
 mkdir -p "$target/Data/downloads"
@@ -23,6 +24,7 @@ if [[ -n "${VIDOTTER_TEST_UPDATE_REPO:-}" ]]; then
   test -f "$target/Data/config.toml"
   test -f "$target/Data/downloads/keep.txt"
   test -f "$manifest"
+  python3 scripts/smoke-mcp-stdio.py "$target/bin/vidotter-linux-amd64"
 fi
 "$target/VidOtter-Maintenance" --confirm-command remove com.thinkerqaq.vidotter
 test -f "$target/Data/config.toml"

@@ -182,3 +182,12 @@ overwrites `Data/`**. Tested on Linux with a preexisting sentinel config;
 Windows/macOS regression cases are also included in CI. This is not silent
 auto-detection of old installations, and choosing a different target does not
 automatically migrate the old Data directory.
+
+### MCP package acceptance
+
+The cross-platform installer smoke now starts the **installed** Bridge executable
+with `--mcp-stdio`, completes the MCP initialize handshake and verifies that
+all 13 VidOtter tools are discoverable. The test runs after installation and
+again after an in-place update, without any Tunnel, API key or cloud connection.
+Only users who explicitly enable the optional ChatGPT Tunnel need to configure
+the external tunnel-client/login-time service.
