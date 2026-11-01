@@ -6,6 +6,7 @@ VidOtter detects browser media and downloads it on the same computer. Desktop br
 
 | Your goal | Read |
 | --- | --- |
+| Package a unified Windows/macOS/Linux GUI installer | [Build installers](how-to/build-installers.md) |
 | Install a packaged release | [Quick start](quick-start.md) or [first-run walkthrough](tutorial/first-run-on-new-machine.md) |
 | Select media and check the finished file | [First download](tutorial/first-download.md) |
 | Set up tools, proxy and models | [Tool configuration](how-to/configure-tools.md) |

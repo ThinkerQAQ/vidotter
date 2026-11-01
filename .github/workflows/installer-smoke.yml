@@ -1,0 +1,104 @@
+name: Build offline installers (acceptance candidates)
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Existing release with complete native archives
+        required: true
+        default: v1.6.2
+  pull_request:
+    paths:
+      - '.github/workflows/installer-smoke.yml'
+      - 'scripts/build-offline-installer.py'
+      - 'tools/vidotterdev/**'
+permissions:
+  contents: read
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            slug: linux-amd64
+          - os: windows-2025
+            slug: windows-amd64
+          - os: macos-15-intel
+            slug: macos-amd64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v6
+        with:
+          go-version: '1.27.1'
+          cache: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Install Qt IFW build-tool downloader
+        run: python -m pip install --disable-pip-version-check aqtinstall==3.3.0
+      - name: Install Linux Qt runtime dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libxkbcommon-x11-0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-render-util0 libxcb-xkb1 libxcb-util1 libxcb-shape0 libxcb-xinerama0 libxcb-cursor0
+      - name: Build verified release installer
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.release_tag || 'v1.6.2' }}
+        shell: bash
+        run: |
+          preview=()
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            preview+=(--preview-source)
+          fi
+          python scripts/build-offline-installer.py "${preview[@]}" \
+            --tag "$RELEASE_TAG" \
+            --tools-root "$RUNNER_TEMP/qtifw" \
+            --working-dir "$RUNNER_TEMP/release-work" \
+            --output-dir "$RUNNER_TEMP/installer-output"
+      - name: Verify packaged PR popup, worker and version agree
+        if: github.event_name == 'pull_request'
+        shell: bash
+        env:
+          RELEASE_TAG: ${{ inputs.release_tag || 'v1.6.2' }}
+        run: python scripts/smoke-pr-extension-bundle.py "$RUNNER_TEMP/release-work/extracted/vidotter-$RELEASE_TAG-${{ matrix.slug }}/extension"
+      - name: Build synthetic next-version update repository (CI only)
+        shell: bash
+        env:
+          RELEASE_TAG: ${{ inputs.release_tag || 'v1.6.2' }}
+        run: |
+          python scripts/make-synthetic-upgrade.py \
+            --stage "$RUNNER_TEMP/release-work/extracted/vidotter-$RELEASE_TAG-${{ matrix.slug }}" \
+            --tools-root "$RUNNER_TEMP/qtifw" \
+            --workdir "$RUNNER_TEMP/update-test-work"
+      - name: Linux headless install/uninstall & Data preservation
+        if: runner.os == 'Linux'
+        shell: bash
+        env:
+          VIDOTTER_TEST_UPDATE_REPO: ${{ runner.temp }}/update-test-work/update-test-repo
+        run: bash scripts/smoke-offline-installer.sh "$RUNNER_TEMP/installer-output/VidOtter-Setup-${{ inputs.release_tag || 'v1.6.2' }}-linux-amd64.run"
+      - name: Linux GUI wizard and Finish options (virtual platform)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: bash scripts/smoke-installer-gui.sh "$RUNNER_TEMP/installer-output/VidOtter-Setup-${{ inputs.release_tag || 'v1.6.2' }}-linux-amd64.run"
+      - name: Windows headless install/uninstall & Data preservation
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          VIDOTTER_TEST_UPDATE_REPO: ${{ runner.temp }}/update-test-work/update-test-repo
+          RELEASE_TAG: ${{ inputs.release_tag || 'v1.6.2' }}
+        run: ./scripts/smoke-offline-installer.ps1
+      - name: macOS headless install/uninstall & Data preservation
+        if: runner.os == 'macOS'
+        shell: bash
+        env:
+          VIDOTTER_TEST_UPDATE_REPO: ${{ runner.temp }}/update-test-work/update-test-repo
+          RELEASE_TAG: ${{ inputs.release_tag || 'v1.6.2' }}
+        run: bash scripts/smoke-offline-installer-macos.sh "$RUNNER_TEMP/installer-output/VidOtter-Setup-$RELEASE_TAG-macos-amd64.dmg"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: installer-candidate-${{ matrix.slug }}
+          path: ${{ runner.temp }}/installer-output/*
+          if-no-files-found: error
+          retention-days: 7

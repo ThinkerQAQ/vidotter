@@ -744,12 +744,46 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
+  // MV3 background may be older than refreshed popup after an in-place update.
+  if (message.action === "bridge.mcp.capabilities") {
+    sendResponse({ ok: true, protocol: 2, actions: ["install-client", "setup", "service"] });
+    return;
+  }
+
   if (message.action === "bridge.tool.action") {
     const tool = String(message.tool || "");
     const action = String(message.toolAction || "");
     if (tool === "bridge" && action === "restart") {
       restartBridge()
         .then(session => sendResponse({ ok: true, pid: session.pid }), error => sendResponse({ ok: false, error: error.message || String(error) }));
+      return true;
+    }
+    if (tool === "chatgpt-mcp" && action === "install-client") {
+      bridgeFetch("/v1/mcp/client/install", { method: "POST" })
+        .then(result => sendResponse(result), error =>
+          sendResponse({ ok: false, error: error.message || String(error) }));
+      return true;
+    }
+    if (tool === "chatgpt-mcp" && action === "service") {
+      const serviceAction = String(message.serviceAction || "");
+      if (!["start", "stop", "restart"].includes(serviceAction)) {
+        sendResponse({ ok: false, error: "不支持的 Tunnel 服务操作" });
+        return;
+      }
+      bridgeFetch("/v1/mcp/service", {
+        method: "POST",
+        body: JSON.stringify({ action: serviceAction })
+      }).then(result => sendResponse(result), error =>
+        sendResponse({ ok: false, error: error.message || String(error) }));
+      return true;
+    }
+    if (tool === "chatgpt-mcp" && action === "setup") {
+      bridgeFetch("/v1/mcp/setup", {
+        method: "POST",
+        body: JSON.stringify({ tunnelId: String(message.tunnelId || "") })
+      })
+        .then(result => sendResponse(result), error =>
+          sendResponse({ ok: false, error: error.message || String(error) }));
       return true;
     }
     if (tool === "browser-automation" &&

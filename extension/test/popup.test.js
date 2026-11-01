@@ -86,3 +86,28 @@ assert.match(popupStyles, /\.job-files\.all-complete/);
 assert.match(popupStyles, /\.job-file-state\.completed::before/);
 
 console.log("extension popup tests passed");
+
+
+// Cloud ChatGPT setup must be a local user-initiated integration, never
+// an installer checkbox or an arbitrary shell command from the extension.
+assert.match(environmentSource, /chatgpt-mcp/);
+assert.match(environmentSource, /integration/);
+assert.match(environmentSource, /renderChatGPTMCP/);
+assert.match(environmentSource, /tunnelInput\.name = "tunnelId"/);
+assert.match(environmentSource, /查看 VidOtter 配置文档/);
+assert.doesNotMatch(environmentSource, /tool.name === "chatgpt-mcp" && action.id === "setup"/);
+const backgroundSource = fs.readFileSync(path.join(__dirname, "../background.js"), "utf8");
+assert.match(backgroundSource, /tool === "chatgpt-mcp" && action === "setup"/);
+assert.match(backgroundSource, /bridgeFetch\("\/v1\/mcp\/setup"/);
+assert.match(backgroundSource, /JSON\.stringify\(\{ tunnelId: String\(message\.tunnelId/);
+assert.match(environmentSource, /安装官方 Tunnel Client/);
+assert.match(environmentSource, /复制 Tunnel ID/);
+assert.match(environmentSource, /前往 ChatGPT 创建插件/);
+assert.match(environmentSource, /start", "stop", "restart/);
+assert.match(backgroundSource, /bridgeFetch\("\/v1\/mcp\/client\/install"/);
+assert.match(backgroundSource, /bridge\.mcp\.capabilities/);
+assert.match(environmentSource, /api\.send\("bridge\.mcp\.capabilities"\)/);
+assert.match(environmentSource, /showMcpWorkerReload/);
+assert.match(environmentSource, /root\.chrome\.runtime\.reload\(\)/);
+
+assert.match(backgroundSource, /bridgeFetch\("\/v1\/mcp\/service"/);

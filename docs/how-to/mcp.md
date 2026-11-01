@@ -2,6 +2,19 @@
 
 [中文](../zh-CN/how-to/mcp.md) · [Bridge API](../reference/bridge-api.md)
 
+**MCP installation and activation:** Every desktop VidOtter release already contains the
+MCP server inside its standard Go Bridge binary; there is no second server
+package. The Chrome/Edge extension starts its local Bridge through Native
+Messaging only when needed. Local MCP clients launch the same binary using
+`--mcp-stdio` on demand. Nothing needs to run permanently for local downloads.
+
+**Cloud ChatGPT connection is separate and opt-in.** Only users choosing
+ChatGPT integration need their own private Tunnel ID, restricted API key and
+the official tunnel-client. The provided setup helper can register the Tunnel
+at user login, so normal use does not require manually starting it each time.
+This service is never started or configured as a side effect of the regular
+VidOtter installer. Never turn on remote access without explicit user choice.
+
 VidOtter exposes **13 optional MCP tools** through the same desktop Go executable. The browser extension and MCP share the existing authenticated loopback Bridge and download queue; MCP does not ship a second downloader.
 
 | MCP tool | Operation |
@@ -94,3 +107,21 @@ The profile and runtime key belong in private OS storage, **not** this public Gi
 - The local Bridge HTTP API must remain on loopback; never expose port `17891` to the internet. Tunnel only the restricted MCP stdio server.
 
 See [Secure MCP Tunnels](https://developers.openai.com/api/docs/guides/secure-mcp-tunnels) for access and account requirements.
+
+### Configure and start ChatGPT Tunnel inside VidOtter Settings
+
+1. Copy your Tunnel ID from [OpenAI Platform Tunnels](https://platform.openai.com/settings/organization/tunnels) and create a Restricted Runtime API Key with Tunnels Read + Use at [API Keys](https://platform.openai.com/settings/organization/api-keys). The ID alone does not authenticate the daemon.
+2. Install official [tunnel-client](https://github.com/openai/tunnel-client/releases/latest) on the same host as VidOtter and place it on PATH or in the user .local/bin directory.
+3. Open VidOtter Settings → AI integrations → ChatGPT MCP. Enter the Tunnel ID in the inline field and click Configure and start Tunnel. This action does not open an external browser page. Only the separate VidOtter documentation link opens the setup guide.
+4. The authenticated local Bridge validates the ID and launches a fixed local setup script. Enter the Runtime API Key inside the system terminal, not into the extension. The helper initializes the profile, runs doctor, and arranges per-user login-time startup (Windows Startup shortcut, macOS LaunchAgent or Linux systemd user unit).
+5. Add the same Tunnel as a custom MCP plugin in ChatGPT. Verify client health/ready and perform a real tool call.
+
+If the Tunnel Client is absent, VidOtter reports the missing dependency in Settings without redirecting to other sites. An existing profile for a different Tunnel ID is not silently replaced. Local configuration presence is never proof of a healthy connection. See the [official Secure MCP Tunnel guide](https://developers.openai.com/api/docs/guides/secure-mcp-tunnels).
+
+## Streamlined ChatGPT onboarding (development branch)
+
+**No generic plugin ZIP is required.** ChatGPT can create a private custom MCP plugin with Connection: Tunnel and discover VidOtter's 13 tools automatically. A ZIP cannot replace the user's private Tunnel association or consent. Secure MCP Tunnel is not eligible for public plugin-directory distribution.
+
+Create a Tunnel ID once in OpenAI Platform. In VidOtter Settings → AI integrations → ChatGPT MCP, install the official tunnel-client when missing (the app downloads the matching official GitHub Release archive and verifies its published SHA-256 digest), enter the ID, and select Configure and start Tunnel. The local setup script reuses a valid credential already stored for this VidOtter user or explicitly provided in CONTROL_PLANE_API_KEY. Only first-time users without credentials are asked for the restricted Runtime API Key in a local terminal; other applications' secrets are never harvested.
+
+For an existing profile, VidOtter exposes Start, Stop, and Restart actions. The official tunnel-client health check with a successful control-plane poll is required before the daemon is shown Ready; configuration alone never proves remote connectivity. Click Copy Tunnel ID and Open ChatGPT Plugins, then in ChatGPT choose Plugins → + → Add custom MCP server → Connection: Tunnel and select/paste the ID. Configure application authentication when applicable, review the warning and create the private plugin. Validate by calling vidotter_status from ChatGPT. The installer never creates or authorizes plugins silently.

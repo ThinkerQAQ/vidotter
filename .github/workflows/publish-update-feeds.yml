@@ -1,0 +1,103 @@
+name: Publish verified VidOtter update feeds
+
+# This workflow is intentionally manual. It must only run on the protected
+# main branch, after a complete public Release and installer acceptance.
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Existing non-prerelease GitHub Release (SHA256 validated)
+        required: true
+        default: v1.6.2
+
+permissions:
+  contents: read
+
+concurrency:
+  group: vidotter-update-pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    if: github.ref == 'refs/heads/main'
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            slug: linux-amd64
+          - os: windows-2025
+            slug: windows-amd64
+          - os: macos-15-intel
+            slug: macos-amd64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v6
+        with:
+          go-version: '1.27.1'
+          cache: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Check published release status
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
+        shell: bash
+        run: |
+          test "$(gh release view "$RELEASE_TAG" --repo ThinkerQAQ/vidotter --json isDraft,isPrerelease --jq '(.isDraft == false) and (.isPrerelease == false)')" = "true"
+      - run: python -m pip install --disable-pip-version-check aqtinstall==3.3.0
+      - name: Install Linux Qt libraries
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libxkbcommon-x11-0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-render-util0 libxcb-xkb1 libxcb-util1 libxcb-shape0 libxcb-xinerama0 libxcb-cursor0
+      - name: Build release feeds from SHA256-verified assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
+        shell: bash
+        run: |
+          python scripts/build-offline-installer.py --repo-only \
+            --tag "$RELEASE_TAG" \
+            --tools-root "$RUNNER_TEMP/qtifw" \
+            --working-dir "$RUNNER_TEMP/release-work" \
+            --output-dir "$RUNNER_TEMP/site"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: update-feed-${{ matrix.slug }}
+          path: ${{ runner.temp }}/site/
+          retention-days: 1
+          if-no-files-found: error
+
+  publish:
+    if: github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: update-feed-*
+          path: site
+          merge-multiple: true
+      - name: Verify all platform feeds exist
+        run: |
+          test -f site/updates/linux/amd64/Updates.xml
+          test -f site/updates/windows/amd64/Updates.xml
+          test -f site/updates/macos/amd64/Updates.xml
+          touch site/.nojekyll
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: site
+      - name: Publish to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

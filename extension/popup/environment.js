@@ -46,6 +46,7 @@
     if (kind === "runtime" || kind === "infra") return "runtime";
     if (kind === "capability" || kind === "core" || kind === "platform") return "capability";
     if (kind === "dependency") return "dependency";
+    if (kind === "integration") return "integration";
     return "other";
   }
 
@@ -320,6 +321,7 @@
     runtime: { title: "连接与运行时", description: "浏览器连接、Bridge 与网络", icon: "runtime" },
     capability: { title: "下载能力", description: "媒体嗅探、下载与处理", icon: "capability" },
     dependency: { title: "外部组件", description: "FFmpeg、yt-dlp、识别和翻译", icon: "dependency" },
+    integration: { title: "AI 集成", description: "连接 ChatGPT 的可选本地服务", icon: "runtime" },
     other: { title: "其他组件", description: "其他可选模块", icon: "settings" }
   };
 
@@ -415,8 +417,8 @@
             : action.id === "open-output" ? "已打开下载目录。"
             : tool.name === "browser-automation" ? ("浏览器自动化：" + (action.label || action.id) + "已完成。")
             : (tool.displayName || tool.name) + " 已安装。";
-          api.setMessage("environmentMessage", success, "ok");
           await refresh();
+          api.setMessage("environmentMessage", success, "ok");
         } catch (error) {
           api.setMessage("environmentMessage", error.message || String(error), "error");
         } finally {
@@ -426,6 +428,216 @@
       actionRow.appendChild(button);
     }
     body.appendChild(actionRow);
+  }
+
+  let pendingMcpTunnelID = "";
+
+  function isOutdatedMcpWorkerError(error) {
+    return /不支持的 Tool 操作|不支持的 Tool|unsupported tool (?:action|operation)|unsupported action/i
+      .test(String(error && error.message || error || ""));
+  }
+
+  // In-place unpacked extension updates can leave a previously launched MV3
+  // service worker running, while the popup already reads the new UI files.
+  // Never hide this mismatch as a Tunnel-client installation failure.
+  function showMcpWorkerReload(form, message) {
+    message.textContent = "VidOtter 扩展后台仍是旧版。请重新加载扩展，再执行客户端安装。";
+    message.classList.add("mcp-reload-needed");
+    if (form.querySelector("[data-mcp-worker-reload]")) return;
+    if (api.host === "extension" && root.chrome?.runtime?.reload) {
+      const reload = document.createElement("button");
+      reload.type = "button";
+      reload.className = "secondary";
+      reload.dataset.mcpWorkerReload = "1";
+      reload.textContent = "重新加载 VidOtter 扩展";
+      reload.addEventListener("click", () => root.chrome.runtime.reload());
+      form.appendChild(reload);
+    } else {
+      const instruction = document.createElement("p");
+      instruction.dataset.mcpWorkerReload = "1";
+      instruction.textContent = "在 edge://extensions 或 chrome://extensions 找到 VidOtter，点击重新加载，再刷新本页面。";
+      form.appendChild(instruction);
+    }
+  }
+
+  function renderChatGPTMCP(body, tool, health) {
+    // Inline setup: the browser collects only a non-secret Tunnel identifier.
+    // The restricted API key is entered only into the local OS terminal.
+    const form = document.createElement("form");
+    form.className = "mcp-setup-form";
+    const label = document.createElement("label");
+    label.className = "tool-field wide";
+    label.textContent = "Tunnel ID";
+    const tunnelInput = document.createElement("input");
+    tunnelInput.name = "tunnelId";
+    tunnelInput.type = "text";
+    tunnelInput.autocomplete = "off";
+    tunnelInput.spellcheck = false;
+    tunnelInput.placeholder = "tunnel_0123456789abcdef0123456789abcdef";
+    tunnelInput.setAttribute("aria-label", "Tunnel ID");
+    tunnelInput.required = true;
+    const savedTunnelID = tool.config?.values?.tunnelId || "";
+    tunnelInput.value = pendingMcpTunnelID || savedTunnelID;
+    tunnelInput.addEventListener("input", () => { pendingMcpTunnelID = tunnelInput.value.trim(); });
+    label.appendChild(tunnelInput);
+
+    const hint = document.createElement("p");
+    hint.className = "settings-help";
+    hint.textContent = "输入 OpenAI Platform 创建的 Tunnel ID。首次连接还需要 Runtime API Key（Tunnels Read + Use），密钥只在本机终端输入。";
+    const controls = document.createElement("div");
+    controls.className = "tool-actions mcp-actions";
+    const button = document.createElement("button");
+    button.type = "submit";
+    button.className = "primary";
+    button.textContent = "配置并启动 Tunnel";
+    const docs = document.createElement("a");
+    docs.className = "secondary mcp-doc-link";
+    docs.href = "https://github.com/ThinkerQAQ/vidotter/blob/main/docs/zh-CN/how-to/mcp.md";
+    docs.target = "_blank";
+    docs.rel = "noopener noreferrer";
+    docs.textContent = "查看 VidOtter 配置文档";
+    const message = document.createElement("small");
+    message.className = "mcp-setup-message";
+    message.setAttribute("role", "status");
+    const clientMissing = health.status === "missing";
+    if (clientMissing) {
+      const installClient = document.createElement("button");
+      installClient.type = "button";
+      installClient.className = "secondary";
+      installClient.dataset.mcpInstallClient = "1";
+      installClient.textContent = "安装官方 Tunnel Client";
+      installClient.addEventListener("click", async () => {
+        if (!root.confirm("下载并安装 OpenAI 官方 Tunnel Client？\n\nVidOtter 将从 openai/tunnel-client 正式 GitHub Release 下载对应的系统版本，核验 SHA-256，安装到当前用户目录。\n不会自动创建 Tunnel 或开启远程服务。")) return;
+        installClient.disabled = true;
+        installClient.textContent = "正在校验并安装…";
+        message.textContent = "从 OpenAI 官方 Release 下载客户端并校验 SHA-256…";
+        try {
+          await api.send("bridge.tool.action", { tool: "chatgpt-mcp", toolAction: "install-client" });
+          await refresh();
+          api.setMessage("environmentMessage", "官方 Tunnel Client 已安装。现在可以填写 Tunnel ID 配置连接。", "ok");
+        } catch (error) {
+          if (isOutdatedMcpWorkerError(error)) {
+            showMcpWorkerReload(form, message);
+          } else {
+            message.textContent = error.message || String(error);
+          }
+          api.setMessage("environmentMessage", message.textContent, "error");
+          installClient.disabled = Boolean(form.querySelector("[data-mcp-worker-reload]"));
+          installClient.textContent = "安装官方 Tunnel Client";
+        }
+      });
+      controls.prepend(installClient);
+      button.disabled = true;
+      button.title = "请先安装官方 Tunnel Client";
+    }
+    controls.append(button, docs);
+    form.append(label, hint, controls, message);
+    // Preflight is intentionally independent of the local Bridge version:
+    // the old worker does not know the new tool action even when the Bridge does.
+    if (api.host === "extension") {
+      const installClient = controls.querySelector("[data-mcp-install-client]");
+      if (installClient) installClient.disabled = true;
+      void api.send("bridge.mcp.capabilities").then(capabilities => {
+        if (!Number.isInteger(capabilities.protocol) || capabilities.protocol < 2 ||
+            !Array.isArray(capabilities.actions) ||
+            !["install-client", "setup", "service"].every(action => capabilities.actions.includes(action))) {
+          throw new Error("unsupported tool action: old extension worker");
+        }
+        if (installClient) installClient.disabled = false;
+      }).catch(() => {
+        if (installClient) installClient.disabled = true;
+        button.disabled = true;
+        showMcpWorkerReload(form, message);
+      });
+    }
+    if (savedTunnelID || pendingMcpTunnelID) {
+      const nextSteps = document.createElement("div");
+      nextSteps.className = "mcp-next-steps";
+      const copy = document.createElement("button");
+      copy.type = "button";
+      copy.className = "secondary";
+      copy.textContent = "复制 Tunnel ID";
+      copy.addEventListener("click", async () => {
+        const id = tunnelInput.value.trim();
+        if (!/^tunnel_(?:[a-z0-9]{32}|[a-z0-9]{4}_[a-z0-9]{32})$/.test(id)) {
+          message.textContent = "请先填写正确的 Tunnel ID。";
+          return;
+        }
+        try {
+          await navigator.clipboard.writeText(id);
+          message.textContent = "Tunnel ID 已复制。";
+        } catch {
+          message.textContent = "无法访问剪贴板，请手动复制上面的 Tunnel ID。";
+        }
+      });
+      const chatGPT = document.createElement("a");
+      chatGPT.className = "secondary mcp-doc-link";
+      chatGPT.href = "https://chatgpt.com/#settings/Connectors";
+      chatGPT.target = "_blank";
+      chatGPT.rel = "noopener noreferrer";
+      chatGPT.textContent = "前往 ChatGPT 创建插件";
+      const help = document.createElement("p");
+      help.className = "settings-help";
+      help.textContent = "ChatGPT：Plugins → + → Add custom MCP server → Connection: Tunnel → 粘贴 Tunnel ID → 确认权限。无需上传 ZIP。";
+      nextSteps.append(copy, chatGPT, help);
+      form.appendChild(nextSteps);
+    }
+    if (savedTunnelID && !clientMissing) {
+      const serviceRow = document.createElement("div");
+      serviceRow.className = "tool-actions mcp-service-actions";
+      for (const serviceAction of ["start", "stop", "restart"]) {
+        const control = document.createElement("button");
+        control.type = "button";
+        control.className = "secondary";
+        control.textContent = { start: "启动服务", stop: "停止服务", restart: "重启服务" }[serviceAction];
+        control.addEventListener("click", async () => {
+          if (serviceAction !== "start" && !root.confirm(
+            "确认" + control.textContent + "？\n这将影响当前 ChatGPT 的远程工具调用，但不会删除已保存的 Tunnel 配置。"
+          )) return;
+          control.disabled = true;
+          try {
+            await api.send("bridge.tool.action", {
+              tool: "chatgpt-mcp", toolAction: "service", serviceAction
+            });
+            await refresh();
+            api.setMessage("environmentMessage", "已发送 Tunnel 服务命令，正在检查本机服务状态。", "ok");
+          } catch (error) {
+            message.textContent = error.message || String(error);
+            api.setMessage("environmentMessage", message.textContent, "error");
+            control.disabled = false;
+          }
+        });
+        serviceRow.appendChild(control);
+      }
+      form.appendChild(serviceRow);
+    }
+    form.addEventListener("submit", async event => {
+      event.preventDefault();
+      const tunnelId = tunnelInput.value.trim();
+      if (!/^tunnel_(?:[a-z0-9]{32}|[a-z0-9]{4}_[a-z0-9]{32})$/.test(tunnelId)) {
+        message.textContent = "Tunnel ID 格式不正确，请检查后再试。";
+        return;
+      }
+      const accepted = root.confirm(
+        "确认配置此 Tunnel？\n\n" +
+        "VidOtter 将打开本地配置终端并尝试安装用户级自启动服务。" +
+        "Runtime API Key 只在终端中输入，不会保存到浏览器扩展。"
+      );
+      if (!accepted) return;
+      button.disabled = true;
+      message.textContent = "正在打开本地配置终端…";
+      try {
+        await api.send("bridge.tool.action", { tool: "chatgpt-mcp", toolAction: "setup", tunnelId });
+        message.textContent = "已启动本机配置终端。请完成 Runtime API Key 授权；配置完成后刷新检查状态。";
+        api.setMessage("environmentMessage", message.textContent, "ok");
+      } catch (error) {
+        message.textContent = error.message || String(error);
+        api.setMessage("environmentMessage", message.textContent, "error");
+      } finally {
+        button.disabled = false;
+      }
+    });
+    body.appendChild(form);
   }
 
   function renderDetail(list, tool, editing) {
@@ -472,10 +684,14 @@
         line.textContent = detail;
         body.appendChild(line);
       }
-      renderConfigView(body, tool);
-      renderModelManager(body, tool);
+      if (tool.name === "chatgpt-mcp") {
+        renderChatGPTMCP(body, tool, health);
+      } else {
+        renderConfigView(body, tool);
+        renderModelManager(body, tool);
+      }
       if (visibleConfigFields(tool, true).length) renderEditControls(body, tool, card, false);
-      toolActions(body, tool, health);
+      if (tool.name !== "chatgpt-mcp") toolActions(body, tool, health);
     }
     card.append(header, body);
     list.appendChild(card);
@@ -515,7 +731,7 @@
         icon: "appearance", action: () => enter("category", "appearance")
       }));
       addSection(list, "系统与组件");
-      for (const kind of ["runtime", "capability", "dependency", "other"]) {
+      for (const kind of ["runtime", "capability", "integration", "dependency", "other"]) {
         const count = tools.filter(tool => normalizedKind(tool) === kind).length;
         if (!count) continue;
         list.appendChild(settingsRow({
@@ -554,7 +770,7 @@
         list.appendChild(settingsRow({
           title: tool.displayName || tool.name, subtitle: health.summary || tool.description,
           icon: group.icon,
-          trailing: health.status === "ready" ? "就绪" : (health.version || health.status || "未知"),
+          trailing: health.status === "ready" ? "就绪" : health.status === "disabled" ? "未启用" : (health.version || health.status || "未知"),
           health, action: () => enter("tool", tool.name)
         }));
       }
@@ -600,6 +816,6 @@
   root.VidOtterEnvironment = { init, activate: refresh, renderTools };
 
   if (typeof module !== "undefined" && module.exports) {
-    module.exports = { cardState, normalizedKind, visibleConfigFields, editorValue, toggleMetadata, formatModelSize, modelOptionLabel, modelActionLabel };
+    module.exports = { cardState, normalizedKind, visibleConfigFields, editorValue, toggleMetadata, formatModelSize, modelOptionLabel, modelActionLabel, isOutdatedMcpWorkerError };
   }
 })(globalThis);

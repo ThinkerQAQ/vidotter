@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>VidOtterFirstRun</class>
+ <widget class="QWidget" name="VidOtterFirstRun">
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <item><widget class="QLabel" name="setupTitle">
+    <property name="text"><string>Browser extension activation required</string></property>
+    <property name="styleSheet"><string>font-weight: 600; font-size: 15px;</string></property>
+   </widget></item>
+   <item><widget class="QLabel" name="setupDescription">
+    <property name="text"><string>VidOtter is installed. To download videos from browser pages, you must activate the bundled Chrome/Edge extension. When you finish this installer, an offline guide and the extension folder open automatically.</string></property>
+    <property name="wordWrap"><bool>true</bool></property>
+   </widget></item>
+   <item><widget class="QLabel" name="requiredExtensionNote">
+    <property name="text"><string>Next step (required): Enable Developer mode, choose Load unpacked, and select the extension folder.</string></property>
+    <property name="wordWrap"><bool>true</bool></property>
+   </widget></item>
+   <item><widget class="QLabel" name="extensionInstructions">
+    <property name="text"><string>Browser permissions must be approved by you. The offline guide opens automatically; you can reopen it from the Start menu or installation folder.</string></property>
+    <property name="wordWrap"><bool>true</bool></property>
+   </widget></item>
+
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

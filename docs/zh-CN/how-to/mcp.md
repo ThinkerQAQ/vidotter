@@ -27,6 +27,19 @@ Bridge 重启或内存索引丢失时，扩展在重新连接及 MCP 请求时**
 
 下载接口立即返回 `task_id`，不代表已下载完成。用 `vidotter_get_job` 查询结果。
 
+## MCP 与桌面安装的关系
+
+**安装 VidOtter 就已经安装 MCP Server。** MCP 与下载引擎共用同一个 Go
+可执行文件，不需要另装独立的 MCP 服务。浏览器扩展通过 Native Messaging
+按需启动本地 Bridge；支持本地 stdio 的 AI 客户端可按需运行
+`bin/vidotter-系统-架构 --mcp-stdio`，无须常驻后台下载服务。
+
+**ChatGPT 云端访问需用户明确选择后再开启。** 仅在选择“连接 ChatGPT”时，
+才需要个人 Tunnel ID、权限受限的运行密钥和官方 tunnel-client。
+发行包附带的可选脚本在用户确认后设置登录时自动启动的 Tunnel；
+平时不必手动启动，但不能在普通安装时默认开启远程访问。
+Tunnel 相关私有信息应留在系统用户目录，不能写入公开仓库和发行包。
+
 ## 配置向导（可选）
 
 先安装官方 tunnel-client。Windows 在发行包目录执行 `powershell -NoProfile -File scripts/Setup-VidOtter-MCP.ps1`；Linux/macOS 执行 `bash scripts/setup-mcp.sh`。向导询问 Tunnel ID 和受限运行密钥，保存到当前用户私有目录（Windows 使用 DPAPI，Unix 使用仅本人可读的文件），运行 doctor，并尽可能设置登录后常驻启动。重复执行时保留已有私有配置，同一个 Tunnel 只应运行一个客户端进程。向导不自动下载 tunnel-client，也不能代替用户在 ChatGPT 中注册和授权。
@@ -92,3 +105,28 @@ Linux/macOS 使用对应的 `bin/vidotter-linux-...` 或 `bin/vidotter-macos-...
 - 不要把本地 Bridge 的 `127.0.0.1:17891` 直接公开映射到互联网；远程只转发受限 MCP。
 
 官方说明：[Secure MCP Tunnels](https://developers.openai.com/api/docs/guides/secure-mcp-tunnels)。
+
+### 在 VidOtter 设置页配置并启动 Tunnel（新版）
+
+1. 在 [OpenAI Platform Tunnels](https://platform.openai.com/settings/organization/tunnels) 创建或查看私人 Tunnel，复制 Tunnel ID。
+2. 在 [OpenAI Platform API Keys](https://platform.openai.com/settings/organization/api-keys) 创建 Restricted Runtime API Key，权限只需 Tunnels Read + Use。Tunnel ID 不是身份凭证，单靠它无法启动服务。
+3. 在本机安装官方 [tunnel-client](https://github.com/openai/tunnel-client/releases/latest)，将程序放入 PATH 或用户 .local/bin 目录。
+4. 打开 VidOtter 浏览器扩展 → 设置 → AI 集成 → ChatGPT MCP；在该页面内填写 Tunnel ID，点击「配置并启动 Tunnel」。这个按钮不会跳转到外部网页。旁边的「查看 VidOtter 配置文档」才会主动打开本教程。
+5. VidOtter 验证 Tunnel ID 和客户端后，在本机系统终端运行绑定的配置脚本；首次使用时在那里输入 Runtime API Key。密钥不会交给浏览器扩展，也不会通过命令行参数传递。
+6. 脚本初始化和诊断 Tunnel，设置用户级登录自动启动：Windows Startup 快捷方式、macOS LaunchAgent，或 Linux systemd --user。最后在 ChatGPT Plugins 中创建采用同一个 Tunnel 的自定义 MCP 插件，并执行一次真实工具调用验证。
+
+说明：本地 MCP Server 随 VidOtter 安装，无须另装。配置文件存在不等于 Tunnel 已连通，也不等于 ChatGPT 已授权。设置页会如实显示“连接待验证”；请使用 doctor/health 和 ChatGPT 实际调用确认。
+
+如果缺少官方 Tunnel Client，设置页会展示提示和文档链接，不会自动跳转或下载第三方程序；已经配置不同 Tunnel ID 时，脚本会拒绝静默覆盖。
+
+## 新版一站式接入（开发分支，推荐）
+
+**不用预制插件 ZIP。** ChatGPT 可直接创建私有 Tunnel 插件并自动发现 VidOtter 的 13 个 MCP 工具。上传 ZIP 并不能代替每位用户自己的 Tunnel 与授权；Secure MCP Tunnel 目前也不支持作为公开插件提交/分发。
+
+用户只需要：首次在 OpenAI Platform 的 Tunnels 页面创建自己的 Tunnel ID → 在 VidOtter 设置页按需安装官方 Tunnel Client（来自 openai/tunnel-client 正式 GitHub Release，SHA-256 校验）→ 填入 Tunnel ID，点击「配置并启动 Tunnel」。本机脚本复用同一用户已保存的 VidOtter 运行凭据或显式提供的 CONTROL_PLANE_API_KEY。只有首次缺少凭据时，才在本机终端输入 Runtime API Key。不会扫描其他项目的私有密钥。
+
+配置成功后，用户可以在 VidOtter 设置中「启动 / 停止 / 重启」本机 Tunnel 服务；通过官方 health 命令要求至少一次控制平面轮询成功，才能判定服务 Ready。状态为 Ready 不意味着 ChatGPT 插件已创建。
+
+随后点击「复制 Tunnel ID」及「前往 ChatGPT 创建插件」，选择 Plugins → + → Add custom MCP server → Tunnel，选择或粘贴该 ID，按实际情况选择应用层认证（不需要应用层认证可选 None），确认风险提示，创建私有插件。MCP 工具自动发现；不需要上传 ZIP 或手工复制 Schema。最后在 ChatGPT 中调用 vidotter_status 验收。
+
+注意：Tunnel ID 不是运行凭证；云端插件的首次创建与授权仍由用户本人完成。下载客户端不会自动开启远程访问。发行版和正式更新源尚未发布，本功能必须更新扩展和本地 Bridge。

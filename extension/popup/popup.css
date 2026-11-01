@@ -520,3 +520,21 @@ html[data-surface="side-panel"] .log-follow { grid-column: 1; }
 .settings-about-brand small { font-size: 11px; color: #667085; }
 .settings-about-versions { padding: 2px 17px 12px; }
 .settings-about-version { color: #344054; font-size: 13px; font-weight: 650; font-variant-numeric: tabular-nums; }
+
+
+/* ChatGPT MCP connection is configured inline, not through an external popup. */
+.mcp-setup-form { display: grid; gap: 12px; margin-top: 16px; }
+.mcp-setup-form .tool-field { display: grid; gap: 7px; font-weight: 600; color: #344054; }
+.mcp-setup-form input { width: 100%; min-width: 0; padding: 10px 12px; border: 1px solid #d0d5dd; border-radius: 7px; color: #182230; background: #fff; }
+.mcp-setup-form .settings-help { margin: 0; line-height: 1.65; }
+.mcp-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
+.mcp-doc-link { display: inline-flex; align-items: center; min-height: 34px; padding: 7px 11px; border: 1px solid #d0d5dd; border-radius: 8px; color: #475467; background: #fff; text-decoration: none; }
+.mcp-doc-link:hover { background: #f9fafb; text-decoration: underline; }
+.mcp-setup-message { display: block; min-height: 1.5em; color: #667085; overflow-wrap: anywhere; }
+
+
+.mcp-next-steps { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding-top: 10px; border-top: 1px solid var(--line-soft); }
+.mcp-next-steps .settings-help { flex-basis: 100%; }
+
+
+.mcp-service-actions { display: flex; gap: 8px; flex-wrap: wrap; padding-top: 12px; }

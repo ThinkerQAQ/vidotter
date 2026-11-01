@@ -11,3 +11,5 @@ Use a packaged desktop release for this path. A source checkout requires the sep
 If installation or connection is unclear, follow [first run](tutorial/first-run-on-new-machine.md). If resource selection is unclear, follow [first download](tutorial/first-download.md).
 
 Next: [tools and models](how-to/configure-tools.md) · [subtitles](how-to/subtitles.md) · [workspace](how-to/use-web-ui.md) · [task recovery](how-to/manage-downloads.md) · [troubleshooting](how-to/troubleshoot.md).
+
+> Future one-click GUI installers are being prepared for all three desktop platforms. Until they appear as tested release assets, use the archive steps above. [Installer build/status](how-to/build-installers.md).

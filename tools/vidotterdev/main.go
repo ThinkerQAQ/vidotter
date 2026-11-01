@@ -21,7 +21,7 @@ func main() {
 
 func execute(args []string) error {
 	if len(args) == 0 {
-		return errors.New("usage: vidotterdev <verify|build|licenses|package|deploy|install|uninstall|components|tool-install|android-bind|android-build|ffmpeg-native|ffmpeg-android|icons> [flags]")
+		return errors.New("usage: vidotterdev <verify|build|licenses|package|installer|update-repository|deploy|install|uninstall|components|tool-install|android-bind|android-build|ffmpeg-native|ffmpeg-android|icons> [flags]")
 	}
 	command := args[0]
 	flags := flag.NewFlagSet(command, flag.ContinueOnError)
@@ -32,6 +32,10 @@ func execute(args []string) error {
 	arch := flags.String("arch", runtime.GOARCH, "target architecture")
 	target := flags.String("target", "", "explicit install/deploy directory")
 	extensionID := flags.String("extension-id", "hfjpenjlamneepmigemmmiibebpokmik", "Chromium extension ID")
+	installerStage := flags.String("stage", "", "extracted release root for Qt IFW packaging")
+	binarycreator := flags.String("binarycreator", "", "Qt IFW binarycreator executable")
+	repogen := flags.String("repogen", "", "Qt IFW repogen executable")
+	updateURL := flags.String("update-url", "", "optional published Qt IFW repository URL")
 	sourceArchive := flags.String("archive", "", "local verified third-party archive path")
 	ffmpegSource := flags.String("source", "", "FFmpeg source directory or release source archive")
 	allowMissing := flags.Bool("allow-missing-tools", false, "allow explicitly incomplete development-only tool bundle")
@@ -61,6 +65,28 @@ func execute(args []string) error {
 		return maint.Licenses(root)
 	case "package":
 		return maint.Package(root, *version, *allowMissing, *ffmpegSource)
+	case "installer":
+		// go -C tools/vidotterdev run . changes the working directory.
+		// Treat documented release-stage and output paths as repository-relative.
+		stage := *installerStage
+		if stage != "" && !filepath.IsAbs(stage) {
+			stage = filepath.Join(root, stage)
+		}
+		destination := *output
+		if destination != "" && !filepath.IsAbs(destination) {
+			destination = filepath.Join(root, destination)
+		}
+		return maint.Installer(stage, *platform, *arch, *binarycreator, destination, *updateURL)
+	case "update-repository":
+		stage := *installerStage
+		if stage != "" && !filepath.IsAbs(stage) {
+			stage = filepath.Join(root, stage)
+		}
+		destination := *output
+		if destination != "" && !filepath.IsAbs(destination) {
+			destination = filepath.Join(root, destination)
+		}
+		return maint.UpdateRepository(stage, *platform, *arch, *repogen, destination)
 	case "deploy":
 		if *target == "" {
 			return errors.New("deploy requires --target to prevent unintended installation changes")

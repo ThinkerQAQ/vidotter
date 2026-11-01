@@ -17,7 +17,7 @@ client="$(command -v tunnel-client || true)"
 [[ -x "$client" ]] || { echo "Install official openai/tunnel-client first: https://github.com/openai/tunnel-client" >&2; exit 1; }
 id="${VIDOTTER_TUNNEL_ID:-}"
 if [[ -z "$id" ]]; then read -r -p "VidOtter Tunnel ID: " id; fi
-[[ "$id" =~ ^tunnel_[a-zA-Z0-9]+$ ]] || { echo "Invalid Tunnel ID" >&2; exit 1; }
+[[ "$id" =~ ^tunnel_([a-z0-9]{32}|[a-z0-9]{4}_[a-z0-9]{32})$ ]] || { echo "Invalid Tunnel ID" >&2; exit 1; }
 private="${XDG_CONFIG_HOME:-$HOME/.config}/vidotter/mcp"
 profile_dir="${XDG_CONFIG_HOME:-$HOME/.config}/tunnel-client"
 mkdir -p "$private" "$profile_dir"
@@ -38,6 +38,10 @@ set -a
 source "$env_file"
 set +a
 profile="$profile_dir/vidotter.yaml"
+if [[ -f "$profile" ]] && ! grep -Fq -- "$id" "$profile"; then
+  echo "Tunnel ID differs from existing VidOtter profile. Reuse the saved ID or explicitly edit the profile." >&2
+  exit 1
+fi
 if [[ ! -f "$profile" ]]; then
   "$client" init --sample sample_mcp_stdio_local --profile-dir "$profile_dir" --profile vidotter \
     --tunnel-id "$id" --mcp-command "$app --mcp-stdio" --health-listen-addr 127.0.0.1:0
@@ -55,7 +59,7 @@ Wants=network-online.target
 [Service]
 Type=simple
 EnvironmentFile="$env_file"
-ExecStart="$client" run --config "$profile"
+ExecStart="$client" run --config "$profile" --health.url-file "$private/health.url"
 Restart=on-failure
 RestartSec=5
 UMask=0077
@@ -72,7 +76,7 @@ elif [[ "$os" == "Darwin" ]]; then
 set -a
 source "$env_file"
 set +a
-exec "$client" run --config "$profile"
+exec "$client" run --config "$profile" --health.url-file "$private/health.url"
 EOF
   chmod 700 "$runner"
   runner_xml="$(printf "%s" "$runner" | sed -e "s/\&/\&amp;/g" -e "s/</\&lt;/g" -e "s/>/\&gt;/g")"

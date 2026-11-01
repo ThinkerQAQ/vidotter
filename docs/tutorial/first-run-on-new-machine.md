@@ -2,7 +2,7 @@
 
 **Goal:** install the desktop Bridge, connect the browser extension, identify a media file and find the finished download. You do not need Go, Node.js, an account, or speech-recognition models to use a packaged release.
 
-This walkthrough applies to **VidOtter v1.3.0**. The screenshot shows the Chinese interface before media detection. Follow the steps below to verify your own connection and download.
+The screenshot below was captured in **v1.3.0**; the manual archive installation steps apply to packaged desktop releases. New Qt IFW installers are not yet published. Follow the steps below to verify your own connection and download.
 
 ## 1. Download the desktop package
 
