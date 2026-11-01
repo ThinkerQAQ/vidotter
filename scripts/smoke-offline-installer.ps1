@@ -6,6 +6,10 @@ New-Item -ItemType Directory -Force -Path $sandbox | Out-Null
 & $setup --root $target --accept-licenses --confirm-command install
 if ($LASTEXITCODE -ne 0) { throw "Windows installer failed" }
 if (!(Test-Path (Join-Path $target "bin/vidotter-windows-amd64.exe"))) { throw "Bridge not installed" }
+if ($env:GITHUB_EVENT_NAME -eq 'pull_request') {
+    python scripts/smoke-pr-extension-bundle.py (Join-Path $target 'extension')
+    if ($LASTEXITCODE -ne 0) { throw 'Installed popup / service worker mismatch' }
+}
 $offlineGuide = Join-Path $target "docs/extension-install.html"
 if (!(Test-Path $offlineGuide)) { throw "Offline browser extension guide missing from installer" }
 $guideText = Get-Content -Raw -Encoding UTF8 $offlineGuide

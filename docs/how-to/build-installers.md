@@ -223,3 +223,9 @@ The development branch moves the optional Tunnel setup to **Settings → AI inte
 New installers always add **Start → VidOtter → Uninstall VidOtter**, pointing to the same Qt Maintenance Tool. Select **Remove all components** and confirm. This removes managed program files and Native Messaging registration without silently deleting the user's Data/ directory. Older candidates can open VidOtter-Maintenance.exe from the installation directory instead.
 
 VidOtter-Maintenance.exe.new may be a deferred Windows maintenance-tool update artifact; it is not the standard uninstall entry. Consult InstallationLog.txt before troubleshooting or deleting a pending file.
+
+### Stale MV3 service worker after a local extension upgrade
+
+When Qt setup replaces unpacked extension files, Edge/Chrome can keep the old Manifest V3 background service worker alive while loading fresh popup JavaScript. The former symptom for a new MCP install action was the generic **Unsupported Tool operation** response. The Bridge/Tunnel downloader was never reached.
+
+New builds probe `bridge.mcp.capabilities` before the action; a mismatch presents an explicit **Reload VidOtter extension** control. The same can be done manually in `edge://extensions` or `chrome://extensions` (reload the VidOtter card, then reopen its settings). No reinstallation or user Data deletion is needed. CI preview packages use distinct four-part browser manifest versions rather than reusing the public `1.6.2` version. Packaging tests now inspect the actual installed popup, worker, relay, and manifest for matching MCP support.

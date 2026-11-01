@@ -9,7 +9,7 @@
     "ui.about",
     "ui.logs.get", "ui.logs.set", "bridge.logs.list", "bridge.logs.clear",
     "media.list", "media.clear", "media.download", "media.playlist.probe",
-    "bridge.environment", "bridge.tools", "bridge.tool.action", "bridge.config.save",
+    "bridge.environment", "bridge.tools", "bridge.tool.action", "bridge.mcp.capabilities", "bridge.config.save",
     "tool.config.save", "bridge.jobs.list", "bridge.jobs.clear",
     "bridge.job.retry", "bridge.job.resume", "bridge.job.pause", "bridge.job.open",
     "bridge.job.reveal", "bridge.job.delete", "bridge.output.open"

@@ -744,6 +744,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
+  // MV3 background may be older than refreshed popup after an in-place update.
+  if (message.action === "bridge.mcp.capabilities") {
+    sendResponse({ ok: true, protocol: 2, actions: ["install-client", "setup", "service"] });
+    return;
+  }
+
   if (message.action === "bridge.tool.action") {
     const tool = String(message.tool || "");
     const action = String(message.toolAction || "");

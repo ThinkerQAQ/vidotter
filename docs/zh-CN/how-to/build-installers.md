@@ -179,3 +179,11 @@ Linux/macOS 也可在安装完成后打开扩展目录和安装教程；首次�
 新安装器会创建 **开始菜单 → VidOtter → Uninstall VidOtter**，指向同一套 Qt Maintenance Tool，不引入第二套卸载程序。打开后选择 **Remove all components** 并确认。卸载会清理 Bridge、扩展程序文件和 Native Messaging 注册，保留 Data/ 用户配置、任务和下载文件。旧测试安装包若没有快捷方式，可在安装目录运行 VidOtter-Maintenance.exe。
 
 如果看到 VidOtter-Maintenance.exe.new，它可能是 Qt IFW 在 Windows 更新维护工具时暂存的文件，不是新的卸载程序。不要在更新进行时手动删除；如果更新失败，先查看安装目录的 InstallationLog.txt。
+
+### 浏览器扩展后台版本不一致（测试包常见）
+
+Qt 安装器更新本机 extension 文件夹后，Edge/Chrome 的 MV3 Service Worker **不会保证立即重载**。旧版后台可能和新版设置页同时存在，表现为点击“安装官方 Tunnel Client”却提示 **“不支持的 Tool 操作”**。这代表消息未进入新的 Bridge 安装接口，不是 Tunnel ID 或下载配置问题。
+
+新版扩展在打开 ChatGPT MCP 设置时进行后台能力检查，如发现版本不兼容，会显示“重新加载 VidOtter 扩展”按钮。点击后需要重新打开设置页；也可打开 edge://extensions 或 chrome://extensions，手动点击 VidOtter 卡片上的“重新加载”按钮。**不需要卸载扩展或删除 Data/**。浏览器用户仍需确认本地未上架扩展的加载操作。
+
+PR 测试安装包现在使用专属四段扩展版本号（比如 1.6.2.某个 CI 构建编号），不再和正式发行包共用 1.6.2。打包 CI 会验证安装后的 popup、后台 worker、relay 和 manifest 是否包含同一版本的 MCP 兼容协议；正式 Release 必须正常提升版本号，不能重复沿用旧扩展版本。

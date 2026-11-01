@@ -432,6 +432,34 @@
 
   let pendingMcpTunnelID = "";
 
+  function isOutdatedMcpWorkerError(error) {
+    return /不支持的 Tool 操作|不支持的 Tool|unsupported tool (?:action|operation)|unsupported action/i
+      .test(String(error && error.message || error || ""));
+  }
+
+  // In-place unpacked extension updates can leave a previously launched MV3
+  // service worker running, while the popup already reads the new UI files.
+  // Never hide this mismatch as a Tunnel-client installation failure.
+  function showMcpWorkerReload(form, message) {
+    message.textContent = "VidOtter 扩展后台仍是旧版。请重新加载扩展，再执行客户端安装。";
+    message.classList.add("mcp-reload-needed");
+    if (form.querySelector("[data-mcp-worker-reload]")) return;
+    if (api.host === "extension" && root.chrome?.runtime?.reload) {
+      const reload = document.createElement("button");
+      reload.type = "button";
+      reload.className = "secondary";
+      reload.dataset.mcpWorkerReload = "1";
+      reload.textContent = "重新加载 VidOtter 扩展";
+      reload.addEventListener("click", () => root.chrome.runtime.reload());
+      form.appendChild(reload);
+    } else {
+      const instruction = document.createElement("p");
+      instruction.dataset.mcpWorkerReload = "1";
+      instruction.textContent = "在 edge://extensions 或 chrome://extensions 找到 VidOtter，点击重新加载，再刷新本页面。";
+      form.appendChild(instruction);
+    }
+  }
+
   function renderChatGPTMCP(body, tool, health) {
     // Inline setup: the browser collects only a non-secret Tunnel identifier.
     // The restricted API key is entered only into the local OS terminal.
@@ -476,6 +504,7 @@
       const installClient = document.createElement("button");
       installClient.type = "button";
       installClient.className = "secondary";
+      installClient.dataset.mcpInstallClient = "1";
       installClient.textContent = "安装官方 Tunnel Client";
       installClient.addEventListener("click", async () => {
         if (!root.confirm("下载并安装 OpenAI 官方 Tunnel Client？\n\nVidOtter 将从 openai/tunnel-client 正式 GitHub Release 下载对应的系统版本，核验 SHA-256，安装到当前用户目录。\n不会自动创建 Tunnel 或开启远程服务。")) return;
@@ -487,9 +516,13 @@
           await refresh();
           api.setMessage("environmentMessage", "官方 Tunnel Client 已安装。现在可以填写 Tunnel ID 配置连接。", "ok");
         } catch (error) {
-          message.textContent = error.message || String(error);
+          if (isOutdatedMcpWorkerError(error)) {
+            showMcpWorkerReload(form, message);
+          } else {
+            message.textContent = error.message || String(error);
+          }
           api.setMessage("environmentMessage", message.textContent, "error");
-          installClient.disabled = false;
+          installClient.disabled = Boolean(form.querySelector("[data-mcp-worker-reload]"));
           installClient.textContent = "安装官方 Tunnel Client";
         }
       });
@@ -499,6 +532,24 @@
     }
     controls.append(button, docs);
     form.append(label, hint, controls, message);
+    // Preflight is intentionally independent of the local Bridge version:
+    // the old worker does not know the new tool action even when the Bridge does.
+    if (api.host === "extension") {
+      const installClient = controls.querySelector("[data-mcp-install-client]");
+      if (installClient) installClient.disabled = true;
+      void api.send("bridge.mcp.capabilities").then(capabilities => {
+        if (!Number.isInteger(capabilities.protocol) || capabilities.protocol < 2 ||
+            !Array.isArray(capabilities.actions) ||
+            !["install-client", "setup", "service"].every(action => capabilities.actions.includes(action))) {
+          throw new Error("unsupported tool action: old extension worker");
+        }
+        if (installClient) installClient.disabled = false;
+      }).catch(() => {
+        if (installClient) installClient.disabled = true;
+        button.disabled = true;
+        showMcpWorkerReload(form, message);
+      });
+    }
     if (savedTunnelID || pendingMcpTunnelID) {
       const nextSteps = document.createElement("div");
       nextSteps.className = "mcp-next-steps";
@@ -765,6 +816,6 @@
   root.VidOtterEnvironment = { init, activate: refresh, renderTools };
 
   if (typeof module !== "undefined" && module.exports) {
-    module.exports = { cardState, normalizedKind, visibleConfigFields, editorValue, toggleMetadata, formatModelSize, modelOptionLabel, modelActionLabel };
+    module.exports = { cardState, normalizedKind, visibleConfigFields, editorValue, toggleMetadata, formatModelSize, modelOptionLabel, modelActionLabel, isOutdatedMcpWorkerError };
   }
 })(globalThis);

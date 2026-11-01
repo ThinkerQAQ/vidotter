@@ -5,6 +5,7 @@ No installer created by this script is automatically published or advertised.
 """
 import argparse
 import hashlib
+import json
 import os
 from pathlib import Path, PurePosixPath
 import platform
@@ -99,6 +100,24 @@ def main():
             "--os", go_os, "--arch", arch, "--output", program)
         shutil.copytree("extension", stage / "extension", dirs_exist_ok=True,
                         ignore=shutil.ignore_patterns("test", ".DS_Store"))
+        # Preview packages used to advertise the production 1.6.2 manifest
+        # despite having a new popup and worker. This caused Edge/Chrome to
+        # keep an old MV3 service worker while reading the new popup files.
+        # Give every CI preview a distinct 4-part Chrome-compatible version.
+        manifest_path = stage / "extension" / "manifest.json"
+        extension_manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        release_version = extension_manifest["version"]
+        parts = release_version.split(".")
+        if len(parts) != 3 or any(not part.isdigit() for part in parts):
+            raise ValueError("PR preview requires a three-part release version")
+        build_number = int(os.environ.get("GITHUB_RUN_NUMBER", "1"))
+        if not 1 <= build_number < 65535:
+            raise ValueError("Preview build number is outside Chrome's version segment range")
+        extension_manifest["version"] = release_version + "." + str(build_number)
+        extension_manifest["version_name"] = release_version + " PR preview #" + str(build_number)
+        manifest_path.write_text(json.dumps(extension_manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        print("Preview extension version:", extension_manifest["version"])
+
         for helper in ("Setup-VidOtter-MCP.ps1", "setup-mcp.sh",
                        "Manage-VidOtter-MCP.ps1", "manage-mcp.sh"):
             shutil.copy2(Path("scripts") / helper, stage / "scripts" / helper)

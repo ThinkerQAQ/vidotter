@@ -22,9 +22,13 @@ def main():
     manifest = copy / "extension" / "manifest.json"
     data = json.loads(manifest.read_text(encoding="utf-8"))
     parts = data["version"].split(".")
-    if len(parts) != 3 or not all(part.isdigit() for part in parts):
-        raise RuntimeError("CI fixture requires a three-number semantic version")
-    data["version"] = ".".join(parts[:2] + [str(int(parts[2]) + 1)])
+    if len(parts) not in (3, 4) or not all(part.isdigit() for part in parts):
+        raise RuntimeError("CI fixture requires a Chrome-compatible version")
+    if len(parts) == 4 and int(parts[-1]) >= 65534:
+        raise RuntimeError("CI fixture version has no remaining build segment")
+    # A real next-version update for the currently installed preview, not
+    # a synthetic downgrade to a three-component version.
+    data["version"] = ".".join(parts[:-1] + [str(int(parts[-1]) + 1)])
     manifest.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     goos = {"Windows": "windows", "Linux": "linux", "Darwin": "darwin"}[platform.system()]
     arch = "arm64" if platform.machine().lower() in ("arm64", "aarch64") else "amd64"

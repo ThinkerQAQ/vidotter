@@ -57,6 +57,12 @@ jobs:
             --tools-root "$RUNNER_TEMP/qtifw" \
             --working-dir "$RUNNER_TEMP/release-work" \
             --output-dir "$RUNNER_TEMP/installer-output"
+      - name: Verify packaged PR popup, worker and version agree
+        if: github.event_name == 'pull_request'
+        shell: bash
+        env:
+          RELEASE_TAG: ${{ inputs.release_tag || 'v1.6.2' }}
+        run: python scripts/smoke-pr-extension-bundle.py "$RUNNER_TEMP/release-work/extracted/vidotter-$RELEASE_TAG-${{ matrix.slug }}/extension"
       - name: Build synthetic next-version update repository (CI only)
         shell: bash
         env:

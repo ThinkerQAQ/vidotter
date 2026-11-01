@@ -9,6 +9,9 @@ mkdir -p "$HOME"
 target="$sandbox/install with spaces"
 "$installer" --root "$target" --accept-licenses --confirm-command install
 test -f "$target/extension/manifest.json"
+if [[ "${GITHUB_EVENT_NAME:-}" == 'pull_request' ]]; then
+  python3 scripts/smoke-pr-extension-bundle.py "$target/extension"
+fi
 test -f "$target/scripts/manage-mcp.sh"
 test -f "$target/scripts/setup-mcp.sh"
 bash -n "$target/scripts/manage-mcp.sh" "$target/scripts/setup-mcp.sh"

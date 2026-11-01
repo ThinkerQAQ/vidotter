@@ -5,6 +5,9 @@ const assert = require("assert");
 global.VidOtterPopup = {};
 const environment = require("../popup/environment.js");
 
+assert.equal(environment.isOutdatedMcpWorkerError(new Error("不支持的 Tool 操作")), true);
+assert.equal(environment.isOutdatedMcpWorkerError(new Error("unsupported tool action")), true);
+assert.equal(environment.isOutdatedMcpWorkerError(new Error("Tunnel download HTTP 404")), false);
 assert.equal(environment.cardState({ status: "ready", ok: true }), "ok");
 assert.equal(environment.cardState({ status: "disabled", ok: true }), "disabled");
 assert.equal(environment.cardState({ status: "missing", ok: false }), "error");

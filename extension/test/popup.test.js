@@ -105,4 +105,9 @@ assert.match(environmentSource, /复制 Tunnel ID/);
 assert.match(environmentSource, /前往 ChatGPT 创建插件/);
 assert.match(environmentSource, /start", "stop", "restart/);
 assert.match(backgroundSource, /bridgeFetch\("\/v1\/mcp\/client\/install"/);
+assert.match(backgroundSource, /bridge\.mcp\.capabilities/);
+assert.match(environmentSource, /api\.send\("bridge\.mcp\.capabilities"\)/);
+assert.match(environmentSource, /showMcpWorkerReload/);
+assert.match(environmentSource, /root\.chrome\.runtime\.reload\(\)/);
+
 assert.match(backgroundSource, /bridgeFetch\("\/v1\/mcp\/service"/);
