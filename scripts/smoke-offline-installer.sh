@@ -29,3 +29,15 @@ test -f "$target/Data/config.toml"
 test -f "$target/Data/downloads/keep.txt"
 test ! -e "$manifest"
 echo "Linux installer smoke passed: installed, registered, uninstalled, preserved Data."
+
+# Explicit legacy directory adoption: Qt may replace program files, never Data/.
+legacy="$sandbox/old unpacked VidOtter"
+mkdir -p "$legacy/Data" "$legacy/bin"
+printf 'migrate=safe\n' > "$legacy/Data/config.toml"
+printf 'old binary\n' > "$legacy/bin/vidotterdev"
+"$installer" --root "$legacy" --accept-licenses --confirm-command --auto-answer OverwriteTargetDirectory=Yes install
+test -f "$legacy/components.xml"
+grep -q 'migrate=safe' "$legacy/Data/config.toml"
+"$legacy/VidOtter-Maintenance" --confirm-command remove com.thinkerqaq.vidotter
+test -f "$legacy/Data/config.toml"
+echo 'Linux legacy adoption preserved Data.'

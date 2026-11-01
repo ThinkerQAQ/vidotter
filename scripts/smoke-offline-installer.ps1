@@ -28,3 +28,15 @@ if (!(Test-Path (Join-Path $data "config.toml"))) { throw "Config lost on uninst
 if (!(Test-Path (Join-Path $data "downloads/keep.txt"))) { throw "Downloads lost on uninstall" }
 if (Test-Path $key) { throw "Native Messaging registry not removed" }
 Write-Host "Windows installer smoke passed"
+
+$legacy = Join-Path $sandbox "old unpacked VidOtter"
+New-Item -ItemType Directory -Force -Path (Join-Path $legacy "Data") | Out-Null
+Set-Content -Path (Join-Path $legacy "Data/config.toml") -Value 'migrate=safe'
+& $setup --root $legacy --accept-licenses --confirm-command --auto-answer OverwriteTargetDirectory=Yes install
+if ($LASTEXITCODE -ne 0) { throw "Windows legacy migration failed" }
+if (!(Test-Path (Join-Path $legacy "components.xml"))) { throw "Legacy install not managed" }
+if (-not ((Get-Content -Raw (Join-Path $legacy "Data/config.toml")) -match 'migrate=safe')) { throw "Legacy configuration overwritten" }
+& (Join-Path $legacy "VidOtter-Maintenance.exe") --confirm-command remove com.thinkerqaq.vidotter
+if ($LASTEXITCODE -ne 0) { throw "Legacy uninstall failed" }
+if (!(Test-Path (Join-Path $legacy "Data/config.toml"))) { throw "Legacy config removed" }
+Write-Host "Windows legacy adoption preserved Data"

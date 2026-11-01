@@ -39,3 +39,18 @@ test -f "$target/Data/config.toml"
 test -f "$target/Data/downloads/keep.txt"
 test ! -e "$manifest"
 echo "macOS Intel installer smoke passed"
+
+legacy="$sandbox/old unpacked VidOtter"
+mkdir -p "$legacy/Data" "$legacy/bin"
+printf 'migrate=safe\n' > "$legacy/Data/config.toml"
+"$installer" --root "$legacy" --accept-licenses --confirm-command --auto-answer OverwriteTargetDirectory=Yes install
+test -f "$legacy/components.xml"
+grep -q 'migrate=safe' "$legacy/Data/config.toml"
+if [[ -d "$legacy/VidOtter-Maintenance.app" ]]; then
+  legacy_maintenance="$(find "$legacy/VidOtter-Maintenance.app/Contents/MacOS" -maxdepth 1 -type f | head -n 1)"
+else
+  legacy_maintenance="$legacy/VidOtter-Maintenance"
+fi
+"$legacy_maintenance" --confirm-command remove com.thinkerqaq.vidotter
+test -f "$legacy/Data/config.toml"
+echo 'macOS legacy adoption preserved Data.'

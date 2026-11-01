@@ -173,5 +173,12 @@ shortcut; Linux adds a **VidOtter Updater** desktop entry. On macOS, open the
 installed **VidOtter-Maintenance.app**. In each case use the Maintenance Tool to
 check and install an available release. Finish/pause downloads and close the
 running Bridge first; never forcibly terminate active media jobs during update.
-Existing archive-based installs do not automatically become IFW-managed; they
-need an explicit migration into the installer layout with `Data/` preserved.
+**Legacy archive adoption:** an existing unpacked installation can be adopted by
+selecting its current directory as the Qt IFW installation target, after
+finishing/stopping all tasks and backing up `Data/`. The wizard warns that the
+directory is nonempty and requires explicit approval. The installer overwrites
+managed `bin/`, `extension/`, `docs/` and `scripts/`, but **never packages or
+overwrites `Data/`**. Tested on Linux with a preexisting sentinel config;
+Windows/macOS regression cases are also included in CI. This is not silent
+auto-detection of old installations, and choosing a different target does not
+automatically migrate the old Data directory.
