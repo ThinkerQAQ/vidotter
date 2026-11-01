@@ -1,6 +1,6 @@
 # VidOtter
 
-[English](README.md) · [下载安装](https://github.com/ThinkerQAQ/vidotter/releases/tag/v1.6.3) · [问题反馈](https://github.com/ThinkerQAQ/vidotter/issues)
+[English](README.md)
 
 - [1. Introduction](#1-introduction)
 - [2. Quick Start](#2-quick-start)
@@ -45,7 +45,7 @@ VidOtter 通过浏览器扩展发现当前页面的媒体，再交给本地下�
 
 ### 2.2. 安装 VidOtter
 
-第一步，从 [v1.6.3 Release](https://github.com/ThinkerQAQ/vidotter/releases/tag/v1.6.3) 下载与系统匹配的安装器：
+从 [v1.6.3 Release](https://github.com/ThinkerQAQ/vidotter/releases/tag/v1.6.3) 下载与系统匹配的安装器：
 
 - Windows x64：运行 `VidOtter-Setup-v1.6.3-windows-amd64.exe`。
 - macOS Intel：打开 `VidOtter-Setup-v1.6.3-macos-amd64.dmg`，运行其中的安装器。
@@ -56,19 +56,33 @@ chmod +x VidOtter-Setup-v1.6.3-linux-amd64.run
 ./VidOtter-Setup-v1.6.3-linux-amd64.run
 ```
 
-按安装器提示完成安装。安装器会注册本地下载服务，完成时打开扩展激活说明和安装目录。浏览器会按需启动 Bridge，不需要一直开着终端。
+按安装器提示选择安装目录并完成安装，记下这个目录。安装器会注册本地下载服务，完成时打开扩展激活说明和安装目录。浏览器会按需启动 Bridge，不需要一直开着终端。
 
-**如果使用 Apple Silicon、Linux ARM64，或者希望手动安装：** 在同一 Release 下载对应的 ZIP/TAR.GZ，完整解压到长期使用的目录，保持 `bin/` 和 `extension/` 在同一个根目录。在解压根目录打开终端，执行：
+当前安装器未签名或公证。如果系统阻止运行，先核对下载来源和系统的发行者提示；安装完成后，再进行扩展加载。
+
+**如果使用 Apple Silicon、Linux ARM64，或者希望手动安装：** 在同一 Release 选择对应的压缩包：
+
+- Windows x64：`vidotter-v1.6.3-windows-amd64.zip`。
+- macOS Intel：`vidotter-v1.6.3-macos-amd64.tar.gz`。
+- macOS Apple Silicon：`vidotter-v1.6.3-macos-arm64.tar.gz`。
+- Linux x64：`vidotter-v1.6.3-linux-amd64.tar.gz`。
+- Linux ARM64：`vidotter-v1.6.3-linux-arm64.tar.gz`。
+
+如果不确定架构，Windows 查看“设置 → 系统 → 系统信息”的系统类型；macOS 查看“关于本机”的芯片或处理器；Linux 执行 `uname -m`，`x86_64` 对应 x64，`aarch64` 对应 ARM64。
+
+完整解压，找到直接包含 `bin/` 和 `extension/` 的文件夹，将它作为安装根目录并保持位置不变。打开终端，先切换到该目录，再注册本地服务。下面的目录路径需要替换为实际解压路径。
 
 Windows PowerShell：
 
 ```powershell
+Set-Location 'C:\path\to\VidOtter'
 .\bin\vidotterdev.exe install
 ```
 
 Linux/macOS：
 
 ```bash
+cd '/path/to/VidOtter'
 ./bin/vidotterdev install
 ```
 
@@ -76,12 +90,13 @@ Linux/macOS：
 
 ### 2.3. 加载浏览器扩展
 
-第二步，让浏览器连接到刚安装的本地服务：
+安装完成后，让浏览器连接到本地服务：
 
 1. Edge 打开 `edge://extensions`，Chrome 打开 `chrome://extensions`。
 2. 开启**开发者模式**，点击**加载解压缩的扩展**。
 3. 选择 VidOtter 安装目录下的 `extension/` 文件夹，这个文件夹中应直接包含 `manifest.json`。
-4. 打开 VidOtter，在**设置**中检查浏览器与本地服务的连接状态。
+4. 在浏览器工具栏的扩展菜单中打开 VidOtter，也可以将它固定到工具栏。
+5. 进入**设置 → 连接与运行时**，确认显示**浏览器与下载服务连接正常**。如果连接失败，先按下面的注册步骤处理，连接正常后再继续下载。
 
 扩展目前通过本地文件安装，尚未上架扩展商店。这一步需要用户在浏览器中操作。
 
@@ -96,7 +111,7 @@ Linux/macOS 使用 `./bin/vidotterdev install --extension-id YOUR_32_CHARACTER_I
 
 ### 2.4. 播放视频并下载
 
-第三步，打开 [MDN 的 CC0 示例视频](https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4)并开始播放。
+连接正常后，打开 [MDN 的 CC0 示例视频](https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4)并开始播放。
 
 保持在这个标签页，打开 VidOtter：
 
@@ -109,7 +124,7 @@ Linux/macOS 使用 `./bin/vidotterdev install --extension-id YOUR_32_CHARACTER_I
 
 ### 2.5. 检查下载结果
 
-第四步，等待任务变为**已完成**，打开下载文件，确认视频可以播放。默认下载目录是安装根目录下的 `Data/downloads/`。
+等待任务变为**已完成**，在任务中展开**下载文件**，点击文件旁的**打开**，确认视频可以播放。也可以直接进入默认下载目录：安装根目录下的 `Data/downloads/`。
 
 至此，浏览器发现资源、本地服务创建任务、下载文件这条链路就跑通了。
 
@@ -122,6 +137,8 @@ Linux/macOS 使用 `./bin/vidotterdev install --extension-id YOUR_32_CHARACTER_I
 - **任务报 403 或地址过期：** 回到原页面重新播放，获取新的媒体请求，再按任务提示恢复或重新下载。
 - **HLS 合并失败：** 检查 FFmpeg 是否可用。字幕问题先切回“不下载字幕”，确认普通下载是否正常。
 - **升级后还是旧版本，或提示不支持的 Tool 操作：** 停止旧 Bridge，更新程序文件，在扩展管理页点击**重新加载**，再到**设置 → 关于**核对版本。不要通过删除 `Data/` 解决。
+
+如果以上方法仍无法解决，请[提交 Issue](https://github.com/ThinkerQAQ/vidotter/issues)，附上 VidOtter 版本、操作系统、复现步骤和脱敏后的错误信息，不要上传完整 `Data/`。
 
 ## 3. Configuration
 
@@ -158,7 +175,7 @@ MP4/HLS 可以使用内置下载器。需要解析其他受支持的网页时，
 - 本地语音识别：需要 FFmpeg、whisper.cpp 和语音模型。
 - 字幕翻译：需要 llama.cpp 和翻译模型；使用语音识别结果时，还要指定原声语言。
 
-在设置页安装或配置工具及模型，再创建带字幕选项的任务。任务完成后，检查字幕文件、内容和时间轴。
+先到**设置 → 外部组件**配置对应工具；本地识别或翻译还需选择并下载模型，已有模型可填写路径。确认组件和模型就绪后，回到**资源嗅探**选择字幕处理方式，再创建下载任务。任务完成后，检查字幕文件、内容和时间轴。
 
 Windows v1.6.3 已附带 FFmpeg Slim、whisper.cpp、llama.cpp 可执行文件，模型需另行下载；Linux/macOS 按需提供兼容工具。
 
@@ -166,7 +183,7 @@ Windows v1.6.3 已附带 FFmpeg Slim、whisper.cpp、llama.cpp 可执行文件�
 
 桌面程序提供 STDIO MCP，启动参数为 `--mcp-stdio`，复用本地 Bridge。
 
-连接 ChatGPT 的步骤如下：
+先完成 Quick Start，确认扩展与 Bridge 已连接，再按以下步骤连接 ChatGPT：
 
 1. 在 OpenAI Platform 创建自己的 Tunnel。
 2. 打开**设置 → AI 集成 → ChatGPT MCP**，按需安装官方 Tunnel Client，填写 Tunnel ID，点击**配置并启动 Tunnel**。
@@ -186,12 +203,19 @@ Tunnel Ready 只表示本机连接就绪；收到 ChatGPT 中的实际工具响�
 
 Android 是独立原生客户端，支持 Android 8.0 / API 26 及以上，通过粘贴或分享 MP4/HLS 直链下载。它不接入桌面任务、Native Messaging、yt-dlp 或 ChatGPT Tunnel。
 
-当前桌面 Release 不包含 APK。源码构建需要 JDK 17、Android SDK 35 / NDK、gomobile 和 Gradle Wrapper，准备好环境后执行：
+当前桌面 Release 不包含 APK，需要从源码构建：
+
+1. 按 [5.1](#51-打开项目并验证) 克隆仓库并准备 Go 环境，以下命令均在仓库根目录执行。
+2. 安装 JDK 17，通过 Android SDK Manager 安装 Android SDK Platform 35、NDK 和 Platform-Tools。设置 `JAVA_HOME`、`ANDROID_SDK_ROOT` 为对应目录；需要指定 NDK 版本时，将 `ANDROID_NDK_HOME` 设为该版本目录。
+3. 安装与 `bridge/go.mod` 一致的两个 Go mobile 工具，再构建 APK：
 
 ```bash
-go -C tools/vidotterdev run . android-bind
+go install golang.org/x/mobile/cmd/gomobile@v0.0.0-20240326195318-268e6c3a80d1
+go install golang.org/x/mobile/cmd/gobind@v0.0.0-20240326195318-268e6c3a80d1
 go -C tools/vidotterdev run . android-build
 ```
+
+`android-build` 会先生成 Go 绑定，再调用仓库自带的 Gradle Wrapper。成功后，APK 位于 `.build/artifacts/android/vidotter-android-arm64-debug.apk`，仅适用于 ARM64 设备。将 APK 传到设备，按系统提示允许从该来源安装，打开 VidOtter，粘贴上面的示例 MP4 地址并下载，检查任务和实际文件。此路径需要 Android 设备单独验收。
 
 ## 5. Development
 
@@ -216,13 +240,27 @@ go -C tools/vidotterdev run . build --os windows --arch amd64
 
 ### 5.2. 安装开发版本
 
-在源码仓库执行，替换为独立的开发安装目录：
+在源码仓库根目录执行以下命令。它将程序部署到独立的 `.build/dev-install/`，然后切换到部署目录注册。
+
+Linux/macOS：
 
 ```bash
-go -C tools/vidotterdev run . deploy --target /absolute/path/to/vidotter-dev
+vidotter_dev_dir="$PWD/.build/dev-install"
+go -C tools/vidotterdev run . deploy --target "$vidotter_dev_dir"
+cd "$vidotter_dev_dir"
+./bin/vidotterdev install
 ```
 
-然后到目标系统的部署目录执行 `bin/vidotterdev install`，Windows 使用 `bin\vidotterdev.exe install`。扩展加载步骤同 Quick Start。
+Windows PowerShell：
+
+```powershell
+$vidotterDevDir = Join-Path (Get-Location).Path '.build\dev-install'
+go -C tools/vidotterdev run . deploy --target $vidotterDevDir
+Set-Location $vidotterDevDir
+.\bin\vidotterdev.exe install
+```
+
+按 [2.3](#23-加载浏览器扩展) 加载这个部署目录的 `extension/`，再按 2.4–2.5 下载并检查文件。继续修改或打包源码前，先切回原来的源码仓库根目录。
 
 ### 5.3. 打包与 CI
 

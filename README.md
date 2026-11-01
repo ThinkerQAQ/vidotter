@@ -1,6 +1,6 @@
 # VidOtter
 
-[简体中文](README_ZH.md) · [Downloads](https://github.com/ThinkerQAQ/vidotter/releases/tag/v1.6.3) · [Issues](https://github.com/ThinkerQAQ/vidotter/issues)
+[简体中文](README_ZH.md)
 
 - [1. Introduction](#1-introduction)
 - [2. Quick Start](#2-quick-start)
@@ -45,7 +45,7 @@ Release users do not need Go, Node.js, an OpenAI account, or an API key. A first
 
 ### 2.2. Install VidOtter
 
-First, download the installer for your system from the [v1.6.3 Release](https://github.com/ThinkerQAQ/vidotter/releases/tag/v1.6.3):
+Download the installer for your system from the [v1.6.3 Release](https://github.com/ThinkerQAQ/vidotter/releases/tag/v1.6.3):
 
 - Windows x64: run `VidOtter-Setup-v1.6.3-windows-amd64.exe`.
 - macOS Intel: open `VidOtter-Setup-v1.6.3-macos-amd64.dmg` and launch the installer inside.
@@ -56,19 +56,33 @@ chmod +x VidOtter-Setup-v1.6.3-linux-amd64.run
 ./VidOtter-Setup-v1.6.3-linux-amd64.run
 ```
 
-Follow the installer to completion. It registers the local service and opens the extension activation instructions and installation folder. The browser launches the Bridge on demand; you do not need to keep a terminal open.
+Choose an installation directory, complete the installer, and keep a note of that directory. The installer registers the local service and opens the extension activation instructions and installation folder. The browser launches the Bridge on demand; you do not need to keep a terminal open.
 
-**For Apple Silicon, Linux ARM64, or a manual installation:** download the matching ZIP/TAR.GZ from the same Release. Extract the whole archive into a permanent directory, keeping `bin/` and `extension/` under the same root. Open a terminal in that root and run:
+Current installers are not signed or notarized. If your system blocks one, check the download source and the system's publisher notice before proceeding. Complete installation before loading the extension.
+
+**For Apple Silicon, Linux ARM64, or a manual installation:** select the matching archive from the same Release:
+
+- Windows x64: `vidotter-v1.6.3-windows-amd64.zip`.
+- macOS Intel: `vidotter-v1.6.3-macos-amd64.tar.gz`.
+- macOS Apple Silicon: `vidotter-v1.6.3-macos-arm64.tar.gz`.
+- Linux x64: `vidotter-v1.6.3-linux-amd64.tar.gz`.
+- Linux ARM64: `vidotter-v1.6.3-linux-arm64.tar.gz`.
+
+To identify your architecture, check System type in Windows Settings → System → About, or Chip/Processor in About This Mac. On Linux, run `uname -m`: `x86_64` means x64 and `aarch64` means ARM64.
+
+Extract the complete archive and find the folder directly containing `bin/` and `extension/`. This is the installation root; keep it at a permanent location. Open a terminal, change to that directory, then register the service. Replace the sample directory below with your actual extracted path.
 
 Windows PowerShell:
 
 ```powershell
+Set-Location 'C:\path\to\VidOtter'
 .\bin\vidotterdev.exe install
 ```
 
 Linux/macOS:
 
 ```bash
+cd '/path/to/VidOtter'
 ./bin/vidotterdev install
 ```
 
@@ -81,7 +95,8 @@ Next, connect the browser to the installed service:
 1. Open `edge://extensions` in Edge or `chrome://extensions` in Chrome.
 2. Enable **Developer mode** and select **Load unpacked**.
 3. Select the installed VidOtter `extension/` folder, which directly contains `manifest.json`.
-4. Open VidOtter and check the browser/service connection in **Settings**.
+4. Open VidOtter from the browser toolbar's extensions menu; optionally pin it to the toolbar.
+5. Go to **Settings → Connection & runtime** and confirm **Browser and download service connected**. If it cannot connect, follow the registration steps below and resolve the connection before downloading.
 
 The extension is installed from local files and is not yet listed in a browser store. This step requires confirmation in the browser.
 
@@ -109,7 +124,7 @@ For HLS, select the complete playlist rather than an individual media segment.
 
 ### 2.5. Check the downloaded file
 
-Wait for **Completed**, then open the downloaded file and confirm that it plays. The default output directory is `Data/downloads/` under the installation root.
+Wait for **Completed**, expand **Downloaded file** in the job, and click **Open** beside the file. Confirm that it plays. You can also open it directly in the default output directory, `Data/downloads/` under the installation root.
 
 This verifies the complete path from browser detection through local job creation to a downloaded file.
 
@@ -122,6 +137,8 @@ For a larger interface, select **Open workspace** in the extension to open `http
 - **HTTP 403 or an expired URL:** replay the original page to refresh the media request, then follow the job's instructions to resume or download again.
 - **HLS muxing fails:** check FFmpeg availability. For subtitle failures, select No subtitles first and verify the basic download.
 - **An old version remains, or an action reports unsupported Tool operation:** stop the old Bridge, update the program files, reload the extension, and compare the version in **Settings → About**. Keep `Data/` intact.
+
+If these checks do not resolve the problem, [open an Issue](https://github.com/ThinkerQAQ/vidotter/issues) with the VidOtter version, operating system, reproduction steps, and sanitized error information. Do not attach the complete `Data/` directory.
 
 ## 3. Configuration
 
@@ -158,7 +175,7 @@ Choose the workflow that matches the subtitle source:
 - Local speech recognition: requires FFmpeg, whisper.cpp, and a speech model.
 - Subtitle translation: requires llama.cpp and a translation model; specify the spoken language when using speech recognition output.
 
-Install or configure tools and models in Settings, then create a job with the desired subtitle options. Check the resulting subtitle files, text, and timestamps.
+Configure the required tools under **Settings → External components**. For local recognition or translation, select and download a model, or set the path to an existing one. Once the tools and models are ready, return to **Detect**, select a subtitle workflow, and create the download job. Check the resulting subtitle files, text, and timestamps.
 
 Windows v1.6.3 includes FFmpeg Slim, whisper.cpp, and llama.cpp executables; download models separately. Linux/macOS users supply compatible tools as needed.
 
@@ -166,7 +183,7 @@ Windows v1.6.3 includes FFmpeg Slim, whisper.cpp, and llama.cpp executables; dow
 
 The desktop executable provides STDIO MCP through `--mcp-stdio`, reusing the local Bridge.
 
-To connect ChatGPT:
+Complete Quick Start and confirm that the extension and Bridge are connected, then connect ChatGPT:
 
 1. Create your Tunnel on OpenAI Platform.
 2. Open **Settings → AI integrations → ChatGPT MCP**. Install the official Tunnel Client if needed, enter the Tunnel ID, and choose **Configure and start Tunnel**.
@@ -186,12 +203,19 @@ If ChatGPT already has a Remote Browser Tool connection, reuse it for page actio
 
 Android is an independent native client for Android 8.0 / API 26 and later. It downloads pasted/shared direct MP4/HLS URLs. It does not connect to desktop jobs, Native Messaging, yt-dlp, or ChatGPT Tunnel.
 
-The desktop Release contains no APK. Source builds require JDK 17, Android SDK 35/NDK, gomobile, and the Gradle Wrapper. After preparing them, run:
+The desktop Release contains no APK. Build it from source:
+
+1. Follow [5.1](#51-open-and-verify-the-project) to clone the repository and prepare Go. Run the following commands from the repository root.
+2. Install JDK 17 and use Android SDK Manager to install Android SDK Platform 35, the NDK, and Platform-Tools. Set `JAVA_HOME` and `ANDROID_SDK_ROOT` to their directories. To select a specific NDK version, set `ANDROID_NDK_HOME` to that version's directory.
+3. Install both Go mobile tools at the version pinned in `bridge/go.mod`, then build the APK:
 
 ```bash
-go -C tools/vidotterdev run . android-bind
+go install golang.org/x/mobile/cmd/gomobile@v0.0.0-20240326195318-268e6c3a80d1
+go install golang.org/x/mobile/cmd/gobind@v0.0.0-20240326195318-268e6c3a80d1
 go -C tools/vidotterdev run . android-build
 ```
+
+`android-build` generates the Go binding and runs the bundled Gradle Wrapper. The resulting `.build/artifacts/android/vidotter-android-arm64-debug.apk` is for ARM64 devices. Transfer it to your device, permit installation from that source when prompted, open VidOtter, paste the sample MP4 URL above, and download it. Check the job and the downloaded file. This workflow requires separate Android-device acceptance.
 
 ## 5. Development
 
@@ -216,13 +240,27 @@ go -C tools/vidotterdev run . build --os windows --arch amd64
 
 ### 5.2. Install a development version
 
-Run from the source checkout, replacing the target with an isolated development installation directory:
+Run from the source repository root. These commands deploy into an isolated `.build/dev-install/` directory, then change to that directory and register the service.
+
+Linux/macOS:
 
 ```bash
-go -C tools/vidotterdev run . deploy --target /absolute/path/to/vidotter-dev
+vidotter_dev_dir="$PWD/.build/dev-install"
+go -C tools/vidotterdev run . deploy --target "$vidotter_dev_dir"
+cd "$vidotter_dev_dir"
+./bin/vidotterdev install
 ```
 
-In that deployment directory on the target system, run `bin/vidotterdev install`, or `bin\vidotterdev.exe install` on Windows. Load the extension as described in Quick Start.
+Windows PowerShell:
+
+```powershell
+$vidotterDevDir = Join-Path (Get-Location).Path '.build\dev-install'
+go -C tools/vidotterdev run . deploy --target $vidotterDevDir
+Set-Location $vidotterDevDir
+.\bin\vidotterdev.exe install
+```
+
+Follow [2.3](#23-load-the-browser-extension) to load this deployment's `extension/`, then complete 2.4–2.5 to download and check a file. Change back to the original source repository root before further source work or packaging.
 
 ### 5.3. Packaging and CI
 
