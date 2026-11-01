@@ -86,3 +86,13 @@ assert.match(popupStyles, /\.job-files\.all-complete/);
 assert.match(popupStyles, /\.job-file-state\.completed::before/);
 
 console.log("extension popup tests passed");
+
+
+// Cloud ChatGPT setup must be a local user-initiated integration, never
+// an installer checkbox or an arbitrary shell command from the extension.
+assert.match(environmentSource, /chatgpt-mcp/);
+assert.match(environmentSource, /integration/);
+assert.match(environmentSource, /window\.confirm/);
+const backgroundSource = fs.readFileSync(path.join(__dirname, "../background.js"), "utf8");
+assert.match(backgroundSource, /tool === "chatgpt-mcp" && action === "setup"/);
+assert.match(backgroundSource, /bridgeFetch\("\/v1\/mcp\/setup"/);

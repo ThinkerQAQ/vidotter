@@ -46,6 +46,7 @@
     if (kind === "runtime" || kind === "infra") return "runtime";
     if (kind === "capability" || kind === "core" || kind === "platform") return "capability";
     if (kind === "dependency") return "dependency";
+    if (kind === "integration") return "integration";
     return "other";
   }
 
@@ -320,6 +321,7 @@
     runtime: { title: "连接与运行时", description: "浏览器连接、Bridge 与网络", icon: "runtime" },
     capability: { title: "下载能力", description: "媒体嗅探、下载与处理", icon: "capability" },
     dependency: { title: "外部组件", description: "FFmpeg、yt-dlp、识别和翻译", icon: "dependency" },
+    integration: { title: "AI 集成", description: "连接 ChatGPT 的可选本地服务", icon: "runtime" },
     other: { title: "其他组件", description: "其他可选模块", icon: "settings" }
   };
 
@@ -396,6 +398,15 @@
       button.textContent = action.label || action.id;
       button.title = action.description || "";
       button.addEventListener("click", async () => {
+        if (tool.name === "chatgpt-mcp" && action.id === "setup") {
+          const accepted = window.confirm(
+            "配置 ChatGPT MCP 连接？\n\n" +
+            "MCP Server 已包含在 VidOtter 中。继续将打开本机配置向导，" +
+            "需要你主动提供个人 Tunnel ID 和受限运行密钥。\n\n" +
+            "此操作不会将密钥发送给浏览器扩展。未完成向导前不会开启云端连接。"
+          );
+          if (!accepted) return;
+        }
         if (tool.name === "browser-automation" && action.id === "enable-interaction") {
           // A separate, local user decision is mandatory. MCP cannot enable
           // interactive browser control on its own.
@@ -413,10 +424,11 @@
           await api.send("bridge.tool.action", { tool: tool.name, toolAction: action.id });
           const success = action.id === "restart" ? "Bridge 已重启并重新连接。"
             : action.id === "open-output" ? "已打开下载目录。"
+            : tool.name === "chatgpt-mcp" ? "已打开本地 ChatGPT 配置向导。完成后可在此刷新状态。"
             : tool.name === "browser-automation" ? ("浏览器自动化：" + (action.label || action.id) + "已完成。")
             : (tool.displayName || tool.name) + " 已安装。";
-          api.setMessage("environmentMessage", success, "ok");
           await refresh();
+          api.setMessage("environmentMessage", success, "ok");
         } catch (error) {
           api.setMessage("environmentMessage", error.message || String(error), "error");
         } finally {
@@ -515,7 +527,7 @@
         icon: "appearance", action: () => enter("category", "appearance")
       }));
       addSection(list, "系统与组件");
-      for (const kind of ["runtime", "capability", "dependency", "other"]) {
+      for (const kind of ["runtime", "capability", "integration", "dependency", "other"]) {
         const count = tools.filter(tool => normalizedKind(tool) === kind).length;
         if (!count) continue;
         list.appendChild(settingsRow({
@@ -554,7 +566,7 @@
         list.appendChild(settingsRow({
           title: tool.displayName || tool.name, subtitle: health.summary || tool.description,
           icon: group.icon,
-          trailing: health.status === "ready" ? "就绪" : (health.version || health.status || "未知"),
+          trailing: health.status === "ready" ? "就绪" : health.status === "disabled" ? "未启用" : (health.version || health.status || "未知"),
           health, action: () => enter("tool", tool.name)
         }));
       }

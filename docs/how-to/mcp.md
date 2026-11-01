@@ -108,12 +108,6 @@ The profile and runtime key belong in private OS storage, **not** this public Gi
 
 See [Secure MCP Tunnels](https://developers.openai.com/api/docs/guides/secure-mcp-tunnels) for access and account requirements.
 
-### Windows installer entry point
+### Optional ChatGPT connection in VidOtter Settings
 
-With the revised GUI installer, **MCP Server is already bundled** and does
-not have a standalone enable switch. For cloud ChatGPT use, open Windows
-**Start → VidOtter → Connect ChatGPT MCP**. The helper starts
-`scripts/Setup-VidOtter-MCP.ps1` when the official `tunnel-client` is
-available, otherwise opens the official client and setup documentation.
-It still requires **your** Tunnel ID and restricted runtime key, and remote
-access is never enabled by the normal VidOtter installation.
+Use **Settings → AI integrations → ChatGPT MCP** in the new development build. The local MCP server is bundled into VidOtter, and the extension calls one authenticated Bridge action after local user consent to open the bundled setup script. No user key is passed through extension messaging, and the installed Native Messaging host is not the Tunnel daemon. The official tunnel-client is an independently installed, optional component. The existing local helper configures user-login startup when requested. A local profile does not prove the Tunnel is healthy; verify doctor/health and an end-to-end ChatGPT tool call. The previous installer and Start Menu entry to configure MCP have been removed.

@@ -53,6 +53,9 @@ func TestDesktopToolsOwnTheirConfigSchema(t *testing.T) {
 	if len(byName["go-downloader"].Actions) != 1 || byName["go-downloader"].Actions[0].ID != "open-output" {
 		t.Fatalf("missing downloader open-output action: %#v", byName["go-downloader"].Actions)
 	}
+	if byName["chatgpt-mcp"].Kind != "integration" || byName["chatgpt-mcp"].Required {
+		t.Fatalf("ChatGPT MCP must be an optional integration: %#v", byName["chatgpt-mcp"])
+	}
 	if byName["bridge"].Kind != "runtime" {
 		t.Fatalf("bridge kind = %q", byName["bridge"].Kind)
 	}

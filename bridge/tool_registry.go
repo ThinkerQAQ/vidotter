@@ -396,6 +396,7 @@ func (t executableTool) Snapshot(ctx context.Context, config bridgeConfig) toolS
 func newDesktopToolRegistry() *toolRegistry {
 	return newToolRegistry(
 		bridgeRuntimeTool{},
+		chatGPTMCPTool{},
 		networkProxyTool{},
 		goDownloaderTool{},
 		browserAutomationTool{},

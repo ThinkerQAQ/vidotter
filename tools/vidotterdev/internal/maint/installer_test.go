@@ -194,7 +194,7 @@ func TestPrepareInstallerFirstRunOnboarding(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			for _, id := range []string{"openExtensionCheckBox", "configureMcpCheckBox"} {
+			for _, id := range []string{"openExtensionCheckBox"} {
 				if !strings.Contains(string(ui), id) {
 					t.Fatalf("missing checkbox %q", id)
 				}
@@ -202,6 +202,9 @@ func TestPrepareInstallerFirstRunOnboarding(t *testing.T) {
 			script, err := os.ReadFile(filepath.Join(base, "meta", "installscript.qs"))
 			if err != nil {
 				t.Fatal(err)
+			}
+			if strings.Contains(string(script), "Connect ChatGPT MCP.lnk") || strings.Contains(string(ui), "configureMcpCheckBox") {
+				t.Fatal("ChatGPT activation must be configured from VidOtter Settings")
 			}
 			if !strings.Contains(string(script), "addWizardPageItem") ||
 				!strings.Contains(string(script), "finishButtonClicked.connect") {
@@ -212,7 +215,7 @@ func TestPrepareInstallerFirstRunOnboarding(t *testing.T) {
 				if _, err := os.Stat(powershell); err != nil {
 					t.Fatal(err)
 				}
-				for _, shortcut := range []string{"Install Browser Extension.lnk", "Connect ChatGPT MCP.lnk"} {
+				for _, shortcut := range []string{"Install Browser Extension.lnk"} {
 					if !strings.Contains(string(script), shortcut) {
 						t.Fatalf("missing Start menu item %s", shortcut)
 					}

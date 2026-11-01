@@ -12,7 +12,7 @@ $parseErrors = $null
 [System.Management.Automation.Language.Parser]::ParseFile($firstRun, [ref]$null, [ref]$parseErrors) | Out-Null
 if ($parseErrors.Count -gt 0) { throw "Windows first-run PowerShell script has syntax errors: $parseErrors" }
 $startMenu = Join-Path ([Environment]::GetFolderPath('Programs')) 'VidOtter'
-foreach ($shortcut in @('Install Browser Extension.lnk', 'Connect ChatGPT MCP.lnk')) {
+foreach ($shortcut in @('Install Browser Extension.lnk')) {
     if (!(Test-Path (Join-Path $startMenu $shortcut))) {
         throw "Missing Start Menu setup shortcut: $shortcut"
     }

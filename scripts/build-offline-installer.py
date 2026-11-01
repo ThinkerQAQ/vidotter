@@ -60,6 +60,7 @@ def main():
     parser.add_argument("--output-dir", type=Path, required=True)
     parser.add_argument("--local-release-dir", type=Path)
     parser.add_argument("--repo-only", action="store_true", help="Build only the update feed")
+    parser.add_argument("--preview-source", action="store_true", help="Overlay current PR Bridge and extension on verified release for CI testing only")
     parser.add_argument("--update-base-url", default="", help="Already-published, verified HTTPS update base")
     a = parser.parse_args()
 
@@ -89,6 +90,18 @@ def main():
         raise ValueError("Release archive checksum mismatch")
     print("Release archive SHA-256 verified")
     stage = secure_extract(release_dir / filename, a.working_dir.resolve() / "extracted", base)
+    if a.preview_source:
+        if a.repo_only:
+            raise ValueError("Preview source must never be published as a release update repository")
+        suffix = ".exe" if go_os == "windows" else ""
+        program = stage / "bin" / f"vidotter-{name}-{arch}{suffix}"
+        run("go", "-C", "tools/vidotterdev", "run", ".", "build",
+            "--os", go_os, "--arch", arch, "--output", program)
+        shutil.copytree("extension", stage / "extension", dirs_exist_ok=True,
+                        ignore=shutil.ignore_patterns("test", ".DS_Store"))
+        for helper in ("Setup-VidOtter-MCP.ps1", "setup-mcp.sh"):
+            shutil.copy2(Path("scripts") / helper, stage / "scripts" / helper)
+        print("PR preview: Bridge and extension overlaid on official verified v1.6.2 dependency bundle")
 
     tools_root = a.tools_root.resolve()
     run(sys.executable, "-m", "aqt", "install-tool", "-O", tools_root,

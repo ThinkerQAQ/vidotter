@@ -8,7 +8,7 @@
     <property name="styleSheet"><string>font-weight: 600; font-size: 15px;</string></property>
    </widget></item>
    <item><widget class="QLabel" name="setupDescription">
-    <property name="text"><string>The local downloader and MCP server are installed. Activate the Chrome/Edge extension to start downloading. ChatGPT access is optional and requires your own Tunnel credentials.</string></property>
+    <property name="text"><string>VidOtter is installed. Activate the Chrome/Edge extension to start downloading. ChatGPT integration can be configured later in VidOtter Settings.</string></property>
     <property name="wordWrap"><bool>true</bool></property>
    </widget></item>
    <item><widget class="QCheckBox" name="openExtensionCheckBox">
@@ -19,14 +19,7 @@
     <property name="text"><string>In the browser: turn on Developer mode, choose Load unpacked, then select the opened extension folder.</string></property>
     <property name="wordWrap"><bool>true</bool></property>
    </widget></item>
-   <item><widget class="QCheckBox" name="configureMcpCheckBox">
-    <property name="text"><string>Configure ChatGPT MCP Tunnel (optional; requires credentials)</string></property>
-    <property name="checked"><bool>false</bool></property>
-   </widget></item>
-   <item><widget class="QLabel" name="mcpInstructions">
-    <property name="text"><string>MCP is already included. Enable a ChatGPT Tunnel only if you want cloud AI access to your local downloader. This does not run automatically.</string></property>
-    <property name="wordWrap"><bool>true</bool></property>
-   </widget></item>
+
   </layout>
  </widget>
  <resources/>

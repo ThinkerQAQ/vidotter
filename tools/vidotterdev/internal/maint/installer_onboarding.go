@@ -65,20 +65,13 @@ Component.prototype.finishFirstRun = function() {
                     ["-NoProfile", "-ExecutionPolicy", "Bypass", "-WindowStyle", "Hidden",
                      "-File", script, "-Mode", "extension"], target);
             }
-            if (form.configureMcpCheckBox.checked) {
-                // Opens a visible interactive terminal only after opt-in.
-                installer.executeDetached("powershell.exe",
-                    ["-NoProfile", "-ExecutionPolicy", "Bypass", "-NoExit",
-                     "-File", script, "-Mode", "mcp"], target);
-            }
+
         } else {
             if (form.openExtensionCheckBox.checked) {
                 QDesktopServices.openUrl("file:///" + target + "/extension");
                 QDesktopServices.openUrl("https://github.com/ThinkerQAQ/vidotter/blob/main/docs/tutorial/first-run-on-new-machine.md");
             }
-            if (form.configureMcpCheckBox.checked) {
-                QDesktopServices.openUrl("https://github.com/ThinkerQAQ/vidotter/blob/main/docs/how-to/mcp.md");
-            }
+
         }
     } catch (e) { console.log("VidOtter setup helper: " + e); }
 };

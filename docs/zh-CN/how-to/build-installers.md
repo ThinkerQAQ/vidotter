@@ -158,16 +158,16 @@ Tunnel、运行密钥或云端连接。普通用户无需手动启动本地 MCP 
   （若没有则使用 Chrome）的扩展管理页面，同时由资源管理器打开实际
   安装目录的 `extension/`。用户只需启用开发者模式并点击
   “加载解压缩的扩展”，浏览器安装授权无法静默跳过。
-- **配置 ChatGPT MCP Tunnel**（默认不勾选）：MCP Server
-  已经随 Bridge 安装，无需另装服务。用户主动选择时才启动
-  Tunnel 配置。如果缺少官方 tunnel-client，先打开其官方说明，
-  不会默默安装额外软件、生成或上传密钥。
+- **ChatGPT 连接不再放到安装器里。** MCP Server 已随 Bridge 安装，但普通安装不会默认配置 Tunnel、访问密钥或用户自启服务。连接 ChatGPT 应在扩展的 **设置 → AI 集成 → ChatGPT MCP** 中单独启用。
 
-以后还能从 Windows 开始菜单的 **Install Browser Extension**
-和 **Connect ChatGPT MCP** 重新打开引导，不必重装 VidOtter。
-安装脚本位于 `scripts/VidOtter-FirstRun.ps1`。
+Windows 开始菜单仅保留 **Install Browser Extension** 用来重新打开扩展安装引导。
 
 Linux/macOS 也可在安装完成后打开扩展目录和安装教程；首次加载仍
 须由浏览器用户确认。命令行/CI 安装不会启动浏览器或配置 Tunnel。
 以上属于新的安装器候选版本，早先的 v1.6.2 ZIP/Actions 安装器
 **没有这些新入口**。
+
+
+### ChatGPT 可选连接由设置页管理（开发分支）
+
+扩展通过 Native Messaging 连接本地 Bridge，用户点击“配置 ChatGPT 连接”并确认后，Bridge 才调用受信任的本地脚本，设置用户级 Tunnel。Tunnel ID/密钥只在本机终端输入，绝不经过扩展。用户需另行安装官方 tunnel-client。设置页若显示“已配置”，只能证明本地有配置文件，不代表 Tunnel 正在运行。正式验收需 doctor、health 和 ChatGPT 调用。该界面需要同时更新 Bridge 与扩展，旧 v1.6.2 正式包尚不具备。

@@ -34,11 +34,6 @@ Controller.prototype.FinishedPageCallback = function() {
         console.log("VIDOTTER_GUI_EXTENSION_OPTION_MISSING");
     }
     var mcp = gui.findChild(gui.currentPageWidget(), "configureMcpCheckBox");
-    if (mcp) {
-        console.log("VIDOTTER_GUI_MCP_OPTION_PRESENT");
-        mcp.checked = false;
-    } else {
-        console.log("VIDOTTER_GUI_MCP_OPTION_MISSING");
-    }
+    if (mcp) console.log("VIDOTTER_GUI_BAD_MCP_OPTION");
     gui.clickButton(buttons.FinishButton, 350);
 };

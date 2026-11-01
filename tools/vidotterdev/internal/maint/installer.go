@@ -229,10 +229,7 @@ func prepareInstallerWithUpdateURL(destination, stage, ver, targetOS, updateURL 
         installer.environmentVariable("SystemRoot") + "/System32/WindowsPowerShell/v1.0/powershell.exe",
         "@UserStartMenuProgramsPath@/VidOtter/Install Browser Extension.lnk",
         "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File \"@TargetDir@/scripts/VidOtter-FirstRun.ps1\" -Mode extension");
-    component.addOperation("CreateShortcut",
-        installer.environmentVariable("SystemRoot") + "/System32/WindowsPowerShell/v1.0/powershell.exe",
-        "@UserStartMenuProgramsPath@/VidOtter/Connect ChatGPT MCP.lnk",
-        "-NoProfile -ExecutionPolicy Bypass -NoExit -File \"@TargetDir@/scripts/VidOtter-FirstRun.ps1\" -Mode mcp");
+
 `
 	}
 	if updateURL != "" {

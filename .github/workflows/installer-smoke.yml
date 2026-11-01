@@ -48,7 +48,11 @@ jobs:
           RELEASE_TAG: ${{ inputs.release_tag || 'v1.6.2' }}
         shell: bash
         run: |
-          python scripts/build-offline-installer.py \
+          preview=()
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            preview+=(--preview-source)
+          fi
+          python scripts/build-offline-installer.py "${preview[@]}" \
             --tag "$RELEASE_TAG" \
             --tools-root "$RUNNER_TEMP/qtifw" \
             --working-dir "$RUNNER_TEMP/release-work" \

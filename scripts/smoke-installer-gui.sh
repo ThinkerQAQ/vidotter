@@ -14,7 +14,10 @@ grep -q 'VIDOTTER_GUI_LICENSE' "$log"
 grep -q 'VIDOTTER_GUI_READY' "$log"
 grep -q 'VIDOTTER_GUI_FINISHED' "$log"
 grep -q 'VIDOTTER_GUI_EXTENSION_OPTION_PRESENT' "$log"
-grep -q 'VIDOTTER_GUI_MCP_OPTION_PRESENT' "$log"
+if grep -q 'VIDOTTER_GUI_BAD_MCP_OPTION' "$log"; then
+    echo "MCP setup does not belong in installer" >&2
+    exit 1
+fi
 if grep -q 'VIDOTTER_GUI_BAD_COMPONENT_SELECTION' "$log"; then
     echo "Unexpected component selection page" >&2
     exit 1

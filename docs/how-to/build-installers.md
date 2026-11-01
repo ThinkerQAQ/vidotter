@@ -203,20 +203,15 @@ directory pages. After a successful **GUI** installation, the Finish page offers
   manager (or Chrome if Edge is unavailable) plus Explorer at the exact
   `extension/` folder. The user still enables Developer mode and selects
   **Load unpacked**; a desktop installer cannot silently bypass that action.
-- **Configure ChatGPT MCP Tunnel** (disabled by default). The MCP server itself
-  was already installed with the Bridge and exposes 13 tools via
-  `--mcp-stdio`. This option opens the optional Tunnel setup **only by
-  request**. If the official tunnel-client is not present, the helper opens
-  its installation instructions; it does not fetch a runtime credential or
-  enable remote access.
+- **ChatGPT setup no longer belongs in the installer.** The MCP server is bundled, but connecting ChatGPT requires a separate action inside VidOtter Settings. No remote service or credentials are activated by installation.
 
-On Windows the Start Menu has **Install Browser Extension** and
-**Connect ChatGPT MCP** entries, so the user can return to setup after closing
-the installer. The helper is located at
-`scripts/VidOtter-FirstRun.ps1` inside the installed directory. Linux/macOS
-open the extension directory plus the manual setup guide; they still need
-their browser-specific user action.
+The Windows Start Menu retains only **Install Browser Extension** to reopen the browser activation guide. Configure cloud access later under **Settings → AI integrations → ChatGPT MCP**.
 
 Headless installs do not open browsers, folders, or Tunnel setup. This
 onboarding is present in **new installer candidates**, not in the already
 published v1.6.2 archive or earlier CI installer candidates.
+
+
+### Optional ChatGPT integration in Settings
+
+The development branch moves the optional Tunnel setup to **Settings → AI integrations → ChatGPT MCP**. After the user confirms locally, the extension asks the authenticated Bridge to open a fixed, bundled setup script. Credentials stay in the local terminal, not in extension messages. The official tunnel-client must be installed separately. Presence of a Tunnel profile is **not proof of an online connection**; run doctor/health and a real ChatGPT MCP call before reporting success. This requires both an updated Bridge and extension; earlier v1.6.2 installers do not include this UI.

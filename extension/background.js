@@ -752,6 +752,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         .then(session => sendResponse({ ok: true, pid: session.pid }), error => sendResponse({ ok: false, error: error.message || String(error) }));
       return true;
     }
+    if (tool === "chatgpt-mcp" && action === "setup") {
+      bridgeFetch("/v1/mcp/setup", { method: "POST" })
+        .then(result => sendResponse(result), error =>
+          sendResponse({ ok: false, error: error.message || String(error) }));
+      return true;
+    }
     if (tool === "browser-automation" &&
       ["install", "enable", "disable", "enable-interaction", "disable-interaction"].includes(action)) {
     bridgeFetch("/v1/browser/automation", {
