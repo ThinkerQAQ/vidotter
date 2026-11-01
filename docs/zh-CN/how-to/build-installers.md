@@ -92,3 +92,25 @@ Qt IFW Maintenance Tool 卸载组件时可以保留 Data，但这不等于一键
 
 参见[首次使用](../tutorial/first-run-on-new-machine.md)、
 [升级与卸载](upgrade.md)。
+
+## 一键升级的正式实现路线
+
+**使用 Qt IFW Maintenance Tool 更新组件，不再运行新版离线安装器覆盖旧目录。**
+最新 Go 构建工具支持 `update-repository`，可通过 Qt `repogen` 从正式版本
+发行目录生成 `Updates.xml` 和版本化组件包。发布后，将更新仓库放到可靠的
+HTTPS 静态地址，构建安装器时传入 `--update-url https://.../updates/linux/amd64`。
+用户即可通过 Maintenance Tool 的“更新”操作完成原地升级：自动重新注册
+Native Messaging、保留 `Data/` 和下载文件。无需手动覆盖 `bin/`。
+
+**实际测试：** Linux 在隔离目录安装正式 v1.6.2，然后通过本地仓库升级
+到临时构造的 **v1.6.3 测试包**，版本记录更新、Native Messaging 正常、
+`Data/config.toml` 保留；还验证了内置 `file://` 更新仓库地址的版本可直接
+检查和升级。测试版本不是可公开使用的新 Release。旧离线安装器可以通过
+`Maintenance Tool --at file:///... update` 接入临时更新仓库，但不能当作
+完整的一键远程更新。
+
+**当前限制：** 稳定的远程更新仓库尚未正式部署、Windows/macOS 升级回归
+及 GUI/签名验收尚未完成，因此不能把“自动升级已正式发布”写进产品说明。
+
+MCP Server 已和 Bridge 一起打包，默认不开放远程连接；只有用户主动选择
+ChatGPT 集成时才单独配置 Tunnel，详见 [MCP 使用说明](mcp.md)。

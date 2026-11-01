@@ -102,7 +102,7 @@ func TestInstallerCallsBinarycreator(t *testing.T) {
 		t.Fatal(err)
 	}
 	output := filepath.Join(t.TempDir(), "VidOtter-Setup-v1.6.2-linux-amd64.run")
-	if err := Installer(stage, "linux", "amd64", stub, output); err != nil {
+	if err := Installer(stage, "linux", "amd64", stub, output, ""); err != nil {
 		t.Fatal(err)
 	}
 	content, err := os.ReadFile(output)
@@ -111,5 +111,26 @@ func TestInstallerCallsBinarycreator(t *testing.T) {
 	}
 	if string(content) != "mock" {
 		t.Fatalf("fake binarycreator did not run: %q", content)
+	}
+}
+
+func TestInstallerOptionalUpdateRepository(t *testing.T) {
+	repo := t.TempDir()
+	release := t.TempDir()
+	if err := os.WriteFile(filepath.Join(release, "LICENSE"), []byte("license"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := prepareInstallerWithUpdateURL(repo, release, "1.6.2", "linux", "file:///tmp/vidotter-updates"); err != nil {
+		t.Fatal(err)
+	}
+	data, err := os.ReadFile(filepath.Join(repo, "config", "config.xml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(data), "<RemoteRepositories>") || !strings.Contains(string(data), "file:///tmp/vidotter-updates") {
+		t.Fatalf("installer is missing update repository: %s", data)
+	}
+	if err := prepareInstallerWithUpdateURL(t.TempDir(), release, "1.6.2", "linux", "http://bad.example.com"); err == nil {
+		t.Fatal("insecure public update repository must be rejected")
 	}
 }

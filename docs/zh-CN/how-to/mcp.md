@@ -27,6 +27,19 @@ Bridge 重启或内存索引丢失时，扩展在重新连接及 MCP 请求时**
 
 下载接口立即返回 `task_id`，不代表已下载完成。用 `vidotter_get_job` 查询结果。
 
+## MCP 与桌面安装的关系
+
+**安装 VidOtter 就已经安装 MCP Server。** MCP 与下载引擎共用同一个 Go
+可执行文件，不需要另装独立的 MCP 服务。浏览器扩展通过 Native Messaging
+按需启动本地 Bridge；支持本地 stdio 的 AI 客户端可按需运行
+`bin/vidotter-系统-架构 --mcp-stdio`，无须常驻后台下载服务。
+
+**ChatGPT 云端访问需用户明确选择后再开启。** 仅在选择“连接 ChatGPT”时，
+才需要个人 Tunnel ID、权限受限的运行密钥和官方 tunnel-client。
+发行包附带的可选脚本在用户确认后设置登录时自动启动的 Tunnel；
+平时不必手动启动，但不能在普通安装时默认开启远程访问。
+Tunnel 相关私有信息应留在系统用户目录，不能写入公开仓库和发行包。
+
 ## 配置向导（可选）
 
 先安装官方 tunnel-client。Windows 在发行包目录执行 `powershell -NoProfile -File scripts/Setup-VidOtter-MCP.ps1`；Linux/macOS 执行 `bash scripts/setup-mcp.sh`。向导询问 Tunnel ID 和受限运行密钥，保存到当前用户私有目录（Windows 使用 DPAPI，Unix 使用仅本人可读的文件），运行 doctor，并尽可能设置登录后常驻启动。重复执行时保留已有私有配置，同一个 Tunnel 只应运行一个客户端进程。向导不自动下载 tunnel-client，也不能代替用户在 ChatGPT 中注册和授权。

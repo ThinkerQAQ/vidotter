@@ -2,6 +2,19 @@
 
 [中文](../zh-CN/how-to/mcp.md) · [Bridge API](../reference/bridge-api.md)
 
+**MCP installation and activation:** Every desktop VidOtter release already contains the
+MCP server inside its standard Go Bridge binary; there is no second server
+package. The Chrome/Edge extension starts its local Bridge through Native
+Messaging only when needed. Local MCP clients launch the same binary using
+`--mcp-stdio` on demand. Nothing needs to run permanently for local downloads.
+
+**Cloud ChatGPT connection is separate and opt-in.** Only users choosing
+ChatGPT integration need their own private Tunnel ID, restricted API key and
+the official tunnel-client. The provided setup helper can register the Tunnel
+at user login, so normal use does not require manually starting it each time.
+This service is never started or configured as a side effect of the regular
+VidOtter installer. Never turn on remote access without explicit user choice.
+
 VidOtter exposes **13 optional MCP tools** through the same desktop Go executable. The browser extension and MCP share the existing authenticated loopback Bridge and download queue; MCP does not ship a second downloader.
 
 | MCP tool | Operation |

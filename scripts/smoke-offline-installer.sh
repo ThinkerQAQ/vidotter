@@ -15,6 +15,15 @@ test -f "$manifest"
 mkdir -p "$target/Data/downloads"
 printf 'kept=true\n' > "$target/Data/config.toml"
 printf 'kept\n' > "$target/Data/downloads/keep.txt"
+if [[ -n "${VIDOTTER_TEST_UPDATE_REPO:-}" ]]; then
+  uri="$(python3 -c 'from pathlib import Path; import sys; print(Path(sys.argv[1]).resolve().as_uri())' "$VIDOTTER_TEST_UPDATE_REPO")"
+  "$target/VidOtter-Maintenance" --at "$uri" check-updates | grep -q "version=\"${VIDOTTER_TEST_UPDATE_VERSION:-1.6.3}\""
+  "$target/VidOtter-Maintenance" --at "$uri" --confirm-command update
+  grep -q "<Version>${VIDOTTER_TEST_UPDATE_VERSION:-1.6.3}</Version>" "$target/components.xml"
+  test -f "$target/Data/config.toml"
+  test -f "$target/Data/downloads/keep.txt"
+  test -f "$manifest"
+fi
 "$target/VidOtter-Maintenance" --confirm-command remove com.thinkerqaq.vidotter
 test -f "$target/Data/config.toml"
 test -f "$target/Data/downloads/keep.txt"

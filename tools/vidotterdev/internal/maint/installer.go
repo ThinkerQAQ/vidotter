@@ -15,7 +15,7 @@ import (
 // Installer wraps an already packaged, platform-specific release with the Qt
 // Installer Framework. It does not rebuild the Bridge or download dependencies.
 // binarycreator is a build-time tool; users do not need Qt installed.
-func Installer(stage, targetOS, targetArch, binarycreator, output string) error {
+func Installer(stage, targetOS, targetArch, binarycreator, output, updateURL string) error {
 	if stage == "" {
 		return errors.New("installer requires --stage pointing to an extracted matching release")
 	}
@@ -85,10 +85,13 @@ func Installer(stage, targetOS, targetArch, binarycreator, output string) error 
 		return err
 	}
 	defer os.RemoveAll(dir)
-	if err := prepareInstaller(dir, stage, ver, targetOS); err != nil {
+	if err := prepareInstallerWithUpdateURL(dir, stage, ver, targetOS, updateURL); err != nil {
 		return err
 	}
-	args := []string{"--offline-only", "-p", filepath.Join(dir, "packages"), "-c", filepath.Join(dir, "config", "config.xml"), output}
+	args := []string{"-p", filepath.Join(dir, "packages"), "-c", filepath.Join(dir, "config", "config.xml"), output}
+	if updateURL == "" {
+		args = append([]string{"--offline-only"}, args...)
+	}
 	fmt.Println("+", executable, strings.Join(args, " "))
 	command := exec.Command(executable, args...)
 	command.Stdout, command.Stderr = os.Stdout, os.Stderr
@@ -100,17 +103,26 @@ func Installer(stage, targetOS, targetArch, binarycreator, output string) error 
 }
 
 type installerConfig struct {
-	XMLName             xml.Name `xml:"Installer"`
-	Name                string   `xml:"Name"`
-	Version             string   `xml:"Version"`
-	Title               string   `xml:"Title"`
-	Publisher           string   `xml:"Publisher"`
-	StartMenuDir        string   `xml:"StartMenuDir"`
-	TargetDir           string   `xml:"TargetDir"`
-	MaintenanceToolName string   `xml:"MaintenanceToolName"`
-	RemoveTargetDir     string   `xml:"RemoveTargetDir"`
+	XMLName             xml.Name               `xml:"Installer"`
+	Name                string                 `xml:"Name"`
+	Version             string                 `xml:"Version"`
+	Title               string                 `xml:"Title"`
+	Publisher           string                 `xml:"Publisher"`
+	StartMenuDir        string                 `xml:"StartMenuDir"`
+	TargetDir           string                 `xml:"TargetDir"`
+	MaintenanceToolName string                 `xml:"MaintenanceToolName"`
+	RemoveTargetDir     string                 `xml:"RemoveTargetDir"`
+	RemoteRepositories  *installerRepositories `xml:"RemoteRepositories,omitempty"`
 }
 
+type installerRepositories struct {
+	Repository installerRepository `xml:"Repository"`
+}
+type installerRepository struct {
+	Url         string `xml:"Url"`
+	Enabled     string `xml:"Enabled"`
+	DisplayName string `xml:"DisplayName"`
+}
 type installerLicense struct {
 	Name string `xml:"name,attr"`
 	File string `xml:"file,attr"`
@@ -134,11 +146,25 @@ type installerPackage struct {
 // prepareInstaller only repackages verified release files. Data/ is never
 // included in a managed package, so upgrades cannot overwrite local state.
 func prepareInstaller(destination, stage, ver, targetOS string) error {
+	return prepareInstallerWithUpdateURL(destination, stage, ver, targetOS, "")
+}
+
+func prepareInstallerWithUpdateURL(destination, stage, ver, targetOS, updateURL string) error {
+	if updateURL != "" {
+		if !strings.HasPrefix(updateURL, "https://") && !strings.HasPrefix(updateURL, "file://") {
+			return errors.New("update repository URL must be https:// or file://")
+		}
+	}
 	config := installerConfig{
 		Name: "VidOtter", Version: ver, Title: "VidOtter Setup",
 		Publisher: "ThinkerQAQ", StartMenuDir: "VidOtter",
 		TargetDir: "@HomeDir@/VidOtter", MaintenanceToolName: "VidOtter-Maintenance",
 		RemoveTargetDir: "false",
+	}
+	if updateURL != "" {
+		config.RemoteRepositories = &installerRepositories{Repository: installerRepository{
+			Url: updateURL, Enabled: "1", DisplayName: "VidOtter Updates",
+		}}
 	}
 	if err := installerXML(filepath.Join(destination, "config", "config.xml"), config); err != nil {
 		return err

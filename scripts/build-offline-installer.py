@@ -104,6 +104,17 @@ def main():
     if not artifact.is_file() or artifact.stat().st_size == 0:
         raise RuntimeError("Qt IFW returned without an installer artifact")
     print(f"Installer candidate: {artifact} ({artifact.stat().st_size:,} bytes)")
+    repo_dir = a.output_dir.resolve() / "updates" / name / arch
+    repogen_name = "repogen.exe" if go_os == "windows" else "repogen"
+    repogen = list(tools_root.rglob(repogen_name))
+    if len(repogen) != 1:
+        raise RuntimeError(f"Qt IFW repogen not found uniquely: {repogen}")
+    run("go", "-C", "tools/vidotterdev", "run", ".", "update-repository",
+        "--stage", stage, "--os", go_os, "--arch", arch,
+        "--repogen", repogen[0], "--output", repo_dir)
+    if not (repo_dir / "Updates.xml").is_file():
+        raise RuntimeError("Missing update repository metadata")
+    print(f"Update repository candidate: {repo_dir}")
 
 
 if __name__ == "__main__":

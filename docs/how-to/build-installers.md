@@ -111,3 +111,41 @@ fallback until each installer is published and verified.
 
 See [manual first run](../tutorial/first-run-on-new-machine.md) and
 [upgrade](upgrade.md).
+
+## One-click update: tested mechanism and publishing requirement
+
+Qt IFW's **Maintenance Tool** is the updater. Do **not** launch a new offline
+setup on top of an existing install: that still yields `TargetDirectoryInUse`.
+The correct update path is to publish an IFW update repository generated from
+the verified new release. The installed Maintenance Tool checks it, downloads
+the changed components, updates in place, and re-runs Native Messaging
+registration without replacing `Data/`.
+
+The new CI packaging command is:
+
+```bash
+go -C tools/vidotterdev run . update-repository \
+  --stage .build/out/release-stage/vidotter-v1.6.2-linux-amd64 \
+  --os linux --arch amd64 --repogen /path/to/qtifw/repogen \
+  --output .build/artifacts/update-repos/linux-amd64
+```
+
+For a **published HTTPS repository** containing `Updates.xml` and all referenced
+7z archives, build the installer with `--update-url https://.../updates/linux/amd64`.
+This creates an update-capable Maintenance Tool. A local `file://` repository
+is permitted for isolated acceptance tests. Without `--update-url`, the
+installer remains fully offline and `Maintenance Tool --at file:///... update`
+can still be used for controlled migration.
+
+**Verified locally on Linux:** full v1.6.2 installation → synthetic 1.6.3
+IFW update repository → `check-updates` → `update` → component version 1.6.3,
+with original config and Native Messaging intact. Version 1.6.3 here is a
+**test fixture, not a publicly released binary**. A second run with a bundled
+updatable installer and an embedded local repository URL completed without
+passing `--at` manually. Automatic updates for end users require a hosted,
+reviewed and reachable repository, signed releases and native GUI acceptance;
+none of those is currently advertised as shipped.
+
+The MCP server is bundled as part of the same Bridge binary in every release.
+Configuring ChatGPT Tunnel is optional, user-authorized, and not performed by
+the default installer; see [MCP](mcp.md).

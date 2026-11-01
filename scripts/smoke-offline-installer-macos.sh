@@ -25,6 +25,15 @@ else
   maintenance="$target/VidOtter-Maintenance"
 fi
 test -x "$maintenance"
+if [[ -n "${VIDOTTER_TEST_UPDATE_REPO:-}" ]]; then
+  uri="$(python3 -c 'from pathlib import Path; import sys; print(Path(sys.argv[1]).resolve().as_uri())' "$VIDOTTER_TEST_UPDATE_REPO")"
+  "$maintenance" --at "$uri" check-updates | grep -q "version=\"${VIDOTTER_TEST_UPDATE_VERSION:-1.6.3}\""
+  "$maintenance" --at "$uri" --confirm-command update
+  grep -q "<Version>${VIDOTTER_TEST_UPDATE_VERSION:-1.6.3}</Version>" "$target/components.xml"
+  test -f "$target/Data/config.toml"
+  test -f "$target/Data/downloads/keep.txt"
+  test -f "$manifest"
+fi
 "$maintenance" --confirm-command remove com.thinkerqaq.vidotter
 test -f "$target/Data/config.toml"
 test -f "$target/Data/downloads/keep.txt"

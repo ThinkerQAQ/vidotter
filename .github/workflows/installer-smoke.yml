@@ -53,20 +53,33 @@ jobs:
             --tools-root "$RUNNER_TEMP/qtifw" \
             --working-dir "$RUNNER_TEMP/release-work" \
             --output-dir "$RUNNER_TEMP/installer-output"
+      - name: Build synthetic next-version update repository (CI only)
+        shell: bash
+        env:
+          RELEASE_TAG: ${{ inputs.release_tag || 'v1.6.2' }}
+        run: |
+          python scripts/make-synthetic-upgrade.py \
+            --stage "$RUNNER_TEMP/release-work/extracted/vidotter-$RELEASE_TAG-${{ matrix.slug }}" \
+            --tools-root "$RUNNER_TEMP/qtifw" \
+            --workdir "$RUNNER_TEMP/update-test-work"
       - name: Linux headless install/uninstall & Data preservation
         if: runner.os == 'Linux'
         shell: bash
+        env:
+          VIDOTTER_TEST_UPDATE_REPO: ${{ runner.temp }}/update-test-work/update-test-repo
         run: bash scripts/smoke-offline-installer.sh "$RUNNER_TEMP/installer-output/VidOtter-Setup-${{ inputs.release_tag || 'v1.6.2' }}-linux-amd64.run"
       - name: Windows headless install/uninstall & Data preservation
         if: runner.os == 'Windows'
         shell: pwsh
         env:
+          VIDOTTER_TEST_UPDATE_REPO: ${{ runner.temp }}/update-test-work/update-test-repo
           RELEASE_TAG: ${{ inputs.release_tag || 'v1.6.2' }}
         run: ./scripts/smoke-offline-installer.ps1
       - name: macOS headless install/uninstall & Data preservation
         if: runner.os == 'macOS'
         shell: bash
         env:
+          VIDOTTER_TEST_UPDATE_REPO: ${{ runner.temp }}/update-test-work/update-test-repo
           RELEASE_TAG: ${{ inputs.release_tag || 'v1.6.2' }}
         run: bash scripts/smoke-offline-installer-macos.sh "$RUNNER_TEMP/installer-output/VidOtter-Setup-$RELEASE_TAG-macos-amd64.dmg"
       - uses: actions/upload-artifact@v4
