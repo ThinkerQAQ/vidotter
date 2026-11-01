@@ -5,9 +5,10 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
-//go:embed assets/controller.qs assets/first-run.ui assets/first-run.ps1
+//go:embed assets/controller.qs assets/first-run.ui assets/first-run.ps1 assets/extension-install.html
 var onboardingAssets embed.FS
 
 func writeInstallerAsset(from, to string) error {
@@ -21,7 +22,8 @@ func writeInstallerAsset(from, to string) error {
 	return os.WriteFile(to, b, 0o644)
 }
 
-// The first-run controls are a GUI opt-in, never launched in headless CI.
+// The first-run browser activation guide opens on every successful GUI install;
+// headless installs never launch a browser.
 // Windows ships an explicit helper which opens the browser extensions page
 // and Explorer at the precise path. It never silently installs the extension.
 func writeInstallerOnboarding(dir, meta, payload string, targetOS string) error {
@@ -32,6 +34,9 @@ func writeInstallerOnboarding(dir, meta, payload string, targetOS string) error 
 		if err := writeInstallerAsset(file.asset, file.path); err != nil {
 			return err
 		}
+	}
+	if err := writeInstallerAsset("extension-install.html", filepath.Join(payload, "docs", "extension-install.html")); err != nil {
+		return err
 	}
 	if targetOS == "windows" {
 		if err := writeInstallerAsset("first-run.ps1", filepath.Join(payload, "scripts", "VidOtter-FirstRun.ps1")); err != nil {
@@ -57,27 +62,24 @@ Component.prototype.finishFirstRun = function() {
             installer.status != QInstaller.Success) return;
         var form = component.userInterface("VidOtterFirstRun");
         if (!form) return;
+        console.log("VIDOTTER_EXTENSION_GUIDE_REQUIRED");
         var target = installer.value("TargetDir");
-        if (installer.value("os") == "win") {
+        if ("__VIDOTTER_PLATFORM__" == "windows") {
             var script = installer.toNativeSeparators(target + "/scripts/VidOtter-FirstRun.ps1");
-            if (form.openExtensionCheckBox.checked) {
-                installer.executeDetached("powershell.exe",
-                    ["-NoProfile", "-ExecutionPolicy", "Bypass", "-WindowStyle", "Hidden",
-                     "-File", script, "-Mode", "extension"], target);
-            }
+            installer.executeDetached("powershell.exe",
+                ["-NoProfile", "-ExecutionPolicy", "Bypass", "-WindowStyle", "Hidden",
+                 "-File", script, "-Mode", "extension"], target);
 
         } else {
-            if (form.openExtensionCheckBox.checked) {
-                QDesktopServices.openUrl("file:///" + target + "/extension");
-                QDesktopServices.openUrl("https://github.com/ThinkerQAQ/vidotter/blob/main/docs/tutorial/first-run-on-new-machine.md");
-            }
+            QDesktopServices.openUrl("file:///" + target + "/extension");
+            QDesktopServices.openUrl("file:///" + target + "/docs/extension-install.html");
 
         }
     } catch (e) { console.log("VidOtter setup helper: " + e); }
 };
 `
 
-func firstRunComponentScript(bridgeInstaller, shortcutOperations string) string {
+func firstRunComponentScript(bridgeInstaller, shortcutOperations, targetOS string) string {
 	return fmt.Sprintf(`function Component() {
     if (installer.isInstaller() && !installer.isCommandLineInstance()) {
         installer.installationFinished.connect(this, Component.prototype.showFirstRunOptions);
@@ -93,5 +95,5 @@ Component.prototype.createOperations = function() {
 %s
 }
 %s
-`, bridgeInstaller, bridgeInstaller, shortcutOperations, firstRunQtHandlers)
+`, bridgeInstaller, bridgeInstaller, shortcutOperations, strings.ReplaceAll(firstRunQtHandlers, "__VIDOTTER_PLATFORM__", targetOS))
 }

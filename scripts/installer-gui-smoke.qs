@@ -26,13 +26,14 @@ Controller.prototype.ReadyForInstallationPageCallback = function() {
 };
 Controller.prototype.FinishedPageCallback = function() {
     console.log("VIDOTTER_GUI_FINISHED");
-    var opts = gui.findChild(gui.currentPageWidget(), "openExtensionCheckBox");
-    if (opts) {
-        console.log("VIDOTTER_GUI_EXTENSION_OPTION_PRESENT");
-        opts.checked = false;
+    var note = gui.findChild(gui.currentPageWidget(), "requiredExtensionNote");
+    if (note) {
+        console.log("VIDOTTER_GUI_MANDATORY_GUIDE_PRESENT");
     } else {
-        console.log("VIDOTTER_GUI_EXTENSION_OPTION_MISSING");
+        console.log("VIDOTTER_GUI_MANDATORY_GUIDE_MISSING");
     }
+    var optional = gui.findChild(gui.currentPageWidget(), "openExtensionCheckBox");
+    if (optional) console.log("VIDOTTER_GUI_BAD_OPTIONAL_EXTENSION");
     var mcp = gui.findChild(gui.currentPageWidget(), "configureMcpCheckBox");
     if (mcp) console.log("VIDOTTER_GUI_BAD_MCP_OPTION");
     gui.clickButton(buttons.FinishButton, 350);

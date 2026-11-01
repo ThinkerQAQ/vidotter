@@ -14,7 +14,7 @@ VidOtter 通过 Chrome/Edge 扩展发现网页媒体，由本机 Go Bridge 下�
 
 1. 从 [Releases](https://github.com/ThinkerQAQ/vidotter/releases) 下载适合系统和 CPU 架构的发行包，完整解压到固定目录。
 2. 在解压目录运行安装命令：Windows PowerShell 使用 `.\bin\vidotterdev.exe install`；Linux/macOS 使用 `./bin/vidotterdev install`。Linux/macOS 需另外安装 FFmpeg 并加入 PATH，用于合并和封装。
-3. 打开 `chrome://extensions` 或 `edge://extensions`，开启“开发人员模式”，选择“加载解压缩的扩展”，加载 `extension/`。
+3. **必须启用浏览器扩展（无需上架/访问商店）**：打开 Edge 的 `edge://extensions` 或 Chrome 的 `chrome://extensions`，开启“开发者模式”，点击“加载解压缩的扩展”，选择当前安装目录内**直接包含 `manifest.json`** 的 `extension/` 文件夹。Qt 图形安装器会在点击“完成”后自动打开浏览器扩展管理页、该文件夹和随包离线说明 `docs/extension-install.html`。若没有自动打开，可在开始菜单选择 **VidOtter → Install Browser Extension** 重新查看。
 4. 播放视频，打开 VidOtter，确认 Bridge 连接状态，在“资源嗅探”中选择目标资源。首次下载选择“不下载字幕”。
 5. 到“下载任务”查看任务，等待完成后检查输出文件。
 

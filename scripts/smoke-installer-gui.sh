@@ -13,7 +13,12 @@ grep -q 'VIDOTTER_GUI_TARGET' "$log"
 grep -q 'VIDOTTER_GUI_LICENSE' "$log"
 grep -q 'VIDOTTER_GUI_READY' "$log"
 grep -q 'VIDOTTER_GUI_FINISHED' "$log"
-grep -q 'VIDOTTER_GUI_EXTENSION_OPTION_PRESENT' "$log"
+grep -q 'VIDOTTER_GUI_MANDATORY_GUIDE_PRESENT' "$log"
+grep -q 'VIDOTTER_EXTENSION_GUIDE_REQUIRED' "$log"
+if grep -q 'VIDOTTER_GUI_BAD_OPTIONAL_EXTENSION' "$log"; then
+    echo 'Browser activation must not be optional' >&2
+    exit 1
+fi
 if grep -q 'VIDOTTER_GUI_BAD_MCP_OPTION' "$log"; then
     echo "MCP setup does not belong in installer" >&2
     exit 1
@@ -23,4 +28,4 @@ if grep -q 'VIDOTTER_GUI_BAD_COMPONENT_SELECTION' "$log"; then
     exit 1
 fi
 "$HOME/VidOtter/VidOtter-Maintenance" --confirm-command remove com.thinkerqaq.vidotter >/dev/null
-echo 'Qt GUI smoke passed: one product, browser+MCP options on Finish.'
+echo 'Qt GUI smoke passed: mandatory extension guide at Finish.'

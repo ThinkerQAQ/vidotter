@@ -14,7 +14,7 @@ VidOtter detects media in Chrome/Edge and downloads it with a local Go Bridge. I
 
 1. Download the archive for your system and CPU from [Releases](https://github.com/ThinkerQAQ/vidotter/releases). Extract the whole archive to a permanent folder.
 2. In that folder run `.\bin\vidotterdev.exe install` in Windows PowerShell, or `./bin/vidotterdev install` on Linux/macOS. Linux/macOS need a separate FFmpeg installation in PATH for merging and muxing.
-3. Open `chrome://extensions` or `edge://extensions`, enable **Developer mode**, choose **Load unpacked**, and select `extension/`.
+3. **Required browser extension activation (no store listing needed):** Open `edge://extensions` or `chrome://extensions`, enable **Developer mode**, click **Load unpacked**, and select the installed `extension/` directory containing `manifest.json`. The new GUI installer opens the browser extensions page, the correct directory, and an offline guide (`docs/extension-install.html`) automatically when you finish; you can reopen it from **VidOtter → Install Browser Extension** in the Windows Start Menu.
 4. Play a video, open VidOtter, check the Bridge status, and select the intended resource in **Detect**. For the first download choose **No subtitles**.
 5. Open **Downloads**, wait for **Completed**, then check the output file.
 

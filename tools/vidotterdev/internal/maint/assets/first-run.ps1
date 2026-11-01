@@ -8,7 +8,12 @@ if ($Mode -eq 'extension') {
     if (!(Test-Path (Join-Path $folder 'manifest.json'))) {
         throw "VidOtter extension is missing: $folder"
     }
-    # Show the precise folder to select. Do not rely on the user finding it.
+    $guide = Join-Path $root 'docs/extension-install.html'
+    if (!(Test-Path $guide)) {
+        throw "VidOtter offline extension guide is missing: $guide"
+    }
+    # The offline guide always opens. No internet or browser store is required.
+    # Show the precise folder to select, so users do not need to locate it.
     Start-Process -FilePath explorer.exe -ArgumentList ('"' + $folder + '"')
     $edgePaths = @(
         (Join-Path ${env:ProgramFiles(x86)} 'Microsoft\Edge\Application\msedge.exe'),
@@ -26,10 +31,11 @@ if ($Mode -eq 'extension') {
         if ($chrome) {
             Start-Process -FilePath $chrome -ArgumentList 'chrome://extensions/'
         } else {
-            Start-Process 'https://github.com/ThinkerQAQ/vidotter/blob/main/docs/zh-CN/tutorial/first-run-on-new-machine.md'
+            Write-Warning "Edge or Chrome was not found. Open either browser and navigate to its extensions page."
         }
     }
-    Write-Host "Activate Developer mode, choose Load unpacked and select: $folder"
+    Start-Process -FilePath $guide
+    Write-Host "Required browser activation: enable Developer mode, choose Load unpacked, select $folder"
     exit 0
 }
 

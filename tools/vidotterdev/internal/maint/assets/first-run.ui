@@ -4,19 +4,19 @@
  <widget class="QWidget" name="VidOtterFirstRun">
   <layout class="QVBoxLayout" name="verticalLayout">
    <item><widget class="QLabel" name="setupTitle">
-    <property name="text"><string>Finish setting up VidOtter</string></property>
+    <property name="text"><string>Browser extension activation required</string></property>
     <property name="styleSheet"><string>font-weight: 600; font-size: 15px;</string></property>
    </widget></item>
    <item><widget class="QLabel" name="setupDescription">
-    <property name="text"><string>VidOtter is installed. Activate the Chrome/Edge extension to start downloading. ChatGPT integration can be configured later in VidOtter Settings.</string></property>
+    <property name="text"><string>VidOtter is installed. To download videos from browser pages, you must activate the bundled Chrome/Edge extension. When you finish this installer, an offline guide and the extension folder open automatically.</string></property>
     <property name="wordWrap"><bool>true</bool></property>
    </widget></item>
-   <item><widget class="QCheckBox" name="openExtensionCheckBox">
-    <property name="text"><string>Open browser extensions and the VidOtter extension folder</string></property>
-    <property name="checked"><bool>true</bool></property>
+   <item><widget class="QLabel" name="requiredExtensionNote">
+    <property name="text"><string>Next step (required): Enable Developer mode, choose Load unpacked, and select the extension folder.</string></property>
+    <property name="wordWrap"><bool>true</bool></property>
    </widget></item>
    <item><widget class="QLabel" name="extensionInstructions">
-    <property name="text"><string>In the browser: turn on Developer mode, choose Load unpacked, then select the opened extension folder.</string></property>
+    <property name="text"><string>Browser permissions must be approved by you. The offline guide opens automatically; you can reopen it from the Start menu or installation folder.</string></property>
     <property name="wordWrap"><bool>true</bool></property>
    </widget></item>
 

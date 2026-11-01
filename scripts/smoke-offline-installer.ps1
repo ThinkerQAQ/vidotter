@@ -6,11 +6,22 @@ New-Item -ItemType Directory -Force -Path $sandbox | Out-Null
 & $setup --root $target --accept-licenses --confirm-command install
 if ($LASTEXITCODE -ne 0) { throw "Windows installer failed" }
 if (!(Test-Path (Join-Path $target "bin/vidotter-windows-amd64.exe"))) { throw "Bridge not installed" }
+$offlineGuide = Join-Path $target "docs/extension-install.html"
+if (!(Test-Path $offlineGuide)) { throw "Offline browser extension guide missing from installer" }
+$guideText = Get-Content -Raw -Encoding UTF8 $offlineGuide
+if ($guideText -notmatch "edge://extensions" -or $guideText -notmatch "chrome://extensions" -or $guideText -notmatch "manifest.json") {
+    throw "Offline extension guide is missing required browser steps"
+}
 $firstRun = Join-Path $target "scripts/VidOtter-FirstRun.ps1"
 if (!(Test-Path $firstRun)) { throw "First-run helper missing from installation" }
 $parseErrors = $null
 [System.Management.Automation.Language.Parser]::ParseFile($firstRun, [ref]$null, [ref]$parseErrors) | Out-Null
 if ($parseErrors.Count -gt 0) { throw "Windows first-run PowerShell script has syntax errors: $parseErrors" }
+$helperText = Get-Content -Raw -Encoding UTF8 $firstRun
+if ($helperText -notmatch 'Start-Process -FilePath \$guide' -or $helperText -notmatch 'edge://extensions/') {
+    throw "First-run helper does not open offline guide and extension manager"
+}
+
 $startMenu = Join-Path ([Environment]::GetFolderPath('Programs')) 'VidOtter'
 foreach ($shortcut in @('Install Browser Extension.lnk')) {
     if (!(Test-Path (Join-Path $startMenu $shortcut))) {

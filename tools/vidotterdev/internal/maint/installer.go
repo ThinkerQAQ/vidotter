@@ -241,7 +241,7 @@ func prepareInstallerWithUpdateURL(destination, stage, ver, targetOS, updateURL 
 			shortcutOperations = `    component.addOperation("CreateDesktopEntry", "vidotter-update.desktop", "Type=Application\nName=VidOtter Updater\nExec=\"@TargetDir@/VidOtter-Maintenance\"\nTerminal=false\nCategories=Utility;");`
 		}
 	}
-	script := firstRunComponentScript(bridgeInstaller, shortcutOperations)
+	script := firstRunComponentScript(bridgeInstaller, shortcutOperations, targetOS)
 	if err := os.WriteFile(filepath.Join(meta, "installscript.qs"), []byte(script), 0o644); err != nil {
 		return err
 	}

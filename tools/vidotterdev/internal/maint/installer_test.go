@@ -194,14 +194,27 @@ func TestPrepareInstallerFirstRunOnboarding(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			for _, id := range []string{"openExtensionCheckBox"} {
+			for _, id := range []string{"requiredExtensionNote"} {
 				if !strings.Contains(string(ui), id) {
-					t.Fatalf("missing checkbox %q", id)
+					t.Fatalf("missing mandatory guide %q", id)
 				}
 			}
 			script, err := os.ReadFile(filepath.Join(base, "meta", "installscript.qs"))
 			if err != nil {
 				t.Fatal(err)
+			}
+			if strings.Contains(string(ui), "openExtensionCheckBox") {
+				t.Fatal("browser activation is required, not an optional checkbox")
+			}
+			html, err := os.ReadFile(filepath.Join(base, "data", "docs", "extension-install.html"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !strings.Contains(string(html), "edge://extensions") || !strings.Contains(string(html), "chrome://extensions") || !strings.Contains(string(html), "manifest.json") {
+				t.Fatal("offline guide must explain both browsers and the exact extension folder")
+			}
+			if !strings.Contains(string(script), "VIDOTTER_EXTENSION_GUIDE_REQUIRED") {
+				t.Fatal("installer finish must always open browser activation guide")
 			}
 			if strings.Contains(string(script), "Connect ChatGPT MCP.lnk") || strings.Contains(string(ui), "configureMcpCheckBox") {
 				t.Fatal("ChatGPT activation must be configured from VidOtter Settings")

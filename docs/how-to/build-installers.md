@@ -194,18 +194,20 @@ the external tunnel-client/login-time service.
 
 ### First-run GUI onboarding (installer candidates)
 
-The single-product installer hides the redundant Component Selection page and the
-extra Start Menu group-selection page, but keeps the license and installation
-directory pages. After a successful **GUI** installation, the Finish page offers:
+The one-product installer hides the redundant Component Selection and Start Menu
+group-selection pages. On successful GUI installation, the Finish page marks
+**browser extension activation as a required next step**, not an optional
+checkbox. Clicking Finish automatically opens the installed, offline
+`docs/extension-install.html` tutorial plus the exact `extension/` folder.
+On Windows the helper also opens Edge's extension manager (or Chrome if Edge is
+unavailable). The user enables Developer mode and explicitly chooses
+**Load unpacked**, selecting the folder with `manifest.json`. The installer
+does not and cannot silently approve the browser's permission prompt.
 
-- **Open browser extensions and the VidOtter extension folder** (selected by
-  default). On Windows, the user-approved action opens the Edge extensions
-  manager (or Chrome if Edge is unavailable) plus Explorer at the exact
-  `extension/` folder. The user still enables Developer mode and selects
-  **Load unpacked**; a desktop installer cannot silently bypass that action.
-- **ChatGPT setup no longer belongs in the installer.** The MCP server is bundled, but connecting ChatGPT requires a separate action inside VidOtter Settings. No remote service or credentials are activated by installation.
-
-The Windows Start Menu retains only **Install Browser Extension** to reopen the browser activation guide. Configure cloud access later under **Settings → AI integrations → ChatGPT MCP**.
+The Windows Start Menu keeps **Install Browser Extension**, allowing the same
+guide to be reopened later. There are **no extension-store URLs** in the flow.
+ChatGPT Tunnel remains separately opt-in from **Settings → AI integrations →
+ChatGPT MCP**; desktop setup does not activate it.
 
 Headless installs do not open browsers, folders, or Tunnel setup. This
 onboarding is present in **new installer candidates**, not in the already
