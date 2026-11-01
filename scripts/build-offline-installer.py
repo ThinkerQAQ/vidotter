@@ -118,6 +118,13 @@ def main():
         manifest_path.write_text(json.dumps(extension_manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
         print("Preview extension version:", extension_manifest["version"])
 
+        # PR tests build on the latest released media-dependency bundle. Do
+        # not accidentally carry removed guides or stale README/license files
+        # from that older release into the current preview installer.
+        shutil.rmtree(stage / "docs", ignore_errors=True)
+        for readme in ("README.md", "README_ZH.md", "LICENSE", "NOTICE", "THIRD_PARTY_NOTICES.md"):
+            shutil.copy2(Path(readme), stage / readme)
+        shutil.copytree("assets", stage / "assets", dirs_exist_ok=True)
         for helper in ("Setup-VidOtter-MCP.ps1", "setup-mcp.sh",
                        "Manage-VidOtter-MCP.ps1", "manage-mcp.sh"):
             shutil.copy2(Path("scripts") / helper, stage / "scripts" / helper)
