@@ -68,6 +68,10 @@ jobs:
         env:
           VIDOTTER_TEST_UPDATE_REPO: ${{ runner.temp }}/update-test-work/update-test-repo
         run: bash scripts/smoke-offline-installer.sh "$RUNNER_TEMP/installer-output/VidOtter-Setup-${{ inputs.release_tag || 'v1.6.2' }}-linux-amd64.run"
+      - name: Linux GUI wizard and Finish options (virtual platform)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: bash scripts/smoke-installer-gui.sh "$RUNNER_TEMP/installer-output/VidOtter-Setup-${{ inputs.release_tag || 'v1.6.2' }}-linux-amd64.run"
       - name: Windows headless install/uninstall & Data preservation
         if: runner.os == 'Windows'
         shell: pwsh

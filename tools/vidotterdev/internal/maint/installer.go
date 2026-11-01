@@ -107,6 +107,13 @@ type installerConfig struct {
 	Name                string                 `xml:"Name"`
 	Version             string                 `xml:"Version"`
 	Title               string                 `xml:"Title"`
+	ProductUrl          string                 `xml:"ProductUrl,omitempty"`
+	WizardStyle         string                 `xml:"WizardStyle"`
+	WizardDefaultWidth  string                 `xml:"WizardDefaultWidth"`
+	WizardDefaultHeight string                 `xml:"WizardDefaultHeight"`
+	TitleColor          string                 `xml:"TitleColor"`
+	Logo                string                 `xml:"Logo,omitempty"`
+	InstallerWindowIcon string                 `xml:"InstallerWindowIcon,omitempty"`
 	ControlScript       string                 `xml:"ControlScript,omitempty"`
 	WizardShowPageList  string                 `xml:"WizardShowPageList"`
 	Publisher           string                 `xml:"Publisher"`
@@ -164,7 +171,10 @@ func prepareInstallerWithUpdateURL(destination, stage, ver, targetOS, updateURL 
 	config := installerConfig{
 		Name: "VidOtter", Version: ver, Title: "VidOtter Setup",
 		ControlScript: "controller.qs", WizardShowPageList: "false",
-		Publisher: "ThinkerQAQ", StartMenuDir: "VidOtter",
+		ProductUrl:  "https://github.com/ThinkerQAQ/vidotter",
+		WizardStyle: "Modern", WizardDefaultWidth: "660", WizardDefaultHeight: "510",
+		TitleColor: "#245F73",
+		Publisher:  "ThinkerQAQ", StartMenuDir: "VidOtter",
 		TargetDir: "@HomeDir@/VidOtter", MaintenanceToolName: "VidOtter-Maintenance",
 		RemoveTargetDir: "false",
 	}
@@ -172,6 +182,18 @@ func prepareInstallerWithUpdateURL(destination, stage, ver, targetOS, updateURL 
 		config.RemoteRepositories = &installerRepositories{Repository: installerRepository{
 			Url: updateURL, Enabled: "1", DisplayName: "VidOtter Updates",
 		}}
+	}
+	logo := filepath.Join(stage, "extension", "icons", "icon-128.png")
+	if stat, err := os.Stat(logo); err == nil && !stat.IsDir() {
+		if err := copyFile(logo, filepath.Join(destination, "config", "vidotter-logo.png")); err != nil {
+			return err
+		}
+		config.Logo = "vidotter-logo.png"
+		// Qt IFW requires unique filenames for separate config image roles.
+		if err := copyFile(logo, filepath.Join(destination, "config", "vidotter-window.png")); err != nil {
+			return err
+		}
+		config.InstallerWindowIcon = "vidotter-window"
 	}
 	if err := installerXML(filepath.Join(destination, "config", "config.xml"), config); err != nil {
 		return err
