@@ -23,7 +23,7 @@ VidOtter 通过浏览器扩展发现当前页面的媒体，再交给本地下�
 
 ![VidOtter 资源嗅探界面](assets/first-run-detect-zh.png)
 
-截图来自 v1.3.0，用于说明资源嗅探入口。
+界面示意，实际布局以所安装版本为准。
 
 ## 2. Quick Start
 
@@ -41,32 +41,40 @@ VidOtter 通过浏览器扩展发现当前页面的媒体，再交给本地下�
 
 需要一台 Windows、macOS 或 Linux 电脑，以及 Chrome、Chromium 或 Edge 浏览器。
 
-使用发行包不需要安装 Go、Node.js，也不需要 OpenAI 账号或 API Key。首次下载普通 MP4，不需要配置字幕、模型或其他下载工具。HLS 合并、分离音视频处理需要 FFmpeg：Windows 发行包已附带，Linux/macOS 需要自行安装。
+使用发行包不需要安装 Go、Node.js，也不需要 OpenAI 账号或 API Key。首次下载普通 MP4，不需要配置字幕、模型或其他下载工具。HLS 合并、分离音视频处理需要 FFmpeg；可在设置页检查是否可用，缺少时再安装或配置。
 
 ### 2.2. 安装 VidOtter
 
-从 [v1.6.3 Release](https://github.com/ThinkerQAQ/vidotter/releases/tag/v1.6.3) 下载与系统匹配的安装器：
+#### 2.2.1. 使用图形安装器
 
-- Windows x64：运行 `VidOtter-Setup-v1.6.3-windows-amd64.exe`。
-- macOS Intel：打开 `VidOtter-Setup-v1.6.3-macos-amd64.dmg`，运行其中的安装器。
-- Linux x64：下载 `VidOtter-Setup-v1.6.3-linux-amd64.run`，在下载目录执行：
+打开[最新 Release](https://github.com/ThinkerQAQ/vidotter/releases/latest)，在 Assets 中选择与操作系统、CPU 架构匹配的安装器；可用平台以该 Release 为准。没有对应安装器时，使用下方的压缩包方式。
+
+- Windows：运行对应的 `.exe` 安装器。
+- macOS：打开对应的 `.dmg`，运行其中的安装器。
+- Linux：下载对应的 `.run` 安装器。为方便执行，可先在文件管理器中将下载的文件重命名为 `VidOtter-Setup.run`，再在下载目录执行：
 
 ```bash
-chmod +x VidOtter-Setup-v1.6.3-linux-amd64.run
-./VidOtter-Setup-v1.6.3-linux-amd64.run
+chmod +x VidOtter-Setup.run
+./VidOtter-Setup.run
 ```
 
 按安装器提示选择安装目录并完成安装，记下这个目录。安装器会注册本地下载服务，完成时打开扩展激活说明和安装目录。浏览器会按需启动 Bridge，不需要一直开着终端。
 
-当前安装器未签名或公证。如果系统阻止运行，先核对下载来源和系统的发行者提示；安装完成后，再进行扩展加载。
+**图形安装器已自动完成本地 Bridge 注册。安装成功后直接继续 [2.3](#23-安装浏览器扩展)，不需要执行下面的手动注册命令。**
 
-**如果使用 Apple Silicon、Linux ARM64，或者希望手动安装：** 在同一 Release 选择对应的压缩包：
+如果系统显示未识别发行者等提示，先核对下载来源及该 Release 的签名、公证说明；安装完成后，再进行扩展加载。
 
-- Windows x64：`vidotter-v1.6.3-windows-amd64.zip`。
-- macOS Intel：`vidotter-v1.6.3-macos-amd64.tar.gz`。
-- macOS Apple Silicon：`vidotter-v1.6.3-macos-arm64.tar.gz`。
-- Linux x64：`vidotter-v1.6.3-linux-amd64.tar.gz`。
-- Linux ARM64：`vidotter-v1.6.3-linux-arm64.tar.gz`。
+#### 2.2.2. 使用压缩包手动安装
+
+**仅选择压缩包安装的用户执行本节。** 没有对应安装器，或者希望手动安装时，在同一 Release 的 Assets 中选择对应压缩包。文件名包含版本号，按系统和架构后缀识别即可：
+
+- Windows x64：`windows-amd64.zip`。
+- macOS Intel：`macos-amd64.tar.gz`。
+- macOS Apple Silicon：`macos-arm64.tar.gz`。
+- Linux x64：`linux-amd64.tar.gz`。
+- Linux ARM64：`linux-arm64.tar.gz`。
+
+这些是文件名后缀，不是完整文件名。只选择该 Release 实际提供且与设备匹配的文件。
 
 如果不确定架构，Windows 查看“设置 → 系统 → 系统信息”的系统类型；macOS 查看“关于本机”的芯片或处理器；Linux 执行 `uname -m`，`x86_64` 对应 x64，`aarch64` 对应 ARM64。
 
@@ -88,7 +96,7 @@ cd '/path/to/VidOtter'
 
 输出中应包含 `Native Messaging installed:` 和 `Host manifest:`，表示本地服务已注册。移动手动安装目录后，需要在新位置重新执行此命令。
 
-### 2.3. 加载浏览器扩展
+### 2.3. 安装浏览器扩展
 
 安装完成后，让浏览器连接到本地服务：
 
@@ -98,9 +106,9 @@ cd '/path/to/VidOtter'
 4. 在浏览器工具栏的扩展菜单中打开 VidOtter，也可以将它固定到工具栏。
 5. 进入**设置 → 连接与运行时**，确认显示**浏览器与下载服务连接正常**。如果连接失败，先按下面的注册步骤处理，连接正常后再继续下载。
 
-扩展目前通过本地文件安装，尚未上架扩展商店。这一步需要用户在浏览器中操作。
+这一步是在浏览器中安装扩展，与 2.2 的本地 Bridge 注册不同。当前扩展通过本地文件分发，安装器会提供激活引导，但仍需用户在浏览器完成加载。
 
-如果提示找不到 Native Messaging Host，先复制扩展管理页显示的 32 位扩展 ID，再在安装根目录重新注册：
+**仅连接失败时修复注册：** 如果提示找不到 Native Messaging Host，先复制扩展管理页显示的 32 位扩展 ID，再在安装根目录重新注册：
 
 ```powershell
 # Windows：将占位符替换为实际扩展 ID
@@ -155,7 +163,7 @@ Linux/macOS 使用 `./bin/vidotterdev install --extension-id YOUR_32_CHARACTER_I
 
 配置保存在安装根目录的 `Data/config.toml`。设置页会校验并保存完整配置；如需手动修改，先备份、停止 Bridge，修改后重启。不要用几行配置片段覆盖整个文件。
 
-**升级与卸载：** 先暂停任务并备份 `Data/`。图形安装用户通过 **VidOtter Maintenance** 移除旧程序，再运行新安装器；当前尚未发布在线更新源。手动安装用户替换同一版本的 `bin/`、`extension/` 和随包 `tools/`，保留 `Data/`，重新注册并加载扩展。程序卸载会保留数据和下载文件；手动删除安装目录前需自行备份。
+**升级与卸载：** 先暂停任务并备份 `Data/`。图形安装用户优先按对应 Release 的升级说明使用 **VidOtter Maintenance**；若该安装版本没有在线更新源，通过维护工具移除旧程序后再运行新安装器。手动安装用户替换同一版本的 `bin/`、`extension/` 和随包 `tools/`，保留 `Data/`，重新注册并加载扩展。程序卸载会保留数据和下载文件；手动删除安装目录前需自行备份。
 
 手动安装的注销命令为 Windows `.\bin\vidotterdev.exe uninstall`，Linux/macOS `./bin/vidotterdev uninstall`，之后在浏览器移除扩展。
 
@@ -177,7 +185,7 @@ MP4/HLS 可以使用内置下载器。需要解析其他受支持的网页时，
 
 先到**设置 → 外部组件**配置对应工具；本地识别或翻译还需选择并下载模型，已有模型可填写路径。确认组件和模型就绪后，回到**资源嗅探**选择字幕处理方式，再创建下载任务。任务完成后，检查字幕文件、内容和时间轴。
 
-Windows v1.6.3 已附带 FFmpeg Slim、whisper.cpp、llama.cpp 可执行文件，模型需另行下载；Linux/macOS 按需提供兼容工具。
+FFmpeg Slim、whisper.cpp、llama.cpp 是否随包附带，以对应 Release 的说明和设置页检测结果为准；缺少时按需安装或配置，模型另行下载。
 
 ### 4.3. Case 3：通过 ChatGPT 管理下载
 
@@ -203,15 +211,27 @@ Tunnel Ready 只表示本机连接就绪；收到 ChatGPT 中的实际工具响�
 
 Android 是独立原生客户端，支持 Android 8.0 / API 26 及以上，通过粘贴或分享 MP4/HLS 直链下载。它不接入桌面任务、Native Messaging、yt-dlp 或 ChatGPT Tunnel。
 
-当前桌面 Release 不包含 APK，需要从源码构建：
+先检查[最新 Release](https://github.com/ThinkerQAQ/vidotter/releases/latest) 是否提供匹配设备的 APK；若没有，再从源码构建：
 
 1. 按 [5.1](#51-打开项目并验证) 克隆仓库并准备 Go 环境，以下命令均在仓库根目录执行。
-2. 安装 JDK 17，通过 Android SDK Manager 安装 Android SDK Platform 35、NDK 和 Platform-Tools。设置 `JAVA_HOME`、`ANDROID_SDK_ROOT` 为对应目录；需要指定 NDK 版本时，将 `ANDROID_NDK_HOME` 设为该版本目录。
+2. 按 [Android 构建配置](mobile/android/app/build.gradle.kts)及[构建工具的环境检查](tools/vidotterdev/internal/maint/mobile_media.go)准备匹配的 JDK、Android SDK Platform、NDK 和 Platform-Tools。设置 `JAVA_HOME`、`ANDROID_SDK_ROOT` 为对应目录；需要指定 NDK 版本时，将 `ANDROID_NDK_HOME` 设为该版本目录。
 3. 安装与 `bridge/go.mod` 一致的两个 Go mobile 工具，再构建 APK：
 
+Linux/macOS：
+
 ```bash
-go install golang.org/x/mobile/cmd/gomobile@v0.0.0-20240326195318-268e6c3a80d1
-go install golang.org/x/mobile/cmd/gobind@v0.0.0-20240326195318-268e6c3a80d1
+vidotter_mobile_version="$(go -C bridge list -m -f '{{.Version}}' golang.org/x/mobile)"
+go install "golang.org/x/mobile/cmd/gomobile@$vidotter_mobile_version"
+go install "golang.org/x/mobile/cmd/gobind@$vidotter_mobile_version"
+go -C tools/vidotterdev run . android-build
+```
+
+Windows PowerShell：
+
+```powershell
+$vidotterMobileVersion = go -C bridge list -m -f '{{.Version}}' golang.org/x/mobile
+go install "golang.org/x/mobile/cmd/gomobile@$vidotterMobileVersion"
+go install "golang.org/x/mobile/cmd/gobind@$vidotterMobileVersion"
 go -C tools/vidotterdev run . android-build
 ```
 
@@ -219,7 +239,7 @@ go -C tools/vidotterdev run . android-build
 
 ## 5. Development
 
-开发环境需要 Git、Go **1.25+**、Node.js（CI 使用 Node 22）。使用发行包的用户不需要安装这些工具。
+开发环境需要 Git、Go 和 Node.js。Go 工具链须满足 [`bridge/go.mod`](bridge/go.mod) 与 [`tools/vidotterdev/go.mod`](tools/vidotterdev/go.mod) 的声明；Node.js 版本与 [CI 配置](.github/workflows/ci.yml)保持一致。使用发行包的用户不需要安装这些工具。
 
 ### 5.1. 打开项目并验证
 
@@ -260,7 +280,7 @@ Set-Location $vidotterDevDir
 .\bin\vidotterdev.exe install
 ```
 
-按 [2.3](#23-加载浏览器扩展) 加载这个部署目录的 `extension/`，再按 2.4–2.5 下载并检查文件。继续修改或打包源码前，先切回原来的源码仓库根目录。
+按 [2.3](#23-安装浏览器扩展) 加载这个部署目录的 `extension/`，再按 2.4–2.5 下载并检查文件。继续修改或打包源码前，先切回原来的源码仓库根目录。
 
 ### 5.3. 打包与 CI
 
@@ -272,6 +292,6 @@ Set-Location $vidotterDevDir
 
 原创源码采用 [Apache-2.0](LICENSE)，第三方组件遵循各自许可证，详见 [NOTICE](NOTICE) 和[第三方声明](THIRD_PARTY_NOTICES.md)。Windows 的 FFmpeg Slim 使用 LGPL-2.1-or-later，对应源码随同一 Release 提供；Qt Installer Framework 使用 GPL-3.0 与 Qt Company Exception。模型权重和下载的媒体不在项目源码许可范围内。
 
-请只下载有权保存的媒体。VidOtter 不绕过 DRM、付费墙或访问控制，不与内容平台存在从属关系。当前图形安装器未完成 Windows 代码签名和 Apple 公证，ARM64 平台使用压缩包安装。
+请只下载有权保存的媒体。VidOtter 不绕过 DRM、付费墙或访问控制，不与内容平台存在从属关系。安装器的平台支持、签名及公证状态以对应 Release 的说明为准。
 
 `Data/` 中可能包含任务来源、断点数据和本地认证信息，不要上传到公开仓库。浏览器会话由扩展处理，Bridge 仅在本机回环地址监听；私有 MCP 只连接可信客户端。

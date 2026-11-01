@@ -23,7 +23,7 @@ The desktop application runs on Windows, macOS, and Linux with Chrome, Chromium,
 
 ![VidOtter Detect interface](assets/first-run-detect-zh.png)
 
-The screenshot is from v1.3.0 and illustrates the Detect view.
+Interface example; the installed version's layout may differ.
 
 ## 2. Quick Start
 
@@ -41,32 +41,40 @@ Complete the workflow in this order:
 
 Use a Windows, macOS, or Linux computer with Chrome, Chromium, or Edge.
 
-Release users do not need Go, Node.js, an OpenAI account, or an API key. A first plain MP4 download needs no subtitle tools or models. HLS muxing and separate audio/video processing require FFmpeg: Windows packages include it; Linux/macOS users install it separately.
+Release users do not need Go, Node.js, an OpenAI account, or an API key. A first plain MP4 download needs no subtitle tools or models. HLS muxing and separate audio/video processing require FFmpeg. Check its availability in Settings and install or configure it if missing.
 
 ### 2.2. Install VidOtter
 
-Download the installer for your system from the [v1.6.3 Release](https://github.com/ThinkerQAQ/vidotter/releases/tag/v1.6.3):
+#### 2.2.1. Use the GUI installer
 
-- Windows x64: run `VidOtter-Setup-v1.6.3-windows-amd64.exe`.
-- macOS Intel: open `VidOtter-Setup-v1.6.3-macos-amd64.dmg` and launch the installer inside.
-- Linux x64: download `VidOtter-Setup-v1.6.3-linux-amd64.run` and run these commands in the download directory:
+Open the [latest Release](https://github.com/ThinkerQAQ/vidotter/releases/latest). In Assets, choose an installer matching your operating system and CPU architecture. Available targets are listed in that Release; if no matching installer exists, use the archive method below.
+
+- Windows: run the matching `.exe` installer.
+- macOS: open the matching `.dmg` and launch the installer inside.
+- Linux: download the matching `.run` installer. For a consistent command, rename the downloaded file to `VidOtter-Setup.run` in your file manager, then run these commands in the download directory:
 
 ```bash
-chmod +x VidOtter-Setup-v1.6.3-linux-amd64.run
-./VidOtter-Setup-v1.6.3-linux-amd64.run
+chmod +x VidOtter-Setup.run
+./VidOtter-Setup.run
 ```
 
 Choose an installation directory, complete the installer, and keep a note of that directory. The installer registers the local service and opens the extension activation instructions and installation folder. The browser launches the Bridge on demand; you do not need to keep a terminal open.
 
-Current installers are not signed or notarized. If your system blocks one, check the download source and the system's publisher notice before proceeding. Complete installation before loading the extension.
+**The GUI installer registers the local Bridge automatically. After a successful installation, continue directly to [2.3](#23-install-the-browser-extension); do not run the manual registration commands below.**
 
-**For Apple Silicon, Linux ARM64, or a manual installation:** select the matching archive from the same Release:
+If your system displays an unrecognized-publisher warning, check the download source and that Release's signing/notarization information before proceeding. Complete installation before loading the extension.
 
-- Windows x64: `vidotter-v1.6.3-windows-amd64.zip`.
-- macOS Intel: `vidotter-v1.6.3-macos-amd64.tar.gz`.
-- macOS Apple Silicon: `vidotter-v1.6.3-macos-arm64.tar.gz`.
-- Linux x64: `vidotter-v1.6.3-linux-amd64.tar.gz`.
-- Linux ARM64: `vidotter-v1.6.3-linux-arm64.tar.gz`.
+#### 2.2.2. Install an archive manually
+
+**Only archive-installation users follow this subsection.** If no matching installer exists, or you prefer a manual installation, choose an archive from the same Release's Assets. Its full name includes a version; identify the platform using the suffix:
+
+- Windows x64: `windows-amd64.zip`.
+- macOS Intel: `macos-amd64.tar.gz`.
+- macOS Apple Silicon: `macos-arm64.tar.gz`.
+- Linux x64: `linux-amd64.tar.gz`.
+- Linux ARM64: `linux-arm64.tar.gz`.
+
+These are filename suffixes, not complete filenames. Choose only an asset actually provided by that Release and matching your device.
 
 To identify your architecture, check System type in Windows Settings → System → About, or Chip/Processor in About This Mac. On Linux, run `uname -m`: `x86_64` means x64 and `aarch64` means ARM64.
 
@@ -88,7 +96,7 @@ cd '/path/to/VidOtter'
 
 The output should include `Native Messaging installed:` and `Host manifest:`, confirming service registration. If you move a manual installation, run this command again from its new location.
 
-### 2.3. Load the browser extension
+### 2.3. Install the browser extension
 
 Next, connect the browser to the installed service:
 
@@ -98,9 +106,9 @@ Next, connect the browser to the installed service:
 4. Open VidOtter from the browser toolbar's extensions menu; optionally pin it to the toolbar.
 5. Go to **Settings → Connection & runtime** and confirm **Browser and download service connected**. If it cannot connect, follow the registration steps below and resolve the connection before downloading.
 
-The extension is installed from local files and is not yet listed in a browser store. This step requires confirmation in the browser.
+This installs the browser extension, separately from the local Bridge registration in 2.2. The extension is currently distributed as local files; the installer provides activation instructions, but you still complete loading in the browser.
 
-If the Native Messaging host cannot be found, copy the 32-character extension ID from the extensions page and register it again from the installation root:
+**Registration repair only if the connection fails:** if the Native Messaging host cannot be found, copy the 32-character extension ID from the extensions page and register it again from the installation root:
 
 ```powershell
 # Windows: replace the placeholder with the actual extension ID
@@ -155,7 +163,7 @@ Common settings:
 
 Settings are saved in `Data/config.toml` under the installation root. The settings page validates and writes a complete file. For manual edits, back it up, stop the Bridge, edit, and restart. Do not replace the file with a partial snippet.
 
-**Upgrade and uninstall:** pause jobs and back up `Data/`. GUI users remove the old program through **VidOtter Maintenance**, then run the new installer; no online update feed is currently published. Manual users replace matching `bin/`, `extension/`, and packaged `tools/` directories, retain `Data/`, register again, and reload the extension. Program uninstall preserves data and downloads; back them up before manually deleting the installation folder.
+**Upgrade and uninstall:** pause jobs and back up `Data/`. GUI users follow the matching Release's upgrade instructions using **VidOtter Maintenance**. If the installed version has no online update feed, remove the old program through Maintenance, then run the new installer. Manual users replace matching `bin/`, `extension/`, and packaged `tools/` directories, retain `Data/`, register again, and reload the extension. Program uninstall preserves data and downloads; back them up before manually deleting the installation folder.
 
 To unregister a manual installation, run `.\bin\vidotterdev.exe uninstall` on Windows or `./bin/vidotterdev uninstall` on Linux/macOS, then remove the browser extension.
 
@@ -177,7 +185,7 @@ Choose the workflow that matches the subtitle source:
 
 Configure the required tools under **Settings → External components**. For local recognition or translation, select and download a model, or set the path to an existing one. Once the tools and models are ready, return to **Detect**, select a subtitle workflow, and create the download job. Check the resulting subtitle files, text, and timestamps.
 
-Windows v1.6.3 includes FFmpeg Slim, whisper.cpp, and llama.cpp executables; download models separately. Linux/macOS users supply compatible tools as needed.
+Whether FFmpeg Slim, whisper.cpp, and llama.cpp are bundled depends on the Release. Check its notes and the status in Settings; install or configure missing tools as needed and download models separately.
 
 ### 4.3. Case 3: Manage downloads through ChatGPT
 
@@ -203,15 +211,27 @@ If ChatGPT already has a Remote Browser Tool connection, reuse it for page actio
 
 Android is an independent native client for Android 8.0 / API 26 and later. It downloads pasted/shared direct MP4/HLS URLs. It does not connect to desktop jobs, Native Messaging, yt-dlp, or ChatGPT Tunnel.
 
-The desktop Release contains no APK. Build it from source:
+First check the [latest Release](https://github.com/ThinkerQAQ/vidotter/releases/latest) for an APK matching your device. If none is provided, build it from source:
 
 1. Follow [5.1](#51-open-and-verify-the-project) to clone the repository and prepare Go. Run the following commands from the repository root.
-2. Install JDK 17 and use Android SDK Manager to install Android SDK Platform 35, the NDK, and Platform-Tools. Set `JAVA_HOME` and `ANDROID_SDK_ROOT` to their directories. To select a specific NDK version, set `ANDROID_NDK_HOME` to that version's directory.
+2. Prepare the JDK, Android SDK Platform, NDK, and Platform-Tools required by the [Android build configuration](mobile/android/app/build.gradle.kts) and [build tool environment checks](tools/vidotterdev/internal/maint/mobile_media.go). Set `JAVA_HOME` and `ANDROID_SDK_ROOT` to their directories. To select a specific NDK version, set `ANDROID_NDK_HOME` to that version's directory.
 3. Install both Go mobile tools at the version pinned in `bridge/go.mod`, then build the APK:
 
+Linux/macOS:
+
 ```bash
-go install golang.org/x/mobile/cmd/gomobile@v0.0.0-20240326195318-268e6c3a80d1
-go install golang.org/x/mobile/cmd/gobind@v0.0.0-20240326195318-268e6c3a80d1
+vidotter_mobile_version="$(go -C bridge list -m -f '{{.Version}}' golang.org/x/mobile)"
+go install "golang.org/x/mobile/cmd/gomobile@$vidotter_mobile_version"
+go install "golang.org/x/mobile/cmd/gobind@$vidotter_mobile_version"
+go -C tools/vidotterdev run . android-build
+```
+
+Windows PowerShell:
+
+```powershell
+$vidotterMobileVersion = go -C bridge list -m -f '{{.Version}}' golang.org/x/mobile
+go install "golang.org/x/mobile/cmd/gomobile@$vidotterMobileVersion"
+go install "golang.org/x/mobile/cmd/gobind@$vidotterMobileVersion"
 go -C tools/vidotterdev run . android-build
 ```
 
@@ -219,7 +239,7 @@ go -C tools/vidotterdev run . android-build
 
 ## 5. Development
 
-Development requires Git, Go **1.25+**, and Node.js (CI uses Node 22). Release users do not need these tools.
+Development requires Git, Go, and Node.js. Use a Go toolchain satisfying [`bridge/go.mod`](bridge/go.mod) and [`tools/vidotterdev/go.mod`](tools/vidotterdev/go.mod), and the Node.js version in the [CI configuration](.github/workflows/ci.yml). Release users do not need these tools.
 
 ### 5.1. Open and verify the project
 
@@ -260,7 +280,7 @@ Set-Location $vidotterDevDir
 .\bin\vidotterdev.exe install
 ```
 
-Follow [2.3](#23-load-the-browser-extension) to load this deployment's `extension/`, then complete 2.4–2.5 to download and check a file. Change back to the original source repository root before further source work or packaging.
+Follow [2.3](#23-install-the-browser-extension) to load this deployment's `extension/`, then complete 2.4–2.5 to download and check a file. Change back to the original source repository root before further source work or packaging.
 
 ### 5.3. Packaging and CI
 
@@ -272,6 +292,6 @@ Use `tools/vidotterdev/` for builds, verification, and packaging. Formal packagi
 
 Original source uses [Apache-2.0](LICENSE); third-party components retain their own licenses. See [NOTICE](NOTICE) and [third-party notices](THIRD_PARTY_NOTICES.md). Windows FFmpeg Slim uses LGPL-2.1-or-later, with matching source supplied in the same Release. Qt Installer Framework uses GPL-3.0 with the Qt Company Exception. Model weights and downloaded media are not covered by the source license.
 
-Download only media you are allowed to save. VidOtter does not bypass DRM, paywalls, or access controls and is not affiliated with content platforms. Current GUI installers lack Windows code signing and Apple notarization; ARM64 targets use archive installations.
+Download only media you are allowed to save. VidOtter does not bypass DRM, paywalls, or access controls and is not affiliated with content platforms. Refer to the matching Release for installer platform support, code-signing, and notarization status.
 
 `Data/` may contain source information, checkpoints, and local authentication details; keep it out of public repositories. The extension handles browser sessions, the Bridge listens on loopback, and private MCP access should be granted only to trusted clients.
