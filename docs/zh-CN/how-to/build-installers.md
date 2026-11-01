@@ -114,3 +114,24 @@ Native Messaging、保留 `Data/` 和下载文件。无需手动覆盖 `bin/`。
 
 MCP Server 已和 Bridge 一起打包，默认不开放远程连接；只有用户主动选择
 ChatGPT 集成时才单独配置 Tunnel，详见 [MCP 使用说明](mcp.md)。
+
+### 发布静态更新源（发布维护者执行）
+
+新增 [GitHub Pages 手动发布工作流](../../../.github/workflows/publish-update-feeds.yml)。
+只能从受保护的 `main` 分支手动触发，输入已公开、非预发布的 Release 标签，
+工作流逐平台校验 Release SHA-256，再生成并部署 Qt IFW 更新仓库。
+绝对不上传 CI 使用的临时测试版本。首次运行前需要为 **VidOtter 仓库**
+启用 GitHub Pages 的 GitHub Actions 发布模式，并**实际验证**站点地址。
+由于个人博客已有自定义域名，不能猜测 URL 或覆盖既有博客页面。
+
+只有确认 HTTPS 站点的 `updates/windows/amd64/Updates.xml`、
+`updates/macos/amd64/Updates.xml`、`updates/linux/amd64/Updates.xml`
+及相应组件包均可访问后，才在发布打包时使用
+`--update-base-url 已验证的地址`；未验证时 CI 默认生成离线安装器。
+
+配置了更新源的版本在 Windows 开始菜单提供 **Update VidOtter**，
+Linux 应用菜单提供 **VidOtter Updater**；macOS 可打开安装目录中的
+**VidOtter-Maintenance.app**。进入维护工具检查/执行更新即可。
+更新前必须先暂停或完成下载任务、关闭活动 Bridge，不自动强杀下载任务。
+旧的手动解压安装不是 Qt IFW 管理的安装，不能直接当成受管理版本升级，
+需要明确的数据保留迁移流程。

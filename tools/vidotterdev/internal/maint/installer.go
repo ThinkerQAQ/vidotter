@@ -188,6 +188,19 @@ func prepareInstallerWithUpdateURL(destination, stage, ver, targetOS, updateURL 
 	}
 	// IFW runs extracted binaries after deployment, and executes the undo
 	// action before removing them. The Go installer retains user Data/.
+	shortcutOperations := ""
+	if targetOS == "windows" {
+		shortcutOperations = `    component.addStopProcessForUpdateRequest("vidotter-windows-amd64.exe");`
+	}
+	if updateURL != "" {
+		switch targetOS {
+		case "windows":
+			shortcutOperations += `    component.addOperation("Mkdir", "@UserStartMenuProgramsPath@/VidOtter");
+    component.addOperation("CreateShortcut", "@TargetDir@/VidOtter-Maintenance.exe", "@UserStartMenuProgramsPath@/VidOtter/Update VidOtter.lnk");`
+		case "linux":
+			shortcutOperations = `    component.addOperation("CreateDesktopEntry", "vidotter-update.desktop", "Type=Application\nName=VidOtter Updater\nExec=\"@TargetDir@/VidOtter-Maintenance\"\nTerminal=false\nCategories=Utility;");`
+		}
+	}
 	script := fmt.Sprintf(`function Component() {}
 
 Component.prototype.createOperations = function() {
@@ -195,8 +208,9 @@ Component.prototype.createOperations = function() {
     component.addOperation("Execute",
         "@TargetDir@/bin/%s", "install", "--root", "@TargetDir@",
         "UNDOEXECUTE", "@TargetDir@/bin/%s", "uninstall", "--root", "@TargetDir@");
+%s
 }
-`, bridgeInstaller, bridgeInstaller)
+`, bridgeInstaller, bridgeInstaller, shortcutOperations)
 	if err := os.WriteFile(filepath.Join(meta, "installscript.qs"), []byte(script), 0o644); err != nil {
 		return err
 	}

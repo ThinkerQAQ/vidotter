@@ -134,3 +134,29 @@ func TestInstallerOptionalUpdateRepository(t *testing.T) {
 		t.Fatal("insecure public update repository must be rejected")
 	}
 }
+
+func TestInstallerUpdateShortcuts(t *testing.T) {
+	stage := t.TempDir()
+	if err := os.WriteFile(filepath.Join(stage, "LICENSE"), []byte("license"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	for _, pair := range []struct{ os, expected string }{
+		{"windows", "Update VidOtter.lnk"},
+		{"linux", "vidotter-update.desktop"},
+	} {
+		out := t.TempDir()
+		if err := prepareInstallerWithUpdateURL(out, stage, "1.6.2", pair.os, "file:///tmp/vidotter-feed"); err != nil {
+			t.Fatal(err)
+		}
+		script, err := os.ReadFile(filepath.Join(out, "packages", "com.thinkerqaq.vidotter", "meta", "installscript.qs"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !strings.Contains(string(script), pair.expected) {
+			t.Fatalf("%s update shortcut missing: %s", pair.os, script)
+		}
+		if pair.os == "windows" && !strings.Contains(string(script), "addStopProcessForUpdateRequest") {
+			t.Fatal("Windows updates must request Bridge shutdown")
+		}
+	}
+}

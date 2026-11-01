@@ -149,3 +149,29 @@ none of those is currently advertised as shipped.
 The MCP server is bundled as part of the same Bridge binary in every release.
 Configuring ChatGPT Tunnel is optional, user-authorized, and not performed by
 the default installer; see [MCP](mcp.md).
+
+### Publish the feed (release-maintainer action)
+
+The [manual GitHub Pages workflow](../../.github/workflows/publish-update-feeds.yml)
+may be dispatched **only from protected `main`** after the new version is a
+completed, non-prerelease GitHub Release. It verifies each platform archive
+against the Release SHA256SUMS, generates IFW update metadata per platform,
+then deploys a complete static update site. It does not publish synthetic CI
+versions. First enable GitHub Pages for this repository using GitHub Actions
+as its source, then verify the **actual returned Pages URL**. The owner's main
+site uses a custom domain, so do not assume a GitHub Pages URL or accidentally
+replace existing blog pages.
+
+Before building installers that embed an update URL, confirm on the real HTTPS
+site that `updates/windows/amd64/Updates.xml`, `updates/linux/amd64/Updates.xml`
+and `updates/macos/amd64/Updates.xml` are accessible, plus all referenced
+archives. The build script then accepts `--update-base-url VERIFIED_BASE_URL`.
+CI defaults to standalone offline installers until the hosted feed is verified.
+
+With an update-enabled installer, Windows adds an **Update VidOtter** Start Menu
+shortcut; Linux adds a **VidOtter Updater** desktop entry. On macOS, open the
+installed **VidOtter-Maintenance.app**. In each case use the Maintenance Tool to
+check and install an available release. Finish/pause downloads and close the
+running Bridge first; never forcibly terminate active media jobs during update.
+Existing archive-based installs do not automatically become IFW-managed; they
+need an explicit migration into the installer layout with `Data/` preserved.

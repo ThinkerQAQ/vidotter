@@ -59,6 +59,8 @@ def main():
     parser.add_argument("--working-dir", type=Path, required=True)
     parser.add_argument("--output-dir", type=Path, required=True)
     parser.add_argument("--local-release-dir", type=Path)
+    parser.add_argument("--repo-only", action="store_true", help="Build only the update feed")
+    parser.add_argument("--update-base-url", default="", help="Already-published, verified HTTPS update base")
     a = parser.parse_args()
 
     go_os, name, qt_host, arch = platform_info()
@@ -91,19 +93,25 @@ def main():
     tools_root = a.tools_root.resolve()
     run(sys.executable, "-m", "aqt", "install-tool", "-O", tools_root,
         qt_host, "desktop", "tools_ifw", "qt.tools.ifw.47")
-    binary_name = "binarycreator.exe" if go_os == "windows" else "binarycreator"
-    binaries = list(tools_root.rglob(binary_name))
-    if len(binaries) != 1:
-        raise RuntimeError(f"Qt IFW binarycreator not found uniquely: {binaries}")
     a.output_dir.mkdir(parents=True, exist_ok=True)
-    extension = {"linux": ".run", "windows": ".exe", "darwin": ".dmg"}[go_os]
-    artifact = a.output_dir.resolve() / f"VidOtter-Setup-{a.tag}-{name}-{arch}{extension}"
-    run("go", "-C", "tools/vidotterdev", "run", ".", "installer",
-        "--stage", stage, "--os", go_os, "--arch", arch,
-        "--binarycreator", binaries[0], "--output", artifact)
-    if not artifact.is_file() or artifact.stat().st_size == 0:
-        raise RuntimeError("Qt IFW returned without an installer artifact")
-    print(f"Installer candidate: {artifact} ({artifact.stat().st_size:,} bytes)")
+    if not a.repo_only:
+        binary_name = "binarycreator.exe" if go_os == "windows" else "binarycreator"
+        binaries = list(tools_root.rglob(binary_name))
+        if len(binaries) != 1:
+            raise RuntimeError(f"Qt IFW binarycreator not found uniquely: {binaries}")
+        extension = {"linux": ".run", "windows": ".exe", "darwin": ".dmg"}[go_os]
+        artifact = a.output_dir.resolve() / f"VidOtter-Setup-{a.tag}-{name}-{arch}{extension}"
+        args = ["go", "-C", "tools/vidotterdev", "run", ".", "installer",
+                "--stage", str(stage), "--os", go_os, "--arch", arch,
+                "--binarycreator", str(binaries[0]), "--output", str(artifact)]
+        if a.update_base_url:
+            if not a.update_base_url.startswith("https://"):
+                raise ValueError("public update base must use HTTPS")
+            args.extend(["--update-url", a.update_base_url.rstrip("/") + f"/updates/{name}/{arch}"])
+        run(*args)
+        if not artifact.is_file() or artifact.stat().st_size == 0:
+            raise RuntimeError("Qt IFW returned without an installer artifact")
+        print(f"Installer candidate: {artifact} ({artifact.stat().st_size:,} bytes)")
     repo_dir = a.output_dir.resolve() / "updates" / name / arch
     repogen_name = "repogen.exe" if go_os == "windows" else "repogen"
     repogen = list(tools_root.rglob(repogen_name))
