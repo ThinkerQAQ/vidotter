@@ -59,7 +59,7 @@ $secure = Get-Content -Path $keyFile -TotalCount 1 | ConvertTo-SecureString
 $bstr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure)
 try { $env:CONTROL_PLANE_API_KEY = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($bstr) }
 finally { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr) }
-try { & '__CLIENT__' run --config (Join-Path $private 'vidotter.yaml') }
+try { & '__CLIENT__' run --config (Join-Path $private 'vidotter.yaml') --health.url-file (Join-Path $private 'health.url') }
 finally { Remove-Item Env:CONTROL_PLANE_API_KEY -ErrorAction SilentlyContinue }
 '@
 $runner = $runner.Replace('__CLIENT__', $clientPath.Replace("'", "''"))

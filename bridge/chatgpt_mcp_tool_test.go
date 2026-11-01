@@ -84,7 +84,7 @@ func TestChatGPTMCPRegistryIsOptionalAndNoSecretData(t *testing.T) {
 	if tool.Kind != "integration" || tool.Required {
 		t.Fatalf("ChatGPT integration must be optional: %#v", tool)
 	}
-	if len(tool.Actions) != 1 || tool.Actions[0].ID != "setup" {
+	if len(tool.Actions) != 2 || tool.Actions[0].ID != "setup" || tool.Actions[1].ID != "install-client" {
 		t.Fatalf("unexpected MCP controls: %#v", tool.Actions)
 	}
 	if len(tool.Config.Schema) != 0 {

@@ -531,3 +531,10 @@ html[data-surface="side-panel"] .log-follow { grid-column: 1; }
 .mcp-doc-link { display: inline-flex; align-items: center; min-height: 34px; padding: 7px 11px; border: 1px solid #d0d5dd; border-radius: 8px; color: #475467; background: #fff; text-decoration: none; }
 .mcp-doc-link:hover { background: #f9fafb; text-decoration: underline; }
 .mcp-setup-message { display: block; min-height: 1.5em; color: #667085; overflow-wrap: anywhere; }
+
+
+.mcp-next-steps { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding-top: 10px; border-top: 1px solid var(--line-soft); }
+.mcp-next-steps .settings-help { flex-basis: 100%; }
+
+
+.mcp-service-actions { display: flex; gap: 8px; flex-wrap: wrap; padding-top: 12px; }

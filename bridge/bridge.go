@@ -183,6 +183,8 @@ func runBridge() error {
 	mux.HandleFunc("/v1/logs", server.handleLogs)
 	mux.HandleFunc("/v1/tools", server.handleTools)
 	mux.HandleFunc("/v1/mcp/setup", server.handleMCPSetup)
+	mux.HandleFunc("/v1/mcp/client/install", server.handleMCPClientInstall)
+	mux.HandleFunc("/v1/mcp/service", server.handleMCPServiceManage)
 	mux.HandleFunc("/v1/tools/yt-dlp/install", server.handleInstallYTDLP)
 	mux.HandleFunc("/v1/tools/whisper/models/install", server.handleInstallWhisperModel)
 	mux.HandleFunc("/v1/tools/llama/models/install", server.handleInstallTranslationModel)

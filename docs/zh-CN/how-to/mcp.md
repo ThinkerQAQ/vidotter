@@ -118,3 +118,15 @@ Linux/macOS 使用对应的 `bin/vidotter-linux-...` 或 `bin/vidotter-macos-...
 说明：本地 MCP Server 随 VidOtter 安装，无须另装。配置文件存在不等于 Tunnel 已连通，也不等于 ChatGPT 已授权。设置页会如实显示“连接待验证”；请使用 doctor/health 和 ChatGPT 实际调用确认。
 
 如果缺少官方 Tunnel Client，设置页会展示提示和文档链接，不会自动跳转或下载第三方程序；已经配置不同 Tunnel ID 时，脚本会拒绝静默覆盖。
+
+## 新版一站式接入（开发分支，推荐）
+
+**不用预制插件 ZIP。** ChatGPT 可直接创建私有 Tunnel 插件并自动发现 VidOtter 的 13 个 MCP 工具。上传 ZIP 并不能代替每位用户自己的 Tunnel 与授权；Secure MCP Tunnel 目前也不支持作为公开插件提交/分发。
+
+用户只需要：首次在 OpenAI Platform 的 Tunnels 页面创建自己的 Tunnel ID → 在 VidOtter 设置页按需安装官方 Tunnel Client（来自 openai/tunnel-client 正式 GitHub Release，SHA-256 校验）→ 填入 Tunnel ID，点击「配置并启动 Tunnel」。本机脚本复用同一用户已保存的 VidOtter 运行凭据或显式提供的 CONTROL_PLANE_API_KEY。只有首次缺少凭据时，才在本机终端输入 Runtime API Key。不会扫描其他项目的私有密钥。
+
+配置成功后，用户可以在 VidOtter 设置中「启动 / 停止 / 重启」本机 Tunnel 服务；通过官方 health 命令要求至少一次控制平面轮询成功，才能判定服务 Ready。状态为 Ready 不意味着 ChatGPT 插件已创建。
+
+随后点击「复制 Tunnel ID」及「前往 ChatGPT 创建插件」，选择 Plugins → + → Add custom MCP server → Tunnel，选择或粘贴该 ID，按实际情况选择应用层认证（不需要应用层认证可选 None），确认风险提示，创建私有插件。MCP 工具自动发现；不需要上传 ZIP 或手工复制 Schema。最后在 ChatGPT 中调用 vidotter_status 验收。
+
+注意：Tunnel ID 不是运行凭证；云端插件的首次创建与授权仍由用户本人完成。下载客户端不会自动开启远程访问。发行版和正式更新源尚未发布，本功能必须更新扩展和本地 Bridge。

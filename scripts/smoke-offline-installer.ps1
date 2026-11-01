@@ -12,6 +12,12 @@ $guideText = Get-Content -Raw -Encoding UTF8 $offlineGuide
 if ($guideText -notmatch "edge://extensions" -or $guideText -notmatch "chrome://extensions" -or $guideText -notmatch "manifest.json") {
     throw "Offline extension guide is missing required browser steps"
 }
+$manage = Join-Path $target "scripts/Manage-VidOtter-MCP.ps1"
+if (!(Test-Path $manage)) { throw "Tunnel service manager missing from installed Windows release" }
+$syntaxTokens = $null
+$syntaxErrors = $null
+[System.Management.Automation.Language.Parser]::ParseFile($manage, [ref]$syntaxTokens, [ref]$syntaxErrors) | Out-Null
+if ($syntaxErrors.Count -gt 0) { throw "Tunnel service manager contains invalid PowerShell syntax: $syntaxErrors" }
 $firstRun = Join-Path $target "scripts/VidOtter-FirstRun.ps1"
 if (!(Test-Path $firstRun)) { throw "First-run helper missing from installation" }
 $parseErrors = $null

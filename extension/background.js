@@ -752,6 +752,25 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         .then(session => sendResponse({ ok: true, pid: session.pid }), error => sendResponse({ ok: false, error: error.message || String(error) }));
       return true;
     }
+    if (tool === "chatgpt-mcp" && action === "install-client") {
+      bridgeFetch("/v1/mcp/client/install", { method: "POST" })
+        .then(result => sendResponse(result), error =>
+          sendResponse({ ok: false, error: error.message || String(error) }));
+      return true;
+    }
+    if (tool === "chatgpt-mcp" && action === "service") {
+      const serviceAction = String(message.serviceAction || "");
+      if (!["start", "stop", "restart"].includes(serviceAction)) {
+        sendResponse({ ok: false, error: "不支持的 Tunnel 服务操作" });
+        return;
+      }
+      bridgeFetch("/v1/mcp/service", {
+        method: "POST",
+        body: JSON.stringify({ action: serviceAction })
+      }).then(result => sendResponse(result), error =>
+        sendResponse({ ok: false, error: error.message || String(error) }));
+      return true;
+    }
     if (tool === "chatgpt-mcp" && action === "setup") {
       bridgeFetch("/v1/mcp/setup", {
         method: "POST",

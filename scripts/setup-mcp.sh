@@ -59,7 +59,7 @@ Wants=network-online.target
 [Service]
 Type=simple
 EnvironmentFile="$env_file"
-ExecStart="$client" run --config "$profile"
+ExecStart="$client" run --config "$profile" --health.url-file "$private/health.url"
 Restart=on-failure
 RestartSec=5
 UMask=0077
@@ -76,7 +76,7 @@ elif [[ "$os" == "Darwin" ]]; then
 set -a
 source "$env_file"
 set +a
-exec "$client" run --config "$profile"
+exec "$client" run --config "$profile" --health.url-file "$private/health.url"
 EOF
   chmod 700 "$runner"
   runner_xml="$(printf "%s" "$runner" | sed -e "s/\&/\&amp;/g" -e "s/</\&lt;/g" -e "s/>/\&gt;/g")"

@@ -117,3 +117,11 @@ See [Secure MCP Tunnels](https://developers.openai.com/api/docs/guides/secure-mc
 5. Add the same Tunnel as a custom MCP plugin in ChatGPT. Verify client health/ready and perform a real tool call.
 
 If the Tunnel Client is absent, VidOtter reports the missing dependency in Settings without redirecting to other sites. An existing profile for a different Tunnel ID is not silently replaced. Local configuration presence is never proof of a healthy connection. See the [official Secure MCP Tunnel guide](https://developers.openai.com/api/docs/guides/secure-mcp-tunnels).
+
+## Streamlined ChatGPT onboarding (development branch)
+
+**No generic plugin ZIP is required.** ChatGPT can create a private custom MCP plugin with Connection: Tunnel and discover VidOtter's 13 tools automatically. A ZIP cannot replace the user's private Tunnel association or consent. Secure MCP Tunnel is not eligible for public plugin-directory distribution.
+
+Create a Tunnel ID once in OpenAI Platform. In VidOtter Settings → AI integrations → ChatGPT MCP, install the official tunnel-client when missing (the app downloads the matching official GitHub Release archive and verifies its published SHA-256 digest), enter the ID, and select Configure and start Tunnel. The local setup script reuses a valid credential already stored for this VidOtter user or explicitly provided in CONTROL_PLANE_API_KEY. Only first-time users without credentials are asked for the restricted Runtime API Key in a local terminal; other applications' secrets are never harvested.
+
+For an existing profile, VidOtter exposes Start, Stop, and Restart actions. The official tunnel-client health check with a successful control-plane poll is required before the daemon is shown Ready; configuration alone never proves remote connectivity. Click Copy Tunnel ID and Open ChatGPT Plugins, then in ChatGPT choose Plugins → + → Add custom MCP server → Connection: Tunnel and select/paste the ID. Configure application authentication when applicable, review the warning and create the private plugin. Validate by calling vidotter_status from ChatGPT. The installer never creates or authorizes plugins silently.

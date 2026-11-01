@@ -29,6 +29,57 @@ func validTunnelID(tunnelID string) bool {
 
 func (chatGPTMCPTool) Name() string { return "chatgpt-mcp" }
 
+// Tunnel IDs identify connections, but are not credentials. Never return
+// control-plane keys, file paths, or authentication environment values.
+var tunnelProfileID = regexp.MustCompile(`(?m)^\s*tunnel_id:\s*["']?(tunnel_[a-z0-9_]+)`)
+
+func tunnelIDFromProfile(path string) string {
+	file, err := os.Open(path)
+	if err != nil {
+		return ""
+	}
+	defer file.Close()
+	data, err := io.ReadAll(io.LimitReader(file, 128<<10))
+	if err != nil {
+		return ""
+	}
+	match := tunnelProfileID.FindSubmatch(data)
+	if len(match) != 2 || !validTunnelID(string(match[1])) {
+		return ""
+	}
+	return string(match[1])
+}
+
+func tunnelHealthURLFile(goos, home, localAppData, xdgConfigHome string) string {
+	if goos == "windows" {
+		return filepath.Join(localAppData, "VidOtter", "MCP", "health.url")
+	}
+	if xdgConfigHome == "" {
+		xdgConfigHome = filepath.Join(home, ".config")
+	}
+	return filepath.Join(xdgConfigHome, "vidotter", "mcp", "health.url")
+}
+
+// Trust only the official tunnel-client's readiness+poll health check.
+// A profile file or running process alone cannot establish connectivity.
+func tunnelIsReady(clientPath, urlFile string) bool {
+	if clientPath == "" {
+		return false
+	}
+	if stat, err := os.Stat(urlFile); err != nil || stat.IsDir() {
+		return false
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 1800*time.Millisecond)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, clientPath, "health", "--url-file", urlFile,
+		"--require-control-plane-poll", "--json")
+	cmd.Stdout = io.Discard
+	cmd.Stderr = io.Discard
+	// The official client exits nonzero when --require-control-plane-poll
+	// finds the daemon unhealthy, not ready, or missing a successful poll.
+	return cmd.Run() == nil
+}
+
 func mcpProfilePath(goos, home, localAppData, xdgConfigHome string) string {
 	if goos == "windows" {
 		return filepath.Join(localAppData, "VidOtter", "MCP", "vidotter.yaml")
@@ -64,27 +115,37 @@ func (chatGPTMCPTool) Snapshot(_ context.Context, _ bridgeConfig) toolSnapshot {
 	status := "disabled"
 	summary := "MCP Server 已内置 · ChatGPT 未配置"
 	detail := "本地 MCP 不需要独立安装。连接云端 ChatGPT 时才启用个人 Tunnel。"
+	tunnelID := tunnelIDFromProfile(profile)
+	ready := false
 	if client == "" {
 		status = "missing"
 		summary = "尚未安装 Tunnel Client"
-		detail = "先按 VidOtter 配置文档安装官方 tunnel-client；普通下载不受影响。"
+		detail = "点击安装官方客户端，VidOtter 会自动校验发行包；不会自动开启远程服务。"
 	} else if configured {
 		status = "checking"
 		summary = "Tunnel 已配置 · 连接待验证"
-		detail = "本地已保存配置；请用 doctor/health 检查运行状态，勿将配置视为在线。"
+		detail = "配置已存在；需要本地守护进程通过健康检查，ChatGPT 还须单独授权。"
+		healthURL := tunnelHealthURLFile(runtime.GOOS, home, os.Getenv("LOCALAPPDATA"), os.Getenv("XDG_CONFIG_HOME"))
+		if tunnelIsReady(client, healthURL) {
+			status, ready = "ready", true
+			summary = "Tunnel 服务 Ready"
+			detail = "本机 Tunnel 已经通过控制平面轮询健康检查；ChatGPT 插件是否创建还需用户确认。"
+		}
 	} else {
-		detail = "输入 Tunnel ID；首次启动还需要在本机输入受限 Runtime API Key。"
+		detail = "输入 Tunnel ID；首次需要本机有效的 Runtime API Key，已保存的凭据可以复用。"
 	}
 	return toolSnapshot{
 		Name: "chatgpt-mcp", DisplayName: "ChatGPT MCP", Kind: "integration",
 		Description: "可选云端连接：不影响普通视频下载，也不会默认开放远程访问。",
 		Platforms:   []string{"windows", "linux", "darwin"}, Delivery: "bundled", Required: false,
 		Capabilities: []string{"mcp.stdio", "tunnel.optional"}, SortOrder: 25,
-		Config: toolConfigView{Schema: []toolConfigField{}, Values: map[string]any{}},
-		Health: toolHealth{Status: status, OK: false, Summary: summary,
+		Config: toolConfigView{Schema: []toolConfigField{}, Values: map[string]any{"tunnelId": tunnelID}},
+		Health: toolHealth{Status: status, OK: ready, Summary: summary,
 			Detail: detail, CheckedAt: time.Now()},
 		Actions: []toolAction{{ID: "setup", Label: "配置并启动",
-			Description: "填写 Tunnel ID 后在本机终端完成 API Key 授权，设置用户级后台服务。"}},
+			Description: "Tunnel Client 安装后，在本机配置用户级后台服务。"},
+			{ID: "install-client", Label: "安装官方 Tunnel Client",
+				Description: "用户确认后下载 OpenAI 官方发行包，校验 SHA-256 并安装在用户目录。"}},
 	}
 }
 

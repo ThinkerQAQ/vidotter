@@ -99,7 +99,8 @@ def main():
             "--os", go_os, "--arch", arch, "--output", program)
         shutil.copytree("extension", stage / "extension", dirs_exist_ok=True,
                         ignore=shutil.ignore_patterns("test", ".DS_Store"))
-        for helper in ("Setup-VidOtter-MCP.ps1", "setup-mcp.sh"):
+        for helper in ("Setup-VidOtter-MCP.ps1", "setup-mcp.sh",
+                       "Manage-VidOtter-MCP.ps1", "manage-mcp.sh"):
             shutil.copy2(Path("scripts") / helper, stage / "scripts" / helper)
         print("PR preview: Bridge and extension overlaid on official verified v1.6.2 dependency bundle")
 

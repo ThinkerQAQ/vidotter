@@ -430,6 +430,8 @@
     body.appendChild(actionRow);
   }
 
+  let pendingMcpTunnelID = "";
+
   function renderChatGPTMCP(body, tool, health) {
     // Inline setup: the browser collects only a non-secret Tunnel identifier.
     // The restricted API key is entered only into the local OS terminal.
@@ -446,6 +448,9 @@
     tunnelInput.placeholder = "tunnel_0123456789abcdef0123456789abcdef";
     tunnelInput.setAttribute("aria-label", "Tunnel ID");
     tunnelInput.required = true;
+    const savedTunnelID = tool.config?.values?.tunnelId || "";
+    tunnelInput.value = pendingMcpTunnelID || savedTunnelID;
+    tunnelInput.addEventListener("input", () => { pendingMcpTunnelID = tunnelInput.value.trim(); });
     label.appendChild(tunnelInput);
 
     const hint = document.createElement("p");
@@ -466,8 +471,95 @@
     const message = document.createElement("small");
     message.className = "mcp-setup-message";
     message.setAttribute("role", "status");
+    const clientMissing = health.status === "missing";
+    if (clientMissing) {
+      const installClient = document.createElement("button");
+      installClient.type = "button";
+      installClient.className = "secondary";
+      installClient.textContent = "安装官方 Tunnel Client";
+      installClient.addEventListener("click", async () => {
+        if (!root.confirm("下载并安装 OpenAI 官方 Tunnel Client？\n\nVidOtter 将从 openai/tunnel-client 正式 GitHub Release 下载对应的系统版本，核验 SHA-256，安装到当前用户目录。\n不会自动创建 Tunnel 或开启远程服务。")) return;
+        installClient.disabled = true;
+        installClient.textContent = "正在校验并安装…";
+        message.textContent = "从 OpenAI 官方 Release 下载客户端并校验 SHA-256…";
+        try {
+          await api.send("bridge.tool.action", { tool: "chatgpt-mcp", toolAction: "install-client" });
+          await refresh();
+          api.setMessage("environmentMessage", "官方 Tunnel Client 已安装。现在可以填写 Tunnel ID 配置连接。", "ok");
+        } catch (error) {
+          message.textContent = error.message || String(error);
+          api.setMessage("environmentMessage", message.textContent, "error");
+          installClient.disabled = false;
+          installClient.textContent = "安装官方 Tunnel Client";
+        }
+      });
+      controls.prepend(installClient);
+      button.disabled = true;
+      button.title = "请先安装官方 Tunnel Client";
+    }
     controls.append(button, docs);
     form.append(label, hint, controls, message);
+    if (savedTunnelID || pendingMcpTunnelID) {
+      const nextSteps = document.createElement("div");
+      nextSteps.className = "mcp-next-steps";
+      const copy = document.createElement("button");
+      copy.type = "button";
+      copy.className = "secondary";
+      copy.textContent = "复制 Tunnel ID";
+      copy.addEventListener("click", async () => {
+        const id = tunnelInput.value.trim();
+        if (!/^tunnel_(?:[a-z0-9]{32}|[a-z0-9]{4}_[a-z0-9]{32})$/.test(id)) {
+          message.textContent = "请先填写正确的 Tunnel ID。";
+          return;
+        }
+        try {
+          await navigator.clipboard.writeText(id);
+          message.textContent = "Tunnel ID 已复制。";
+        } catch {
+          message.textContent = "无法访问剪贴板，请手动复制上面的 Tunnel ID。";
+        }
+      });
+      const chatGPT = document.createElement("a");
+      chatGPT.className = "secondary mcp-doc-link";
+      chatGPT.href = "https://chatgpt.com/#settings/Connectors";
+      chatGPT.target = "_blank";
+      chatGPT.rel = "noopener noreferrer";
+      chatGPT.textContent = "前往 ChatGPT 创建插件";
+      const help = document.createElement("p");
+      help.className = "settings-help";
+      help.textContent = "ChatGPT：Plugins → + → Add custom MCP server → Connection: Tunnel → 粘贴 Tunnel ID → 确认权限。无需上传 ZIP。";
+      nextSteps.append(copy, chatGPT, help);
+      form.appendChild(nextSteps);
+    }
+    if (savedTunnelID && !clientMissing) {
+      const serviceRow = document.createElement("div");
+      serviceRow.className = "tool-actions mcp-service-actions";
+      for (const serviceAction of ["start", "stop", "restart"]) {
+        const control = document.createElement("button");
+        control.type = "button";
+        control.className = "secondary";
+        control.textContent = { start: "启动服务", stop: "停止服务", restart: "重启服务" }[serviceAction];
+        control.addEventListener("click", async () => {
+          if (serviceAction !== "start" && !root.confirm(
+            "确认" + control.textContent + "？\n这将影响当前 ChatGPT 的远程工具调用，但不会删除已保存的 Tunnel 配置。"
+          )) return;
+          control.disabled = true;
+          try {
+            await api.send("bridge.tool.action", {
+              tool: "chatgpt-mcp", toolAction: "service", serviceAction
+            });
+            await refresh();
+            api.setMessage("environmentMessage", "已发送 Tunnel 服务命令，正在检查本机服务状态。", "ok");
+          } catch (error) {
+            message.textContent = error.message || String(error);
+            api.setMessage("environmentMessage", message.textContent, "error");
+            control.disabled = false;
+          }
+        });
+        serviceRow.appendChild(control);
+      }
+      form.appendChild(serviceRow);
+    }
     form.addEventListener("submit", async event => {
       event.preventDefault();
       const tunnelId = tunnelInput.value.trim();

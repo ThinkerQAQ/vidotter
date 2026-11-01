@@ -79,3 +79,5 @@ go -C tools/vidotterdev run . build
 项目代码和文档采用 [Apache-2.0](LICENSE)；第三方组件采用各自的许可，见 [NOTICE](NOTICE) 和 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
 
 **卸载（Windows 图形安装器）**：新版开始菜单 → VidOtter → **Uninstall VidOtter**，也可以直接打开安装目录里的 VidOtter-Maintenance.exe，选择 **Remove all components（删除所有组件）** 并确认。Qt 维护工具会清理程序和 Native Messaging 注册，但保留 Data/ 用户配置和下载。旧测试包如果没有开始菜单卸载入口，使用安装目录中的维护工具即可；不要把 VidOtter-Maintenance.exe.new 当作卸载器。
+
+**ChatGPT 最简接入**：创建个人 Tunnel ID → 在 VidOtter 设置页按需安装经 SHA-256 校验的官方 Tunnel Client、填写 ID 并配置自启动 → 复制 ID，在 ChatGPT Plugins 中选择 Tunnel 创建私有插件。无需上传插件 ZIP 或单独编写 MCP 工具定义。详见 docs/zh-CN/how-to/mcp.md。

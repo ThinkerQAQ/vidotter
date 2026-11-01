@@ -100,3 +100,9 @@ const backgroundSource = fs.readFileSync(path.join(__dirname, "../background.js"
 assert.match(backgroundSource, /tool === "chatgpt-mcp" && action === "setup"/);
 assert.match(backgroundSource, /bridgeFetch\("\/v1\/mcp\/setup"/);
 assert.match(backgroundSource, /JSON\.stringify\(\{ tunnelId: String\(message\.tunnelId/);
+assert.match(environmentSource, /安装官方 Tunnel Client/);
+assert.match(environmentSource, /复制 Tunnel ID/);
+assert.match(environmentSource, /前往 ChatGPT 创建插件/);
+assert.match(environmentSource, /start", "stop", "restart/);
+assert.match(backgroundSource, /bridgeFetch\("\/v1\/mcp\/client\/install"/);
+assert.match(backgroundSource, /bridgeFetch\("\/v1\/mcp\/service"/);

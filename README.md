@@ -79,3 +79,5 @@ Build outputs go to `.build/out/`. This does not install the application. Follow
 VidOtter code and documentation use [Apache-2.0](LICENSE). Third-party components have separate terms: [NOTICE](NOTICE), [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
 **Uninstall (Windows installer):** New installer candidates provide **Start → VidOtter → Uninstall VidOtter**, or launch VidOtter-Maintenance.exe from the installed directory and choose **Remove all components**. The Qt maintenance tool removes managed program files and Native Messaging registration while preserving local Data/. Older installer candidates may not have the Start Menu shortcut. VidOtter-Maintenance.exe.new is not the ordinary uninstaller.
+
+**Simplified ChatGPT setup:** Create your Tunnel ID once, then use VidOtter Settings to install the verified official client when needed, configure the local runtime and copy the ID into ChatGPT Plugins → Add custom MCP server → Tunnel. No plugin ZIP or per-tool schema upload is needed. See docs/how-to/mcp.md.
