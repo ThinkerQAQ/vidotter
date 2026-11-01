@@ -29,6 +29,7 @@ def validate(path: Path) -> list[str]:
         return [f'Missing README: {path}']
     source = path.read_text(encoding='utf-8')
     found_topics = re.findall(r'^##\s+(.+)\s*$', source, flags=re.MULTILINE)
+    found_topics = [re.sub(r'^\d+(?:\.\d+)*\.?\s+', '', topic) for topic in found_topics]
     if len(found_topics) != len(TOPICS) or any(
         not actual.startswith(expected)
         for actual, expected in zip(found_topics, TOPICS)

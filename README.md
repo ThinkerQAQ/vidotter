@@ -1,132 +1,203 @@
 # VidOtter
 
-**English** · [简体中文](README_ZH.md) · [Releases](https://github.com/ThinkerQAQ/vidotter/releases) · [Issues](https://github.com/ThinkerQAQ/vidotter/issues)
+[简体中文](README_ZH.md) · [Downloads](https://github.com/ThinkerQAQ/vidotter/releases/tag/v1.6.3) · [Issues](https://github.com/ThinkerQAQ/vidotter/issues)
 
-## Introduction
+- [1. Introduction](#1-introduction)
+- [2. Quick Start](#2-quick-start)
+- [3. Configuration](#3-configuration)
+- [4. Optional Features](#4-optional-features)
+- [5. Development](#5-development)
+- [6. License](#6-license)
 
-VidOtter detects media playing in **Chrome or Edge** and downloads it through a **local Go Bridge**. It is for people who want to save video they are authorized to access without copying temporary media URLs or setting up a separate downloader for every website.
+## 1. Introduction
 
-- **Everyday use:** detect MP4/HLS media in the current tab, choose a resource, follow the download job, and open the resulting file. DASH and separated audio/video may need additional tools and are not universally supported.
-- **One workspace:** Popup, Side Panel, and the loopback Web UI share the same downloads, preferences, and task history.
-- **Optional:** webpage resolution via yt-dlp; captions, local speech recognition, and subtitle translation; a private MCP connection for ChatGPT; restricted browser automation. None is needed for a first MP4 download.
-- **Separate Android client:** paste/share supported direct media URLs; it is not a remote desktop Bridge or a replacement for the desktop extension.
+Saving a video you are allowed to download can involve finding a temporary playback URL, downloading HLS segments, and merging them into a file.
 
-VidOtter does **not** bypass DRM, paywalls, or access controls, and detecting a resource does not guarantee a successful download. The optional [Remote Browser MCP](https://github.com/ThinkerQAQ/remote-browser-mcp) integration is a separately maintained dependency, not part of VidOtter's core.
+VidOtter handles this through a browser extension and a local download service called the Bridge. It provides:
 
-![VidOtter browser interface (older v1.3.0 capture)](assets/first-run-detect-zh.png)
+- MP4/HLS detection, download jobs, progress tracking, and access to downloaded files.
+- A popup, side panel, and full-screen workspace sharing the same jobs, settings, and history.
+- Optional subtitles, speech recognition, translation, and ChatGPT MCP.
 
-*Older Chinese Detect screen for orientation; layouts and labels may differ in newer releases.*
+The desktop application runs on Windows, macOS, and Linux with Chrome, Chromium, or Edge. Android is a separate client, described below.
 
-## Quick Start
+![VidOtter Detect interface](assets/first-run-detect-zh.png)
 
-### 1. Prerequisites
+The screenshot is from v1.3.0 and illustrates the Detect view.
 
-| Platform | v1.6.3 installer / archive | First-download requirements |
-| --- | --- | --- |
-| Windows | **x64 GUI `.exe`**, ZIP fallback | Edge or Chrome; no Go, Node.js, or administrator account required |
-| Linux | **x64 GUI `.run`**, x64/ARM64 TAR.GZ fallback | Chrome/Chromium or Edge; install system FFmpeg for HLS muxing or separated tracks |
-| macOS | **Intel GUI `.dmg`**, Intel/Apple Silicon TAR.GZ fallback | Chrome/Chromium or Edge; install system FFmpeg for HLS muxing or separated tracks |
+## 2. Quick Start
 
-**No account, API key, speech model, or Tunnel is required** for ordinary browser downloads. The Windows release includes a limited FFmpeg Slim sidecar for VidOtter's media workflows; Linux/macOS archives do not include FFmpeg. For a simple, directly playable MP4, optional AI/media tools are unnecessary.
+Suppose an MP4 plays in your browser and you want to save it locally, then check that the downloaded file plays.
 
-### 2. Install the app (recommended: GUI installer)
+Complete the workflow in this order:
 
-Open the [**v1.6.3 Release**](https://github.com/ThinkerQAQ/vidotter/releases/latest) and choose the matching asset:
+1. Prepare the environment.
+2. Install VidOtter.
+3. Load the browser extension.
+4. Play the video and download it.
+5. Check the downloaded file.
 
-- **Windows x64:** download `VidOtter-Setup-v1.6.3-windows-amd64.exe` and run it.
-- **Linux x64:** download `VidOtter-Setup-v1.6.3-linux-amd64.run`, allow execution and open it. From the download directory you can use `chmod +x VidOtter-Setup-v1.6.3-linux-amd64.run && ./VidOtter-Setup-v1.6.3-linux-amd64.run`.
-- **macOS Intel:** open `VidOtter-Setup-v1.6.3-macos-amd64.dmg`, launch the bundled installer app and follow the wizard.
-- **macOS Apple Silicon / Linux ARM64:** use the **matching TAR.GZ archive** and the manual registration steps below; a native GUI installer for those CPU targets has not been validated.
+### 2.1. Prepare the environment
 
-The installer adds the local Bridge and Native Messaging registration, and on **Finish** opens the browser-extension activation instructions and installation folder. It **does not silently authorize** an unpacked browser extension or a ChatGPT Tunnel. The v1.6.3 first-party installers are **not code-signed or Apple-notarized**; Windows SmartScreen or macOS Gatekeeper may display a publisher warning. Review the source and asset checksums before choosing whether to run an unsigned installer.
+Use a Windows, macOS, or Linux computer with Chrome, Chromium, or Edge.
 
-**Manual ZIP/TAR.GZ alternative (all published desktop architectures):** fully extract the matching archive into a permanent location, keeping `bin/` and `extension/` together. Open a terminal **in its root**, then register Native Messaging:
+Release users do not need Go, Node.js, an OpenAI account, or an API key. A first plain MP4 download needs no subtitle tools or models. HLS muxing and separate audio/video processing require FFmpeg: Windows packages include it; Linux/macOS users install it separately.
 
-**Windows — PowerShell**
+### 2.2. Install VidOtter
+
+First, download the installer for your system from the [v1.6.3 Release](https://github.com/ThinkerQAQ/vidotter/releases/tag/v1.6.3):
+
+- Windows x64: run `VidOtter-Setup-v1.6.3-windows-amd64.exe`.
+- macOS Intel: open `VidOtter-Setup-v1.6.3-macos-amd64.dmg` and launch the installer inside.
+- Linux x64: download `VidOtter-Setup-v1.6.3-linux-amd64.run` and run these commands in the download directory:
+
+```bash
+chmod +x VidOtter-Setup-v1.6.3-linux-amd64.run
+./VidOtter-Setup-v1.6.3-linux-amd64.run
+```
+
+Follow the installer to completion. It registers the local service and opens the extension activation instructions and installation folder. The browser launches the Bridge on demand; you do not need to keep a terminal open.
+
+**For Apple Silicon, Linux ARM64, or a manual installation:** download the matching ZIP/TAR.GZ from the same Release. Extract the whole archive into a permanent directory, keeping `bin/` and `extension/` under the same root. Open a terminal in that root and run:
+
+Windows PowerShell:
 
 ```powershell
 .\bin\vidotterdev.exe install
 ```
 
-**Linux / macOS — Terminal**
+Linux/macOS:
 
 ```bash
 ./bin/vidotterdev install
 ```
 
-**Verification for manual registration:** the command prints `Native Messaging installed:` and `Host manifest:` under `Data/native-host/`. If you move an archive installation, re-run `install` from its new directory. GUI and archive installs both let the browser launch the Bridge on demand; neither requires keeping a terminal open.
+The output should include `Native Messaging installed:` and `Host manifest:`, confirming service registration. If you move a manual installation, run this command again from its new location.
 
-### 3. Activate the browser extension (required)
+### 2.3. Load the browser extension
 
-1. In Edge open `edge://extensions`; in Chrome open `chrome://extensions`.
-2. Turn on **Developer mode** and click **Load unpacked**.
-3. Select the **`extension/` directory**, containing `manifest.json`, in the installed VidOtter folder (the GUI installer opens it automatically). Do **not** select a ZIP or the project root.
-4. Pin VidOtter to the toolbar and open it. In **Settings**, confirm that the Bridge/environment is healthy.
+Next, connect the browser to the installed service:
 
-The extension is distributed locally, **not through a browser store**. Browser confirmation cannot be skipped. If its ID differs from the registered one, copy the 32-character ID from the extensions page and re-register the Bridge. For manual ZIP/TAR.GZ installations run, from the extracted root:
+1. Open `edge://extensions` in Edge or `chrome://extensions` in Chrome.
+2. Enable **Developer mode** and select **Load unpacked**.
+3. Select the installed VidOtter `extension/` folder, which directly contains `manifest.json`.
+4. Open VidOtter and check the browser/service connection in **Settings**.
+
+The extension is installed from local files and is not yet listed in a browser store. This step requires confirmation in the browser.
+
+If the Native Messaging host cannot be found, copy the 32-character extension ID from the extensions page and register it again from the installation root:
 
 ```powershell
-# Windows; replace with the actual ID from Edge/Chrome
+# Windows: replace the placeholder with the actual extension ID
 .\bin\vidotterdev.exe install --extension-id YOUR_32_CHARACTER_ID
 ```
 
-On Linux/macOS use `./bin/vidotterdev install --extension-id YOUR_32_CHARACTER_ID`. After updating extension files, **Reload** VidOtter in the browser's extensions page; replacing Bridge binaries does not reload the browser's background worker.
+On Linux/macOS, use `./bin/vidotterdev install --extension-id YOUR_32_CHARACTER_ID`. Reload VidOtter on the extensions page afterward.
 
-### 4. Complete one download
+### 2.4. Play the video and download it
 
-1. Open a permitted video and **start playback**. For a public MP4 test, use the [MDN CC0 flower video](https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4).
-2. Open VidOtter **on the same tab**. Under **Detect / 资源嗅探**, choose a complete MP4 or HLS playlist rather than an individual media segment.
-3. Choose **No subtitles** and click **Download** once.
-4. Open **Downloads / 下载任务**, find the newly created job, and wait for **Completed / 已完成**. Use the output-file action to open it, or check the default `Data/downloads/` folder under your installation.
+Open the [MDN CC0 sample video](https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4) and start playback.
 
-**Done means all three checks pass:** the extension can reach the Bridge, a download job exists, and its completed **media file can be opened**. Merely installing, seeing a green status, or detecting a URL is **not** a full download test. Actual browser playback acceptance must be performed on your machine.
+Stay on that tab and open VidOtter:
 
-Use **Open workspace** in the extension to open the full-screen view at `http://127.0.0.1:17891/console/`. It works through the extension relay; opening that loopback address alone does not authorize privileged actions.
+1. Find the MP4 in **Detect**.
+2. Select **No subtitles**.
+3. Click **Download**.
+4. Open **Downloads** and find the new job.
 
-### 5. Troubleshooting
+For HLS, select the complete playlist rather than an individual media segment.
 
-| Symptom | What to check |
-| --- | --- |
-| **Native Messaging host not found** / unhealthy environment | Re-run `vidotterdev install` from the correct extracted root. Check the extension ID and press **Reload** on `edge://extensions` / `chrome://extensions`. |
-| Extension interface changed, but actions say **unsupported Tool operation** | Reload the unpacked extension to restart its Manifest V3 background worker; then reopen Settings. Do not delete `Data/`. |
-| Bridge never becomes ready | Check whether `127.0.0.1:17891` is already occupied; inspect `Data/logs/`. Identify the process before stopping it. |
-| **No media detected** | Play or seek in the original tab. Some sites expose no downloadable MP4/HLS, or use DRM. Detection is not universal. |
-| Job fails, HTTP 403, or media expired | Read the job error; return to the permitted page and trigger a **fresh** media request. Some tasks can resume the same ID; others require a new download. |
-| HLS cannot merge, or subtitle processing fails | Check FFmpeg availability; local captions/translation also need optional executable(s) and model files. Select **No subtitles** first. |
-| Upgrade seems unchanged | Stop the old Bridge, update **all** program files together, re-register the Native Host, reload the unpacked extension, then compare versions in **Settings → About**. |
+### 2.5. Check the downloaded file
 
-**Upgrade / uninstall:** pause jobs and back up `Data/`. GUI installations use the installed **VidOtter Maintenance** tool (Windows: Start → VidOtter → Uninstall VidOtter; other platforms: Maintenance executable). The first offline installer has **no live hosted update feed**: to change versions, use the Maintenance tool to remove the installed program and run the matching new installer, preserving your original `Data/` and download files. For archive installations replace matching program directories `bin/`, `extension/`, and packaged `tools/`, retain `Data/`, re-run `install`, and reload the extension. Archive unregistration: `.\bin\vidotterdev.exe uninstall` (Windows) or `./bin/vidotterdev uninstall` (Linux/macOS), then remove the extension from the browser. Program uninstall never deliberately erases `Data/` or downloaded media; back up before manually removing the installation directory.
+Wait for **Completed**, then open the downloaded file and confirm that it plays. The default output directory is `Data/downloads/` under the installation root.
 
-## Configuration
+This verifies the complete path from browser detection through local job creation to a downloaded file.
 
-The Bridge creates `Data/config.toml` under the installed directory; **no fields need manual editing for a first download**. Prefer **VidOtter → Settings**: the UI validates inputs and writes a complete configuration file.
+For a larger interface, select **Open workspace** in the extension to open `http://127.0.0.1:17891/console/`. Workspace actions use the extension relay, so open it through the extension.
 
-| Setting | Default | When to change |
-| --- | --- | --- |
-| `download.output_dir` | `Data/downloads/` | Choose a writable output directory |
-| `download.concurrent` | `12` | Downloader concurrency, valid range 1–64 |
-| `download.quality` | Automatic (`""`) | `best` or a supported resolution such as `720` |
-| `proxy.enabled`, `proxy.url` | `false`, empty | Explicit HTTP proxy when required; proxy credentials and SOCKS are not supported |
-| `interface.language` | `zh-CN` | `en` or `zh-CN`; this does not translate video or subtitles |
-| `interface.open_mode` | `popup` | `popup` or `sidePanel` |
+### 2.6. Troubleshooting
 
-Other tool paths, sniffer switches, logging, and model selection are available in Settings. **Do not replace `config.toml` with a partial snippet**: a malformed or incomplete file can cause defaults to be used. For a manual change, back it up, stop Bridge, edit, restart, and verify with a new job.
+- **The extension cannot connect:** check the extension ID, repeat `install` above, and reload the extension. If it still fails, inspect `Data/logs/` and check whether another process occupies `127.0.0.1:17891`.
+- **No video is detected:** play or seek in the original tab to trigger a fresh media request. Some websites expose no downloadable MP4/HLS or use DRM.
+- **HTTP 403 or an expired URL:** replay the original page to refresh the media request, then follow the job's instructions to resume or download again.
+- **HLS muxing fails:** check FFmpeg availability. For subtitle failures, select No subtitles first and verify the basic download.
+- **An old version remains, or an action reports unsupported Tool operation:** stop the old Bridge, update the program files, reload the extension, and compare the version in **Settings → About**. Keep `Data/` intact.
 
-`Data/bridge.json` can contain a local auth token; `Data/jobs.json` and `Data/work/` may contain sensitive source URLs or checkpoints. Never publish or share `Data/` verbatim. The Bridge HTTP listener must stay on loopback, not a public interface.
+## 3. Configuration
 
-## Optional Features
+No manual configuration is required for the first download. To change the output directory, interface, or tools, open **VidOtter → Settings** and save your changes.
 
-These are **not** first-run prerequisites:
+Common settings:
 
-- **More formats and webpages:** enable **yt-dlp** through its tool card to resolve supported pages; FFmpeg handles muxing/merging. Windows v1.6.3 contains FFmpeg Slim, whisper.cpp and llama.cpp executables; **models are not bundled**. Linux/macOS users supply compatible local executables as needed.
-- **Subtitles:** choose site captions (needs yt-dlp and a supported source), local transcription (FFmpeg + whisper.cpp + downloaded model), or translation (llama.cpp + separately licensed model). For translation from ASR, explicitly set the spoken language. Check subtitle files and timestamps, not just the video job.
-- **Private MCP / ChatGPT:** the desktop executable exposes **13 MCP tools** via `--mcp-stdio`; the same Bridge still handles ordinary downloads. A private ChatGPT Tunnel is **optional**. In **Settings → AI integrations → ChatGPT MCP**, first create your personal Tunnel on OpenAI Platform, use **Install official Tunnel Client** if missing (verified upstream SHA-256), enter your Tunnel ID, and select **Configure and start Tunnel**. The restricted Runtime API Key (Tunnels Read + Use) is requested in a *local terminal only if no valid local credential is available*; it is not sent through the extension. Settings can start, stop and restart the user-level service and separately check readiness. In ChatGPT create a **private** custom MCP plugin with Connection: Tunnel and the same ID; discover the tools automatically and verify `vidotter_status`. **Local Tunnel readiness is not proof of a successful ChatGPT plugin connection.** Never publish your API key or local profile.
-- **Browser automation:** optional [Remote Browser MCP](https://github.com/ThinkerQAQ/remote-browser-mcp) integration through VidOtter Settings. It operates in isolated background tabs; interactive clicks require explicit opt-in. Do not expose arbitrary JavaScript, private tabs, browser cookies, or a second public Tunnel. Windows public-MP4 smoke coverage is **not** proof of universal website support.
-- **Android (source-built, separate):** supports pasted/shared direct MP4/HLS URLs on Android API 26+ (Android 8.0). It does **not** use desktop Native Messaging, desktop jobs, yt-dlp, or ChatGPT Tunnel. There is no Android APK in the current desktop Release. Building it requires JDK 17, Android SDK 35/NDK, gomobile, and the Gradle Wrapper: from a configured source checkout run `go -C tools/vidotterdev run . android-bind` followed by `go -C tools/vidotterdev run . android-build`. Device-level testing is separate.
+- `download.output_dir`: output directory; defaults to `Data/downloads/`.
+- `download.concurrent`: download concurrency; defaults to `12`, valid range `1–64`.
+- `download.quality`: automatic by default; also accepts `best` or a source-supported height such as `720`.
+- `proxy.enabled`, `proxy.url`: proxy disabled by default; HTTP proxies are supported, proxy credentials and SOCKS are not.
+- `interface.language`: interface language; defaults to `zh-CN`, also accepts `en`.
+- `interface.open_mode`: defaults to `popup`, also accepts `sidePanel`.
 
-## Development
+Settings are saved in `Data/config.toml` under the installation root. The settings page validates and writes a complete file. For manual edits, back it up, stop the Bridge, edit, and restart. Do not replace the file with a partial snippet.
 
-Clone source only if you want to build or contribute; users of a published archive do not need developer tools. Current source requirements are **Go 1.25+** (the Bridge module specifies `go 1.25.0`), **Node.js** for extension tests (CI uses Node 22), and Git.
+**Upgrade and uninstall:** pause jobs and back up `Data/`. GUI users remove the old program through **VidOtter Maintenance**, then run the new installer; no online update feed is currently published. Manual users replace matching `bin/`, `extension/`, and packaged `tools/` directories, retain `Data/`, register again, and reload the extension. Program uninstall preserves data and downloads; back them up before manually deleting the installation folder.
+
+To unregister a manual installation, run `.\bin\vidotterdev.exe uninstall` on Windows or `./bin/vidotterdev uninstall` on Linux/macOS, then remove the browser extension.
+
+## 4. Optional Features
+
+Choose these features for the relevant scenario. They are not first-download prerequisites.
+
+### 4.1. Case 1: More formats or webpage downloads
+
+Use the built-in downloader for MP4/HLS. Install yt-dlp through Settings when you need to resolve other supported webpages; configure FFmpeg for muxing and merging. DASH and separate audio/video support depend on the source and available tools.
+
+### 4.2. Case 2: Subtitles or translation
+
+Choose the workflow that matches the subtitle source:
+
+- Site captions: requires yt-dlp and captions available from the source.
+- Local speech recognition: requires FFmpeg, whisper.cpp, and a speech model.
+- Subtitle translation: requires llama.cpp and a translation model; specify the spoken language when using speech recognition output.
+
+Install or configure tools and models in Settings, then create a job with the desired subtitle options. Check the resulting subtitle files, text, and timestamps.
+
+Windows v1.6.3 includes FFmpeg Slim, whisper.cpp, and llama.cpp executables; download models separately. Linux/macOS users supply compatible tools as needed.
+
+### 4.3. Case 3: Manage downloads through ChatGPT
+
+The desktop executable provides STDIO MCP through `--mcp-stdio`, reusing the local Bridge.
+
+To connect ChatGPT:
+
+1. Create your Tunnel on OpenAI Platform.
+2. Open **Settings → AI integrations → ChatGPT MCP**. Install the official Tunnel Client if needed, enter the Tunnel ID, and choose **Configure and start Tunnel**.
+3. If no reusable credential is available, enter a Runtime API Key with Tunnels Read + Use permissions when prompted in the local terminal.
+4. Create a private custom MCP plugin in ChatGPT, choose Tunnel as the connection type, and enter the same Tunnel ID.
+5. Call `vidotter_status` to verify the connection. After submitting a download, use its returned job ID to check the result.
+
+Tunnel Ready confirms the local connection; a real tool response in ChatGPT verifies the client connection. Credentials are handled in the local terminal, not sent through the extension.
+
+### 4.4. Case 4: Browser interaction
+
+Install the optional [Remote Browser MCP](https://github.com/ThinkerQAQ/remote-browser-mcp) component in Settings. VidOtter uses its independent release package and limits it to controlled background tabs. Interactive clicking requires explicit local opt-in.
+
+If ChatGPT already has a Remote Browser Tool connection, reuse it for page actions and use VidOtter for media discovery and downloads. No second Tunnel is needed.
+
+### 4.5. Case 5: Android
+
+Android is an independent native client for Android 8.0 / API 26 and later. It downloads pasted/shared direct MP4/HLS URLs. It does not connect to desktop jobs, Native Messaging, yt-dlp, or ChatGPT Tunnel.
+
+The desktop Release contains no APK. Source builds require JDK 17, Android SDK 35/NDK, gomobile, and the Gradle Wrapper. After preparing them, run:
+
+```bash
+go -C tools/vidotterdev run . android-bind
+go -C tools/vidotterdev run . android-build
+```
+
+## 5. Development
+
+Development requires Git, Go **1.25+**, and Node.js (CI uses Node 22). Release users do not need these tools.
+
+### 5.1. Open and verify the project
 
 ```bash
 git clone https://github.com/ThinkerQAQ/vidotter.git
@@ -135,22 +206,34 @@ go -C tools/vidotterdev run . verify
 go -C tools/vidotterdev run . build
 ```
 
-`verify` executes both Go modules' tests, JavaScript syntax checks, and extension test scripts. `build` writes the current OS/architecture Bridge to `.build/out/`; **it does not register Native Messaging or create a distributable release**. Cross-compile, for example:
+`verify` runs tests for both Go modules, extension JavaScript syntax checks, and script tests. Success prints `Go and browser checks passed`. `build` compiles the current platform's Bridge into `.build/out/` without installing it.
+
+For example, cross-compile for Windows:
 
 ```bash
 go -C tools/vidotterdev run . build --os windows --arch amd64
 ```
 
-For an isolated development installation, use `go -C tools/vidotterdev run . deploy --target /absolute/path/to/vidotter-dev` from source, then register Native Messaging **on the target OS** using its `bin/vidotterdev`. Do not overwrite a running Windows Bridge or an existing user's `Data/`.
+### 5.2. Install a development version
 
-Formal release packaging uses `go -C tools/vidotterdev run . package`; it requires matching Windows FFmpeg/whisper/llama sidecars, license/source notices, and the pinned FFmpeg source archive. `--allow-missing-tools` produces an **incomplete development bundle only** and must not be published as a complete Release. The Go maintainer also supports `licenses`, `tool-install`, `ffmpeg-native`, and Android build commands. CI builds and tests on **Windows, macOS and Linux**; this does not replace real browser downloads or Android-device validation.
+Run from the source checkout, replacing the target with an isolated development installation directory:
 
-Basic flow: **browser extension → Native Messaging → authenticated local Bridge → download worker → `Data/`**. Optional MCP connects to the same Bridge through stdio; it is not a second downloader. Contribution guidance: [AGENTS.md](AGENTS.md).
+```bash
+go -C tools/vidotterdev run . deploy --target /absolute/path/to/vidotter-dev
+```
 
-## License
+In that deployment directory on the target system, run `bin/vidotterdev install`, or `bin\vidotterdev.exe install` on Windows. Load the extension as described in Quick Start.
 
-VidOtter's **original source** is [Apache-2.0](LICENSE); [NOTICE](NOTICE) and [third-party notices](THIRD_PARTY_NOTICES.md) document other obligations. These terms **do not license downloaded media, user content, third-party websites, or separately distributed models**.
+### 5.3. Packaging and CI
 
-For example, the Windows distribution ships an independent **FFmpeg Slim** binary using FFmpeg under **LGPL-2.1-or-later**. The corresponding source for v1.6.3 is provided as [FFmpeg-n8.1.2-source.tar.gz](https://github.com/ThinkerQAQ/vidotter/releases/download/v1.6.3/FFmpeg-n8.1.2-source.tar.gz), with accompanying license/source files in that release. Observe the *matching release's* component notices; other models and runtimes have their own terms.
+Use `tools/vidotterdev/` for builds, verification, and packaging. Formal packaging uses `go -C tools/vidotterdev run . package` and requires verified sidecar tools, license materials, and the pinned FFmpeg source archive. `--allow-missing-tools` is for incomplete development bundles only.
 
-Use VidOtter only for media you are permitted to download. The project is not endorsed by source websites, provides no DRM bypass, and does not determine copyright ownership for you. Task history may contain signed URLs; browser session cookies remain in the extension and must not be put in public logs or repositories. Private Tunnel access can permit AI-side tool execution; grant it only to trusted clients and never expose the loopback Bridge port. The first Qt GUI installers use Qt Installer Framework 4.7 under its GPL-3.0/Qt Company Exception terms (see third-party notices). They are not signed or notarized; remote auto-updates and ARM64 GUI installers are not yet published.
+[CI](.github/workflows/ci.yml) runs tests, builds, and README link checks on Windows, macOS, and Linux. Real browser downloads, GUI installer interaction, and Android devices require separate acceptance testing. See [AGENTS.md](AGENTS.md) for contribution rules.
+
+## 6. License
+
+Original source uses [Apache-2.0](LICENSE); third-party components retain their own licenses. See [NOTICE](NOTICE) and [third-party notices](THIRD_PARTY_NOTICES.md). Windows FFmpeg Slim uses LGPL-2.1-or-later, with matching source supplied in the same Release. Qt Installer Framework uses GPL-3.0 with the Qt Company Exception. Model weights and downloaded media are not covered by the source license.
+
+Download only media you are allowed to save. VidOtter does not bypass DRM, paywalls, or access controls and is not affiliated with content platforms. Current GUI installers lack Windows code signing and Apple notarization; ARM64 targets use archive installations.
+
+`Data/` may contain source information, checkpoints, and local authentication details; keep it out of public repositories. The extension handles browser sessions, the Bridge listens on loopback, and private MCP access should be granted only to trusted clients.
