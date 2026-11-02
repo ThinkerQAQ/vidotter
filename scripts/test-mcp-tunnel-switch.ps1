@@ -8,9 +8,11 @@ $oldKey = $env:CONTROL_PLANE_API_KEY
 $oldBad = $env:VIDOTTER_FAKE_BAD_ID
 $oldHealth = $env:VIDOTTER_FAKE_FAIL_HEALTH
 $oldAttempts = $env:VIDOTTER_MCP_HEALTH_ATTEMPTS
-$startup = Join-Path ([Environment]::GetFolderPath('Startup')) 'VidOtter MCP Tunnel.lnk'
-$existingShortcut = Test-Path $startup
-if ($existingShortcut) { throw 'Refusing to replace an existing user startup shortcut in smoke tests' }
+$startup = Join-Path $work 'startup/VidOtter MCP Tunnel.lnk'
+$env:VIDOTTER_MCP_TEST_MODE = '1'
+$env:VIDOTTER_MCP_TEST_STARTUP_DIR = Split-Path -Parent $startup
+$oldMode = $null
+$oldStartupDir = $null
 try {
     foreach ($dir in @('app/scripts','app/bin','mock','local')) {
         New-Item -ItemType Directory -Force -Path (Join-Path $work $dir) | Out-Null
