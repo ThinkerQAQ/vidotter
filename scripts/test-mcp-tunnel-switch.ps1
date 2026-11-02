@@ -20,11 +20,12 @@ try {
     Set-Content -Path (Join-Path $work 'app/bin/vidotter-windows-amd64.exe') -Value 'fake'
     $clientScript = Join-Path $work 'mock/tunnel-mock.ps1'
     @'
-$command = $args[0]
+$allArgs = $args
+$command = $allArgs[0]
 function ValueAfter([string]$name) {
-    $index = [Array]::IndexOf($args, $name)
-    if ($index -lt 0 -or $index + 1 -ge $args.Count) { exit 8 }
-    return $args[$index + 1]
+    $index = [Array]::IndexOf($allArgs, $name)
+    if ($index -lt 0 -or $index + 1 -ge $allArgs.Count) { exit 8 }
+    return $allArgs[$index + 1]
 }
 if ($command -eq 'init') {
     $dir = ValueAfter '--profile-dir'
@@ -37,7 +38,8 @@ if ($command -eq 'init') {
 if ($command -eq 'doctor') {
     $path = ValueAfter '--config'
     $data = Get-Content -Raw $path
-    if (!$env:CONTROL_PLANE_API_KEY -or $data.Contains($env:VIDOTTER_FAKE_BAD_ID) -and $env:VIDOTTER_FAKE_BAD_ID) { exit 7 }
+    if (!$env:CONTROL_PLANE_API_KEY) { exit 7 }
+    if ($env:VIDOTTER_FAKE_BAD_ID -and $data.Contains($env:VIDOTTER_FAKE_BAD_ID)) { exit 7 }
     exit 0
 }
 if ($command -eq 'health') {
