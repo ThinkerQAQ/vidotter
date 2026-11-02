@@ -33,17 +33,20 @@ jobs:
       - run: go -C tools/vidotterdev run . build
       - name: Verify Unix MCP setup syntax
         if: runner.os != 'Windows'
-        run: bash -n scripts/setup-mcp.sh scripts/manage-mcp.sh
+        run: bash -n scripts/setup-mcp.sh scripts/manage-mcp.sh scripts/manage-background.sh
       - name: Test Unix Tunnel switching without network
         if: runner.os == 'Linux'
         run: bash scripts/test-mcp-tunnel-switch.sh
+      - name: Test Linux background lifecycle in isolated user-service manager
+        if: runner.os == 'Linux'
+        run: bash scripts/test-background-lifecycle.sh
       - name: Verify Windows MCP setup syntax
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
           $tokens = $null
           $errors = $null
-          foreach ($script in @('scripts/Setup-VidOtter-MCP.ps1', 'scripts/Manage-VidOtter-MCP.ps1')) {
+          foreach ($script in @('scripts/Setup-VidOtter-MCP.ps1', 'scripts/Manage-VidOtter-MCP.ps1', 'scripts/Manage-VidOtter-Background.ps1', 'scripts/test-background-lifecycle.ps1')) {
             $tokens = $null
             $errors = $null
             [System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path $script), [ref]$tokens, [ref]$errors) | Out-Null
@@ -53,6 +56,10 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: ./scripts/test-mcp-tunnel-switch.ps1
+      - name: Test Windows scheduled-task lifecycle using isolated paths
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: ./scripts/test-background-lifecycle.ps1
       - name: Verify target dependency licenses
         if: runner.os == 'Linux'
         run: go -C tools/vidotterdev run . licenses

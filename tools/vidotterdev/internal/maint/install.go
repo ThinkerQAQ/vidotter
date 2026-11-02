@@ -74,6 +74,9 @@ func removeReg(key string) error {
 }
 
 func Install(root, extensionID string) error {
+	if err := assertInstallOwnership(root); err != nil {
+		return err
+	}
 	binary, err := exeForRoot(root)
 	if err != nil {
 		return err
@@ -140,6 +143,11 @@ func Install(root, extensionID string) error {
 	default:
 		return fmt.Errorf("unsupported installer platform: %s", runtime.GOOS)
 	}
+	// Restore the user's previous login-start choices after an in-place update.
+	// Fresh installations have no preference file and do not enable anything.
+	if err := manageBackgroundLifecycle(root, "restore"); err != nil {
+		return err
+	}
 	fmt.Println("Native Messaging installed:", binary)
 	fmt.Println("Host manifest:", manifest)
 	return nil
@@ -159,6 +167,15 @@ func nativeDirs(home string) []string {
 	}
 }
 func Uninstall(root string) error {
+	// Never unregister another directory's singleton browser host or tasks.
+	if err := assertInstallOwnership(root); err != nil {
+		return err
+	}
+	// Stop and unregister this installation's login tasks before Qt removes
+	// their launch scripts. Keep user settings, downloads and MCP credentials.
+	if err := manageBackgroundLifecycle(root, "uninstall"); err != nil {
+		return err
+	}
 	switch runtime.GOOS {
 	case "windows":
 		if err := removeReg(`HKCU\Software\Classes\vidotter`); err != nil {
