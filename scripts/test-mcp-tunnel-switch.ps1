@@ -97,3 +97,6 @@ exit /b %ERRORLEVEL%
     $env:VIDOTTER_MCP_TEST_STARTUP_DIR = $oldStartupDir
     if (Test-Path $work) { Remove-Item $work -Recurse -Force -ErrorAction SilentlyContinue }
 }
+
+# Expected negative smoke cases leave LASTEXITCODE=1; report the passing test explicitly.
+exit 0
