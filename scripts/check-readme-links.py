@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Validate the two public READMEs without a network dependency.
 
-CI checks relative links, image assets, anchors, and the common six-section
-structure. External sites are checked separately during release review.
+CI checks relative links, HTTPS screenshot references, anchors, and the common
+six-section structure. External sites are checked separately during release review.
 """
 from pathlib import Path
 from urllib.parse import unquote, urlsplit
@@ -15,6 +15,7 @@ TOPICS = ['Introduction', 'Quick Start', 'Configuration', 'Optional Features',
           'Development', 'License']
 LINK = re.compile(r'!?\[[^\]]+\]\(([^)\s]+)(?:\s+"[^"]+")?\)')
 HEADER = re.compile(r'^#{1,6}\s+(.+?)\s*$', re.MULTILINE)
+IMAGE = re.compile(r'!\[[^\]]+\]\(([^)\s]+)\)')
 
 
 def slug(text: str) -> str:
@@ -36,6 +37,15 @@ def validate(path: Path) -> list[str]:
     ):
         failures.append(f'{path.name}: sections differ from {TOPICS}: {found_topics}')
     headings = {slug(h) for h in HEADER.findall(source)}
+    image_urls = IMAGE.findall(source)
+    if not image_urls:
+        failures.append(f'{path.name}: missing project screenshot')
+    for url in image_urls:
+        parsed_image = urlsplit(url)
+        if (parsed_image.scheme != 'https' or not parsed_image.netloc
+                or parsed_image.netloc == 'github.com'
+                or not parsed_image.path.lower().endswith(('.png', '.jpg', '.jpeg', '.webp', '.svg'))):
+            failures.append(f'{path.name}: image must be a direct HTTPS image URL: {url}')
     for match in LINK.finditer(source):
         value = match.group(1).strip('<>')
         if value.startswith(('https://', 'http://', 'mailto:', 'data:')):
@@ -57,8 +67,7 @@ def validate(path: Path) -> list[str]:
                     target.read_text(encoding='utf-8'))}
             if unquote(parsed.fragment).lower() not in destination_headings:
                 failures.append(f'{path.name}: missing heading anchor: {value}')
-    for check in ['assets/first-run-detect-zh.png',
-                  'LICENSE', 'NOTICE', 'THIRD_PARTY_NOTICES.md', 'AGENTS.md']:
+    for check in ['LICENSE', 'NOTICE', 'THIRD_PARTY_NOTICES.md', 'AGENTS.md']:
         if not (ROOT / check).exists():
             failures.append(f'Missing retained asset: {check}')
     return failures
@@ -68,6 +77,9 @@ def main() -> int:
     failures: list[str] = []
     for path in FILES:
         failures += validate(path)
+    image_sources = [IMAGE.findall(path.read_text(encoding='utf-8')) for path in FILES]
+    if image_sources[0] != image_sources[1]:
+        failures.append('README screenshots differ across languages')
     if (ROOT / 'docs').exists():
         failures.append('Old docs/ directory remains')
     for extra in (ROOT / 'build').rglob('README.md'):
@@ -79,7 +91,7 @@ def main() -> int:
             print('README-Only FAILED:', problem, file=sys.stderr)
         return 1
     print('README-Only OK: 2 languages, 6 aligned sections, local links, '
-          'retained image/legal assets, no docs tree')
+          'shared HTTPS image, retained legal assets, no docs tree')
     return 0
 
 
