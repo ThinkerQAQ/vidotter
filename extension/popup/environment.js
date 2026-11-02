@@ -432,7 +432,8 @@
 
   // The guided MCP flow mirrors Reverfolio. Only the Tunnel ID passes through
   // the extension; Runtime API Keys stay in the platform's private OS storage.
-  const mcpUI = { draftID: "", busy: "", error: "", deadline: 0, timer: null, polling: false, advanced: false, workerOutdated: false };
+  const mcpUI = { draftID: "", busy: "", error: "", deadline: 0, timer: null, polling: false, advanced: false, workerOutdated: false,
+    editing: false, pendingID: "" };
   const mcpIDPattern = /^tunnel_(?:[a-z0-9]{32}|[a-z0-9]{4}_[a-z0-9]{32})$/;
   const chatGPTSettingsURL = "https://chatgpt.com/settings/plugins-settings";
 
@@ -497,13 +498,18 @@
       // Avoid replacing the Tunnel ID input every four seconds while typing.
       let changed = JSON.stringify([mcpStatus(previous), previous?.health?.status]) !==
         JSON.stringify([status, current?.health?.status]);
-      if (status.ready && mcpUI.busy === "waiting") {
+      if (status.ready && mcpUI.busy === "waiting" &&
+          (!mcpUI.pendingID || status.tunnelID === mcpUI.pendingID)) {
         mcpUI.busy = "";
         mcpUI.error = "";
+        mcpUI.pendingID = "";
         changed = true;
       } else if (mcpUI.busy === "waiting" && Date.now() > mcpUI.deadline) {
         mcpUI.busy = "";
-        mcpUI.error = "连接尚未就绪。首次配置请先完成本机窗口中的提示，再点击重试。";
+        mcpUI.error = mcpUI.pendingID && status.tunnelID !== mcpUI.pendingID
+          ? "新 Tunnel 未能就绪，当前仍保留原连接。请检查本机配置窗口。"
+          : "连接尚未就绪。请检查本机配置窗口，再点击重试。";
+        mcpUI.pendingID = "";
         changed = true;
       }
       if (changed) renderTools(next);
@@ -523,10 +529,18 @@
     const state = mcpStatus(tool);
     mcpUI.error = "";
     const tunnelId = (mcpUI.draftID || state.tunnelID).trim();
-    if (action === "connect" && !state.configured && !mcpIDPattern.test(tunnelId)) {
+    if ((action === "replace" || (action === "connect" && !state.configured)) && !mcpIDPattern.test(tunnelId)) {
       mcpUI.error = "请粘贴 ChatGPT 提供的完整 Tunnel ID。";
       renderTools(tools);
       return;
+    }
+    if (action === "replace") {
+      if (!state.configured || !mcpIDPattern.test(state.tunnelID) || tunnelId === state.tunnelID) {
+        mcpUI.error = "请填写一个不同于当前连接的有效 Tunnel ID。";
+        renderTools(tools);
+        return;
+      }
+      if (root.confirm && !root.confirm("切换到新的 Tunnel ID？旧连接将先停止，新连接验证失败时会自动恢复原配置。ChatGPT 中仍需单独授权。")) return;
     }
     if (action === "stop" && root.confirm && !root.confirm("断开 VidOtter Tunnel？已保存的配置不会删除。")) return;
     const update = phase => {
@@ -534,12 +548,13 @@
       renderTools(tools);
     };
     try {
-      if (action === "connect") {
+      if (action === "connect" || action === "replace") {
         // Detect a stale MV3 worker before downloading or opening any terminal.
         if (api.host === "extension") {
           const capabilities = await api.send("bridge.mcp.capabilities");
-          if (capabilities.protocol < 2 || !Array.isArray(capabilities.actions) ||
-              !["install-client", "setup", "service"].every(id => capabilities.actions.includes(id))) {
+          if (capabilities.protocol < (action === "replace" ? 3 : 2) || !Array.isArray(capabilities.actions) ||
+              !["install-client", "setup", "service", ...(action === "replace" ? ["replace-tunnel"] : [])]
+                .every(id => capabilities.actions.includes(id))) {
             throw new Error("unsupported tool action: old extension worker");
           }
         }
@@ -548,11 +563,13 @@
           update("preparing");
           await api.send("bridge.tool.action", { tool: "chatgpt-mcp", toolAction: "install-client" });
         }
-        update(state.configured ? "connecting" : "configuring");
+        update(action === "replace" ? "switching" : state.configured ? "connecting" : "configuring");
         await api.send("bridge.tool.action", {
           tool: "chatgpt-mcp",
-          toolAction: state.configured ? "service" : "setup",
-          ...(state.configured ? { serviceAction: "start" } : { tunnelId })
+          toolAction: action === "replace" ? "setup" : state.configured ? "service" : "setup",
+          ...(action === "replace"
+            ? { tunnelId, replace: true, previousTunnelId: state.tunnelID }
+            : state.configured ? { serviceAction: "start" } : { tunnelId })
         });
       } else {
         update(action === "stop" ? "stopping" : "connecting");
@@ -561,10 +578,16 @@
         });
       }
       mcpUI.busy = action === "stop" ? "" : "waiting";
+      mcpUI.pendingID = action === "replace" || (action === "connect" && !state.configured) ? tunnelId : "";
+      if (action === "replace") {
+        mcpUI.editing = false;
+        mcpUI.draftID = "";
+      }
       mcpUI.deadline = Date.now() + 120000;
       await refresh();
     } catch (error) {
       mcpUI.busy = "";
+      mcpUI.pendingID = "";
       mcpUI.error = error.message || String(error);
       renderTools(tools);
       const message = body.querySelector(".mcp-error") || body.querySelector(".mcp-description");
@@ -588,15 +611,14 @@
 
   function renderChatGPTMCP(body, tool) {
     const state = mcpStatus(tool);
-    if (state.ready && mcpUI.busy === "waiting") mcpUI.busy = "";
-    const ready = state.ready;
     const busy = Boolean(mcpUI.busy);
+    const ready = state.ready && !busy;
     const shell = document.createElement("div");
     shell.className = "mcp-guide";
     const progress = document.createElement("ol");
     progress.className = "mcp-steps";
     progress.setAttribute("aria-label", "连接步骤");
-    const step = ready ? 3 : (state.configured || busy ? 2 : 1);
+    const step = mcpUI.editing ? 1 : ready ? 3 : (state.configured || busy ? 2 : 1);
     for (const [index, title] of ["填写连接信息", "启动本机连接", "在 ChatGPT 中启用"].entries()) {
       const item = document.createElement("li");
       item.className = index + 1 < step ? "done" : index + 1 === step ? "current" : "";
@@ -634,6 +656,7 @@
       preparing: "正在安装官方连接客户端…",
       configuring: "正在打开本机配置窗口…",
       connecting: "正在连接…",
+      switching: "正在切换 Tunnel…",
       waiting: "正在检查连接…",
       stopping: "正在断开连接…"
     };
@@ -642,6 +665,9 @@
       description.textContent = mcpUI.busy === "waiting" && !state.configured
         ? "首次配置请在本机终端输入 Runtime API Key；已保存的密钥会自动复用。"
         : "本页会自动刷新连接状态。";
+    } else if (mcpUI.editing) {
+      title.textContent = "更换 Tunnel ID";
+      description.textContent = "输入新 ID；确认后将验证新配置。验证失败会恢复原连接，已保存的 Runtime API Key 不会删除。";
     } else if (ready) {
       title.textContent = "本机连接已就绪";
       description.textContent = "Tunnel 已通过控制平面健康检查。请在 ChatGPT 插件设置中启用 VidOtter 并完成授权。";
@@ -653,7 +679,7 @@
       description.textContent = "在 ChatGPT 的自定义 MCP 连接中选择 Tunnel，将获得的 Tunnel ID 粘贴到下方。";
     }
     card.append(icon, title, description);
-    if (!state.configured) {
+    if (!state.configured || mcpUI.editing) {
       const label = document.createElement("label");
       label.className = "mcp-id-field";
       label.textContent = "Tunnel ID";
@@ -664,7 +690,7 @@
       input.spellcheck = false;
       input.maxLength = 80;
       input.placeholder = "tunnel_…";
-      input.value = mcpUI.draftID || state.tunnelID;
+      input.value = mcpUI.editing ? mcpUI.draftID : (mcpUI.draftID || state.tunnelID);
       input.disabled = busy;
       input.addEventListener("input", () => { mcpUI.draftID = input.value.trim(); });
       label.appendChild(input);
@@ -679,7 +705,15 @@
     }
     const mainAction = document.createElement("div");
     mainAction.className = "mcp-main-action";
-    if (ready) {
+    if (mcpUI.editing) {
+      mcpButton(mainAction, "确认切换", () => mcpAction("replace", tool, shell), true);
+      mcpButton(mainAction, "取消", () => {
+        mcpUI.editing = false;
+        mcpUI.draftID = "";
+        mcpUI.error = "";
+        renderTools(tools);
+      });
+    } else if (ready) {
       const link = document.createElement("a");
       link.href = chatGPTSettingsURL;
       link.target = "_blank";
@@ -690,6 +724,14 @@
     } else {
       mcpButton(mainAction, busy ? phases[mcpUI.busy] : mcpUI.error ? "重试连接" :
         state.configured ? "连接" : "连接 ChatGPT", () => mcpAction("connect", tool, shell), true);
+    }
+    if (state.configured && !mcpUI.editing && !busy) {
+      mcpButton(mainAction, "更换 Tunnel ID", () => {
+        mcpUI.editing = true;
+        mcpUI.draftID = "";
+        mcpUI.error = "";
+        renderTools(tools);
+      });
     }
     card.appendChild(mainAction);
     shell.appendChild(card);
