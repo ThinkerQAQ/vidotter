@@ -113,6 +113,11 @@ finally { Remove-Item Env:CONTROL_PLANE_API_KEY -ErrorAction SilentlyContinue }
 $runner = $runner.Replace('__CLIENT__', $clientPath.Replace("'", "''"))
 Set-Content -Path $launcher -Value $runner -Encoding UTF8
 $startup = [Environment]::GetFolderPath('Startup')
+# Isolated smoke tests never touch the user's real Startup folder.
+if ($env:VIDOTTER_MCP_TEST_MODE -eq '1' -and $env:VIDOTTER_MCP_TEST_STARTUP_DIR) {
+    $startup = $env:VIDOTTER_MCP_TEST_STARTUP_DIR
+    New-Item -ItemType Directory -Force -Path $startup | Out-Null
+}
 $shortcutPath = Join-Path $startup 'VidOtter MCP Tunnel.lnk'
 $shell = New-Object -ComObject WScript.Shell
 $link = $shell.CreateShortcut($shortcutPath)
