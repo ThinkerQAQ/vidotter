@@ -109,13 +109,12 @@ func (chatGPTMCPTool) Snapshot(_ context.Context, _ bridgeConfig) toolSnapshot {
 	home, _ := os.UserHomeDir()
 	profile := mcpProfilePath(runtime.GOOS, home, os.Getenv("LOCALAPPDATA"), os.Getenv("XDG_CONFIG_HOME"))
 	client := findTunnelClient(runtime.GOOS, home)
-	_, profileErr := os.Stat(profile)
-	configured := profileErr == nil
+	tunnelID := tunnelIDFromProfile(profile)
+	configured := tunnelID != ""
 
 	status := "disabled"
 	summary := "MCP Server 已内置 · ChatGPT 未配置"
 	detail := "本地 MCP 不需要独立安装。连接云端 ChatGPT 时才启用个人 Tunnel。"
-	tunnelID := tunnelIDFromProfile(profile)
 	ready := false
 	if client == "" {
 		status = "missing"
@@ -139,7 +138,9 @@ func (chatGPTMCPTool) Snapshot(_ context.Context, _ bridgeConfig) toolSnapshot {
 		Description: "可选云端连接：不影响普通视频下载，也不会默认开放远程访问。",
 		Platforms:   []string{"windows", "linux", "darwin"}, Delivery: "bundled", Required: false,
 		Capabilities: []string{"mcp.stdio", "tunnel.optional"}, SortOrder: 25,
-		Config: toolConfigView{Schema: []toolConfigField{}, Values: map[string]any{"tunnelId": tunnelID}},
+		Config: toolConfigView{Schema: []toolConfigField{}, Values: map[string]any{
+			"tunnelId": tunnelID, "configured": configured, "clientInstalled": client != "", "ready": ready,
+		}},
 		Health: toolHealth{Status: status, OK: ready, Summary: summary,
 			Detail: detail, CheckedAt: time.Now()},
 		Actions: []toolAction{{ID: "setup", Label: "配置并启动",
@@ -207,9 +208,9 @@ func (s *bridgeServer) handleMCPSetup(w http.ResponseWriter, r *http.Request) {
 	var body struct {
 		TunnelID string `json:"tunnelId"`
 	}
-	decoder := json.NewDecoder(io.LimitReader(r.Body, 4096))
+	decoder := json.NewDecoder(http.MaxBytesReader(w, r.Body, 4096))
 	decoder.DisallowUnknownFields()
-	if err := decoder.Decode(&body); err != nil || !validTunnelID(body.TunnelID) {
+	if err := decoder.Decode(&body); err != nil || decoder.Decode(new(any)) != io.EOF || !validTunnelID(body.TunnelID) {
 		writeJSON(w, http.StatusBadRequest, map[string]any{"ok": false, "error": "请填写有效的 Tunnel ID"})
 		return
 	}

@@ -8,6 +8,11 @@ const environment = require("../popup/environment.js");
 assert.equal(environment.isOutdatedMcpWorkerError(new Error("不支持的 Tool 操作")), true);
 assert.equal(environment.isOutdatedMcpWorkerError(new Error("unsupported tool action")), true);
 assert.equal(environment.isOutdatedMcpWorkerError(new Error("Tunnel download HTTP 404")), false);
+assert.deepEqual(environment.mcpStatus({config:{values:{configured:true,clientInstalled:true,tunnelId:"tunnel_test",ready:false}},health:{ok:false}}),
+  { tunnelID:"tunnel_test", configured:true, clientInstalled:true, ready:false });
+assert.equal(environment.mcpStatus({config:{values:{}},health:{ok:true}}).ready, true);
+assert.equal(environment.mcpStatus({}).configured, false);
+
 assert.equal(environment.cardState({ status: "ready", ok: true }), "ok");
 assert.equal(environment.cardState({ status: "disabled", ok: true }), "disabled");
 assert.equal(environment.cardState({ status: "missing", ok: false }), "error");

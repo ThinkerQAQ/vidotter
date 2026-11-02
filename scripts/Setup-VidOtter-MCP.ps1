@@ -34,7 +34,9 @@ if (Test-Path $profile) {
     }
 }
 if (-not (Test-Path $profile)) {
-    $mcpCommand = '"' + $binary + '" --mcp-stdio'
+    # The official tunnel-client parses mcp-command as shell words on Windows.
+    # Use forward slashes to retain drive-qualified executable paths.
+    $mcpCommand = '"' + $binary.Replace('\','/') + '" --mcp-stdio'
     & $clientPath init --sample sample_mcp_stdio_local --profile-dir $private --profile vidotter --tunnel-id $TunnelId --mcp-command $mcpCommand --health-listen-addr '127.0.0.1:0'
     if ($LASTEXITCODE -ne 0) { throw 'Tunnel profile initialization failed' }
 }
@@ -78,3 +80,6 @@ if (-not $already) {
     Start-Process -FilePath (Get-Command powershell.exe).Source -ArgumentList @('-NoProfile','-WindowStyle','Hidden','-File',('"' + $launcher + '"')) -WindowStyle Hidden
 }
 Write-Host 'VidOtter Tunnel configured. In ChatGPT: Plugins -> Add custom MCP server -> Tunnel.'
+
+# Finish a successful guided setup without leaving an empty PowerShell window.
+exit 0

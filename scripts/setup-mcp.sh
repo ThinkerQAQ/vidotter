@@ -44,7 +44,7 @@ if [[ -f "$profile" ]] && ! grep -Fq -- "$id" "$profile"; then
 fi
 if [[ ! -f "$profile" ]]; then
   "$client" init --sample sample_mcp_stdio_local --profile-dir "$profile_dir" --profile vidotter \
-    --tunnel-id "$id" --mcp-command "$app --mcp-stdio" --health-listen-addr 127.0.0.1:0
+    --tunnel-id "$id" --mcp-command "\"$app\" --mcp-stdio" --health-listen-addr 127.0.0.1:0
 fi
 chmod 600 "$profile"
 "$client" doctor --config "$profile"

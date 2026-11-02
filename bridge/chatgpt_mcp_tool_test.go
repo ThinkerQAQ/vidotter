@@ -95,6 +95,31 @@ func TestChatGPTMCPRegistryIsOptionalAndNoSecretData(t *testing.T) {
 	}
 }
 
+func TestMCPProfileRequiresValidTunnelID(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("XDG_CONFIG_HOME", filepath.Join(home, "config"))
+	profile := mcpProfilePath(runtime.GOOS, home, os.Getenv("LOCALAPPDATA"), os.Getenv("XDG_CONFIG_HOME"))
+	if err := os.MkdirAll(filepath.Dir(profile), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(profile, []byte("tunnel_id: invalid\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	invalid := chatGPTMCPTool{}.Snapshot(context.Background(), defaultBridgeConfig())
+	if invalid.Config.Values["configured"] != false || invalid.Config.Values["tunnelId"] != "" {
+		t.Fatalf("invalid profile must not count as configured: %#v", invalid.Config.Values)
+	}
+	id := "tunnel_0123456789abcdef0123456789abcdef"
+	if err := os.WriteFile(profile, []byte("tunnel_id: "+id+"\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	valid := chatGPTMCPTool{}.Snapshot(context.Background(), defaultBridgeConfig())
+	if valid.Config.Values["configured"] != true || valid.Config.Values["tunnelId"] != id {
+		t.Fatalf("valid profile should be detected: %#v", valid.Config.Values)
+	}
+}
+
 func TestMCPSetupRejectsUnauthorizedRequests(t *testing.T) {
 	server := &bridgeServer{state: bridgeState{Token: "test-secret"}}
 	for _, method := range []string{http.MethodPost, http.MethodGet} {
@@ -110,6 +135,7 @@ func TestMCPSetupRejectsUnauthorizedRequests(t *testing.T) {
 		`{"tunnelId":"tunnel_"}`,
 		`{"tunnelId":"tunnel_0123456789abcdef0123456789abcdef;evil"}`,
 		`{"tunnelId":"tunnel_0123456789abcdef0123456789abcdef","apiKey":"sk-never"}`,
+		`{"tunnelId":"tunnel_0123456789abcdef0123456789abcdef"}{"tunnelId":"tunnel_0123456789abcdef0123456789abcdef"}`,
 	}
 	for _, body := range cases {
 		request := httptest.NewRequest(http.MethodPost, "/v1/mcp/setup", strings.NewReader(body))

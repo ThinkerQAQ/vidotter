@@ -93,17 +93,17 @@ console.log("extension popup tests passed");
 assert.match(environmentSource, /chatgpt-mcp/);
 assert.match(environmentSource, /integration/);
 assert.match(environmentSource, /renderChatGPTMCP/);
-assert.match(environmentSource, /tunnelInput\.name = "tunnelId"/);
-assert.match(environmentSource, /查看 VidOtter 配置文档/);
+assert.match(environmentSource, /input\.name = "tunnelId"/);
+assert.ok(environmentSource.includes("https://chatgpt.com/settings/plugins-settings"));
 assert.doesNotMatch(environmentSource, /tool.name === "chatgpt-mcp" && action.id === "setup"/);
 const backgroundSource = fs.readFileSync(path.join(__dirname, "../background.js"), "utf8");
 assert.match(backgroundSource, /tool === "chatgpt-mcp" && action === "setup"/);
 assert.match(backgroundSource, /bridgeFetch\("\/v1\/mcp\/setup"/);
 assert.match(backgroundSource, /JSON\.stringify\(\{ tunnelId: String\(message\.tunnelId/);
-assert.match(environmentSource, /安装官方 Tunnel Client/);
-assert.match(environmentSource, /复制 Tunnel ID/);
-assert.match(environmentSource, /前往 ChatGPT 创建插件/);
-assert.match(environmentSource, /start", "stop", "restart/);
+assert.match(environmentSource, /"install-client"/);
+assert.match(environmentSource, /mcp-steps/);
+assert.match(environmentSource, /打开 ChatGPT 插件设置/);
+assert.match(environmentSource, /"restart", tool, shell/);
 assert.match(backgroundSource, /bridgeFetch\("\/v1\/mcp\/client\/install"/);
 assert.match(backgroundSource, /bridge\.mcp\.capabilities/);
 assert.match(environmentSource, /api\.send\("bridge\.mcp\.capabilities"\)/);
@@ -111,3 +111,11 @@ assert.match(environmentSource, /showMcpWorkerReload/);
 assert.match(environmentSource, /root\.chrome\.runtime\.reload\(\)/);
 
 assert.match(backgroundSource, /bridgeFetch\("\/v1\/mcp\/service"/);
+
+// Guided flow is deliberate, idempotent and uses only authenticated bridge routes.
+assert.match(environmentSource, /state\.clientInstalled/);
+assert.match(environmentSource, /state\.configured \? "service" : "setup"/);
+assert.match(environmentSource, /setTimeout\(mcpPoll, 4000\)/);
+assert.match(environmentSource, /120000/);
+assert.match(environmentSource, /mcpIsVisible\(\)/);
+assert.match(popupStyles, /\.mcp-connection-card/);
