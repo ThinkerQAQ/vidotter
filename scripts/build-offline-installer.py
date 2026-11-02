@@ -124,7 +124,10 @@ def main():
         shutil.rmtree(stage / "docs", ignore_errors=True)
         for readme in ("README.md", "README_ZH.md", "LICENSE", "NOTICE", "THIRD_PARTY_NOTICES.md"):
             shutil.copy2(Path(readme), stage / readme)
-        shutil.copytree("assets", stage / "assets", dirs_exist_ok=True)
+        # Optional in newer README-Only source trees; retain verified release
+        # assets instead of failing a preview build or losing installer icons.
+        if Path("assets").is_dir():
+            shutil.copytree("assets", stage / "assets", dirs_exist_ok=True)
         for helper in ("Setup-VidOtter-MCP.ps1", "setup-mcp.sh",
                        "Manage-VidOtter-MCP.ps1", "manage-mcp.sh"):
             shutil.copy2(Path("scripts") / helper, stage / "scripts" / helper)
