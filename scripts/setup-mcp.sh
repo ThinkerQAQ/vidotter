@@ -162,7 +162,9 @@ else
 fi
 if [[ "$switching" == true ]]; then
   healthy=false
-  for _ in $(seq 1 35); do
+  health_attempts="${VIDOTTER_MCP_HEALTH_ATTEMPTS:-35}"
+  if [[ ! "$health_attempts" =~ ^[1-9][0-9]?$ ]]; then health_attempts=35; fi
+  for _ in $(seq 1 "$health_attempts"); do
     sleep 1
     if "$client" health --url-file "$private/health.url" --require-control-plane-poll --json >/dev/null 2>&1; then
       healthy=true
