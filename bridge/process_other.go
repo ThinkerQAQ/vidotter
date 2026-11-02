@@ -25,3 +25,5 @@ func newWorkerCommand(token string) (*exec.Cmd, error) {
 	command.Stdin, command.Stdout, command.Stderr = nil, nil, nil
 	return command, nil
 }
+
+func hideMCPSetupWindow(command *exec.Cmd) {}

@@ -64,10 +64,13 @@ exit /b %ERRORLEVEL%
     $other = 'tunnel_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
     $bad = 'tunnel_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb'
     $profile = Join-Path $env:LOCALAPPDATA 'VidOtter/MCP/vidotter.yaml'
-    function Setup([string]$id, [bool]$replace=$false, [string]$expected='') {
+    function Setup([string]$id, [bool]$replace=$false, [string]$expected='', [string]$inputKey='') {
         $cli = @('-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-File',$setup,'-TunnelId',$id)
         if ($replace) { $cli += @('-ReplaceExisting','-ExpectedTunnelId',$expected) }
-        try { & powershell.exe @cli 1>$null 2>$null }
+        try {
+            if ($inputKey) { $cli += '-KeyFromStdin'; $inputKey | & powershell.exe @cli 1>$null 2>$null }
+            else { & powershell.exe @cli 1>$null 2>$null }
+        }
         catch { return 1 } # Expected failure cases write to stderr.
         return $LASTEXITCODE
     }
@@ -90,26 +93,16 @@ exit /b %ERRORLEVEL%
     $revisionPath = Join-Path $env:LOCALAPPDATA 'VidOtter/MCP/configuration-revision'
     $expectedRevision = Get-Content -Raw $revisionPath
     $env:CONTROL_PLANE_API_KEY = 'FAKE_FAILED_CANDIDATE_KEY_FOR_TEST_789'
-    # A hidden Bridge launcher must open a fresh, visible interactive window.
-    $wrapper = Join-Path $work 'verify-window-launch.ps1'
-    $marker = Join-Path $work 'window-launch-ok.txt'
-    @'
-param([string]$Setup,[string]$Id,[string]$Marker)
-function Start-Process {
-    param($FilePath,$ArgumentList,$WindowStyle)
-    if ($WindowStyle -ne 'Normal') { throw 'Configuration window must be visible' }
-    if ($ArgumentList -notcontains '-InteractiveWindow') { throw 'Interactive child marker missing' }
-    if ($ArgumentList -notcontains '-ReplaceExisting' -or $ArgumentList -notcontains '-ExpectedTunnelId') { throw 'Replacement confirmation lost' }
-    if ($ArgumentList -contains '-NoNewWindow') { throw 'Must not inherit hidden Bridge console' }
-    Set-Content -Path $Marker -Value 'ok'
-}
-& $Setup -TunnelId $Id -ReplaceExisting -ExpectedTunnelId $Id
-'@ | Set-Content -Encoding UTF8 -Path $wrapper
-    $env:VIDOTTER_MCP_TEST_MODE = '0'
-    & powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $wrapper -Setup $setup -Id $other -Marker $marker
-    if ($LASTEXITCODE -ne 0 -or !(Test-Path $marker)) { throw 'Visible window launch regression' }
-    if ([IO.File]::ReadAllText($keyPath) -cne $expectedKey) { throw 'Launcher changed saved key' }
-    $env:VIDOTTER_MCP_TEST_MODE = '1'
+    # Page submission uses stdin, overrides inherited keys and never opens a window.
+    $inlineKey = 'FAKE_INLINE_KEY_FROM_PASSWORD_FORM_123'
+    if ((Setup $other $true $other $inlineKey) -ne 0) { throw 'Stdin key update failed' }
+    $saved=Get-Content $keyPath | ConvertTo-SecureString
+    $ptr=[Runtime.InteropServices.Marshal]::SecureStringToBSTR($saved)
+    try {
+        if([Runtime.InteropServices.Marshal]::PtrToStringBSTR($ptr) -cne $inlineKey){throw 'Wrong stdin key saved'}
+    } finally {[Runtime.InteropServices.Marshal]::ZeroFreeBSTR($ptr)}
+    $expectedKey=[IO.File]::ReadAllText($keyPath)
+    $expectedRevision=Get-Content -Raw $revisionPath
     $env:VIDOTTER_FAKE_BAD_ID = $bad
     if ((Setup $bad $true $other) -eq 0) { throw 'Invalid candidate doctor must fail' }
     if ((Get-Content -Raw $profile) -notmatch [regex]::Escape($other)) { throw 'Doctor failure modified saved ID' }

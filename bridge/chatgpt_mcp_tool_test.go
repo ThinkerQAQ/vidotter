@@ -2,6 +2,7 @@ package vidotter
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -43,7 +44,7 @@ func TestMCPSetupLaunchesOnlyBundledScripts(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(win.Args[len(win.Args)-4:], []string{"-File", filepath.Join(scripts, "Setup-VidOtter-MCP.ps1"), "-TunnelId", validID}) {
+	if !reflect.DeepEqual(win.Args[len(win.Args)-5:], []string{"-File", filepath.Join(scripts, "Setup-VidOtter-MCP.ps1"), "-TunnelId", validID, "-KeyFromStdin"}) {
 		t.Fatalf("unexpected Windows setup args: %#v", win.Args)
 	}
 	replaced, err := mcpSetupCommand("windows", root,
@@ -65,7 +66,7 @@ func TestMCPSetupLaunchesOnlyBundledScripts(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if filepath.Base(mac.Args[0]) != "osascript" || !strings.Contains(mac.Args[len(mac.Args)-1], "setup-mcp.sh") {
+	if filepath.Base(mac.Args[0]) != "bash" || !strings.Contains(mac.Args[len(mac.Args)-1], "setup-mcp.sh") {
 		t.Fatalf("unexpected macOS setup command: %#v", mac.Args)
 	}
 	if _, err := mcpSetupCommand(runtime.GOOS, filepath.Join(root, "missing"), validID, false, ""); err == nil {
@@ -210,5 +211,31 @@ func TestMCPSetupCommandAllowsKeyOnlyRotation(t *testing.T) {
 	id := "tunnel_0123456789abcdef0123456789abcdef"
 	if _, err := mcpSetupCommand("windows", root, id, true, id); err != nil {
 		t.Fatalf("key-only rotation rejected: %v", err)
+	}
+}
+
+func TestMCPSetupValidatesPasswordWithoutEchoingIt(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("LOCALAPPDATA", home)
+	t.Setenv("XDG_CONFIG_HOME", home)
+	t.Setenv("PATH", home)
+	s := &bridgeServer{state: bridgeState{Token: "test-token"}}
+	for _, key := range []string{"", "short", "FAKE_VALID_KEY\nINJECTED", strings.Repeat("X", 513), "FAKE_VALID_KEY_FOR_FORM_123"} {
+		data, _ := json.Marshal(map[string]any{"tunnelId": "tunnel_0123456789abcdef0123456789abcdef", "runtimeApiKey": key})
+		r := httptest.NewRequest(http.MethodPost, "/v1/mcp/setup", strings.NewReader(string(data)))
+		r.Header.Set("X-VidOtter-Token", "test-token")
+		w := httptest.NewRecorder()
+		s.handleMCPSetup(w, r)
+		expected := http.StatusBadRequest
+		if key == "FAKE_VALID_KEY_FOR_FORM_123" {
+			expected = http.StatusConflict
+		} // Valid password reached the missing-client check.
+		if w.Code != expected {
+			t.Fatalf("unexpected credential validation status: %d", w.Code)
+		}
+		if key != "" && strings.Contains(w.Body.String(), key) {
+			t.Fatal("credential leaked into response")
+		}
 	}
 }

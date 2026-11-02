@@ -83,6 +83,10 @@ export CONTROL_PLANE_API_KEY="FAKE_ROTATED_KEY_FOR_TEST_ONLY_456"
 bash "$work/app/scripts/setup-mcp.sh" >/dev/null
 env_file="$XDG_CONFIG_HOME/vidotter/mcp/runtime.env"
 grep -Fq "$CONTROL_PLANE_API_KEY" "$env_file"
+export VIDOTTER_MCP_KEY_STDIN=1
+printf '%s\n' 'FAKE_INLINE_KEY_FROM_PASSWORD_FORM_123' | bash "$work/app/scripts/setup-mcp.sh" >/dev/null
+grep -Fq 'FAKE_INLINE_KEY_FROM_PASSWORD_FORM_123' "$env_file"
+unset VIDOTTER_MCP_KEY_STDIN
 cp "$env_file" "$work/expected.env"
 revision="$(cat "$XDG_CONFIG_HOME/vidotter/mcp/configuration-revision")"
 # Normal runs must prompt instead of silently adopting an inherited key.

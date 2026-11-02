@@ -39,8 +39,12 @@ elif [[ "${VIDOTTER_REPLACE_TUNNEL:-}" == 1 ]]; then
   echo 'No existing connection to replace' >&2; exit 1
 fi
 key=""
-if [[ "${VIDOTTER_MCP_TEST_MODE:-}" == 1 ]]; then key="${CONTROL_PLANE_API_KEY:-}"; fi
-if [[ -z "$key" ]]; then
+if [[ "${VIDOTTER_MCP_KEY_STDIN:-}" == 1 ]]; then
+  IFS= read -r key
+elif [[ "${VIDOTTER_MCP_TEST_MODE:-}" == 1 ]]; then
+  key="${CONTROL_PLANE_API_KEY:-}"
+fi
+if [[ -z "$key" && "${VIDOTTER_MCP_KEY_STDIN:-}" != 1 ]]; then
   echo 'Enter the key for this connection; the saved key is not reused automatically.'
   read -r -s -p 'Runtime API Key (hidden input): ' key
   printf '\n'

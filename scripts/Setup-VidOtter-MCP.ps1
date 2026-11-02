@@ -1,5 +1,5 @@
 # Optional ChatGPT Tunnel setup. Credentials are entered only on this computer.
-param([string]$TunnelId, [switch]$ReplaceExisting, [string]$ExpectedTunnelId, [switch]$InteractiveWindow)
+param([string]$TunnelId, [switch]$ReplaceExisting, [string]$ExpectedTunnelId, [switch]$KeyFromStdin)
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
 $binary = Join-Path $root 'bin\vidotter-windows-amd64.exe'
@@ -28,25 +28,30 @@ if (Test-Path $profile) {
         throw 'Changing connection credentials requires confirmation using the latest saved Tunnel ID.'
     }
 } elseif ($ReplaceExisting) { throw 'No existing connection to replace.' }
-# A Bridge started as a background task has hidden/NUL console handles.
-# Start-Process opens a separate interactive console with fresh input handles.
-# The first process exits immediately; secrets are entered only in the child.
-if (!$InteractiveWindow -and $env:VIDOTTER_MCP_TEST_MODE -ne '1') {
-    $arguments = @('-NoProfile','-ExecutionPolicy','Bypass','-NoExit','-File',
-        ('"' + $PSCommandPath + '"'),'-InteractiveWindow','-TunnelId',$TunnelId)
-    if ($ReplaceExisting) { $arguments += @('-ReplaceExisting','-ExpectedTunnelId',$ExpectedTunnelId) }
-    Start-Process -FilePath (Get-Command powershell.exe).Source -ArgumentList $arguments -WindowStyle Normal
-    exit 0
-}
-if ($InteractiveWindow) { $Host.UI.RawUI.WindowTitle = 'VidOtter ChatGPT configuration - Runtime API Key' }
 # Never silently import another application's inherited API key.
-if ($env:VIDOTTER_MCP_TEST_MODE -eq '1' -and $env:CONTROL_PLANE_API_KEY) {
+if ($KeyFromStdin) {
+    $value = [Console]::In.ReadLine()
+    if ([string]::IsNullOrWhiteSpace($value)) { throw 'Runtime API Key is required.' }
+    $secure = ConvertTo-SecureString -String $value -AsPlainText -Force
+    $value = $null
+} elseif ($env:VIDOTTER_MCP_TEST_MODE -eq '1' -and $env:CONTROL_PLANE_API_KEY) {
     $secure = ConvertTo-SecureString -String $env:CONTROL_PLANE_API_KEY -AsPlainText -Force
 } else {
     Write-Host 'Enter the Runtime API Key for this connection. The saved key is not reused automatically.'
     $secure = Read-Host 'Runtime API Key (hidden input)' -AsSecureString
 }
 if (!$secure -or $secure.Length -lt 16) { throw 'Runtime API Key is required.' }
+function Invoke-TunnelClient {
+    $clientArgs = @($args)
+    if ($KeyFromStdin) {
+        $quoted = @($clientArgs | ForEach-Object { '"' + $_.Replace('"','\"') + '"' })
+        $process = Start-Process -FilePath $clientPath -ArgumentList $quoted -WindowStyle Hidden -Wait -PassThru
+        $global:LASTEXITCODE = $process.ExitCode
+    } else {
+        & $clientPath @clientArgs
+        $global:LASTEXITCODE = $LASTEXITCODE
+    }
+}
 function Stop-OwnTunnel {
     Get-CimInstance Win32_Process -Filter "Name='tunnel-client.exe'" -ErrorAction SilentlyContinue |
         Where-Object { $_.CommandLine -and $_.CommandLine.Contains($profile) } |
@@ -74,10 +79,10 @@ try {
     try { $env:CONTROL_PLANE_API_KEY = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($bstr) }
     finally { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr); $secure.Dispose() }
     $mcpCommand = '"' + $binary.Replace('\','/') + '" --mcp-stdio'
-    & $clientPath init --sample sample_mcp_stdio_local --profile-dir $staging --profile vidotter --tunnel-id $TunnelId --mcp-command $mcpCommand --health-listen-addr '127.0.0.1:0'
+    Invoke-TunnelClient init --sample sample_mcp_stdio_local --profile-dir $staging --profile vidotter --tunnel-id $TunnelId --mcp-command $mcpCommand --health-listen-addr '127.0.0.1:0'
     if ($LASTEXITCODE -ne 0) { throw 'Tunnel profile initialization failed.' }
     $candidate = Join-Path $staging 'vidotter.yaml'
-    & $clientPath doctor --config $candidate
+    Invoke-TunnelClient doctor --config $candidate
     if ($LASTEXITCODE -ne 0) { throw 'Candidate Tunnel configuration check failed.' }
     # Commit ID and key together; retain both backups until live polling succeeds.
     Stop-OwnTunnel
@@ -111,7 +116,7 @@ Set-Content -Path $launcher -Value $runner -Encoding UTF8
     if ($env:VIDOTTER_MCP_HEALTH_ATTEMPTS -match '^[1-9][0-9]?$') { $attempts=[int]$env:VIDOTTER_MCP_HEALTH_ATTEMPTS }
     for ($attempt=0;$attempt -lt $attempts;$attempt++) {
         Start-Sleep -Seconds 1
-        & $clientPath health --url-file (Join-Path $private 'health.url') --require-control-plane-poll --json 1>$null 2>$null
+        Invoke-TunnelClient health --url-file (Join-Path $private 'health.url') --require-control-plane-poll --json 1>$null 2>$null
         if ($LASTEXITCODE -eq 0) { $healthy=$true;break }
     }
     if (!$healthy) { throw 'New connection failed its live polling check.' }

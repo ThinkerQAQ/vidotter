@@ -36,9 +36,10 @@ function request(action) {
 (async () => {
   const capabilities = await request({ action: "bridge.mcp.capabilities" });
   assert.equal(capabilities.ok, true);
-  assert.equal(capabilities.protocol, 3);
+  assert.equal(capabilities.protocol, 4);
   assert.ok(capabilities.actions.includes("replace-tunnel"));
   assert.ok(capabilities.actions.includes("install-client"));
+  assert.ok(capabilities.actions.includes("inline-credentials"));
 
   const install = await request({
     action: "bridge.tool.action", tool: "chatgpt-mcp", toolAction: "install-client"
@@ -65,6 +66,7 @@ function request(action) {
   const replace = await request({
     action: "bridge.tool.action", tool: "chatgpt-mcp", toolAction: "setup",
     tunnelId: "tunnel_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    runtimeApiKey: "FAKE_FORM_KEY_FOR_TEST_123",
     replace: true, previousTunnelId: "tunnel_0123456789abcdef0123456789abcdef"
   });
   assert.equal(replace.ok, true);
@@ -72,6 +74,7 @@ function request(action) {
   const newBody = JSON.parse(calls[3].options.body);
   assert.deepEqual(newBody, {
     tunnelId: "tunnel_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    runtimeApiKey: "FAKE_FORM_KEY_FOR_TEST_123",
     replace: true,
     previousTunnelId: "tunnel_0123456789abcdef0123456789abcdef"
   });
