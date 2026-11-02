@@ -129,7 +129,8 @@ def main():
         if Path("assets").is_dir():
             shutil.copytree("assets", stage / "assets", dirs_exist_ok=True)
         for helper in ("Setup-VidOtter-MCP.ps1", "setup-mcp.sh",
-                       "Manage-VidOtter-MCP.ps1", "manage-mcp.sh"):
+                       "Manage-VidOtter-MCP.ps1", "manage-mcp.sh",
+                       "Manage-VidOtter-Background.ps1", "Run-VidOtter-Bridge.ps1", "manage-background.sh"):
             shutil.copy2(Path("scripts") / helper, stage / "scripts" / helper)
         print(f"PR preview: current source overlaid on verified {a.tag} dependency bundle")
 

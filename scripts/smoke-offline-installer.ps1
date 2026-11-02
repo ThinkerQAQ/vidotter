@@ -23,6 +23,13 @@ $syntaxTokens = $null
 $syntaxErrors = $null
 [System.Management.Automation.Language.Parser]::ParseFile($manage, [ref]$syntaxTokens, [ref]$syntaxErrors) | Out-Null
 if ($syntaxErrors.Count -gt 0) { throw "Tunnel service manager contains invalid PowerShell syntax: $syntaxErrors" }
+foreach ($helper in @('Manage-VidOtter-Background.ps1', 'Run-VidOtter-Bridge.ps1')) {
+    $file = Join-Path $target ("scripts/" + $helper)
+    if (!(Test-Path $file)) { throw "Background script missing from installer: $helper" }
+    $errors = $null
+    [System.Management.Automation.Language.Parser]::ParseFile($file, [ref]$null, [ref]$errors) | Out-Null
+    if ($errors.Count) { throw "Background script syntax error: $helper" }
+}
 $firstRun = Join-Path $target "scripts/VidOtter-FirstRun.ps1"
 if (!(Test-Path $firstRun)) { throw "First-run helper missing from installation" }
 $parseErrors = $null
