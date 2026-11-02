@@ -13,13 +13,19 @@ function Assert-GUIExecutable([string]$path) {
         if ($subsystem -ne 2) { throw "Expected GUI subsystem 2, got $subsystem in $path" }
     } finally { $reader.Dispose() }
 }
+# GUI-subsystem programs do not update LASTEXITCODE synchronously with '&'.
+# Always wait and read the actual Qt process exit code, including Maintenance.
+function Invoke-QtExecutable([string]$path, [string[]]$arguments) {
+    $quoted = @($arguments | ForEach-Object { '"' + $_.Replace('"','\"') + '"' })
+    $process = Start-Process -FilePath $path -ArgumentList $quoted -Wait -PassThru
+    if ($process.ExitCode -ne 0) { throw "Qt process failed ($($process.ExitCode)): $path" }
+}
 $setup = Join-Path $env:RUNNER_TEMP ("installer-output/VidOtter-Setup-" + $env:RELEASE_TAG + "-windows-amd64.exe")
 $sandbox = Join-Path $env:RUNNER_TEMP "vidotter-windows-qa"
 $target = Join-Path $sandbox "install with spaces"
 New-Item -ItemType Directory -Force -Path $sandbox | Out-Null
 Assert-GUIExecutable $setup
-& $setup --root $target --accept-licenses --confirm-command install
-if ($LASTEXITCODE -ne 0) { throw "Windows installer failed" }
+Invoke-QtExecutable $setup @('--root', $target, '--accept-licenses', '--confirm-command', 'install')
 if (!(Test-Path (Join-Path $target "bin/vidotter-windows-amd64.exe"))) { throw "Bridge not installed" }
 if ($env:GITHUB_EVENT_NAME -eq 'pull_request') {
     python scripts/smoke-pr-extension-bundle.py (Join-Path $target 'extension')
@@ -92,19 +98,16 @@ Set-Content -Path (Join-Path $data "config.toml") -Value 'sentinel=true'
 Set-Content -Path (Join-Path $data "downloads/keep.txt") -Value 'kept'
 if ($env:VIDOTTER_TEST_UPDATE_REPO) {
     $repoUri = ([System.Uri]::new((Resolve-Path $env:VIDOTTER_TEST_UPDATE_REPO).Path + [System.IO.Path]::DirectorySeparatorChar)).AbsoluteUri
-    & (Join-Path $target "VidOtter-Maintenance.exe") --at $repoUri check-updates
-    if ($LASTEXITCODE -ne 0) { throw "Update check failed" }
-    & (Join-Path $target "VidOtter-Maintenance.exe") --at $repoUri --confirm-command update
-    if ($LASTEXITCODE -ne 0) { throw "Update failed" }
-    Assert-GUIExecutable $maintenance
+    Invoke-QtExecutable $maintenance @('--at', $repoUri, 'check-updates')
+        Invoke-QtExecutable $maintenance @('--at', $repoUri, '--confirm-command', 'update')
+        Assert-GUIExecutable $maintenance
     if (-not ((Get-Content -Raw (Join-Path $target "components.xml")) -match "<Version>$($env:VIDOTTER_TEST_UPDATE_VERSION)</Version>")) { throw "Installed component version did not update" }
     if (!(Test-Path (Join-Path $data "config.toml"))) { throw "Config lost on update" }
     if (!(Test-Path $key)) { throw "MCP Native Messaging registration lost on update" }
     python scripts/smoke-mcp-stdio.py (Join-Path $target "bin/vidotter-windows-amd64.exe")
     if ($LASTEXITCODE -ne 0) { throw "MCP failed after update" }
 }
-& (Join-Path $target "VidOtter-Maintenance.exe") --confirm-command remove com.thinkerqaq.vidotter
-if ($LASTEXITCODE -ne 0) { throw "Windows uninstall failed" }
+Invoke-QtExecutable $maintenance @('--confirm-command', 'remove', 'com.thinkerqaq.vidotter')
 if (Test-Path $uninstallLink) { throw "Uninstall shortcut was not removed" }
 if (!(Test-Path (Join-Path $data "config.toml"))) { throw "Config lost on uninstall" }
 if (!(Test-Path (Join-Path $data "downloads/keep.txt"))) { throw "Downloads lost on uninstall" }
@@ -114,11 +117,9 @@ Write-Host "Windows installer smoke passed"
 $legacy = Join-Path $sandbox "old unpacked VidOtter"
 New-Item -ItemType Directory -Force -Path (Join-Path $legacy "Data") | Out-Null
 Set-Content -Path (Join-Path $legacy "Data/config.toml") -Value 'migrate=safe'
-& $setup --root $legacy --accept-licenses --confirm-command --auto-answer OverwriteTargetDirectory=Yes install
-if ($LASTEXITCODE -ne 0) { throw "Windows legacy migration failed" }
+Invoke-QtExecutable $setup @('--root', $legacy, '--accept-licenses', '--confirm-command', '--auto-answer', 'OverwriteTargetDirectory=Yes', 'install')
 if (!(Test-Path (Join-Path $legacy "components.xml"))) { throw "Legacy install not managed" }
 if (-not ((Get-Content -Raw (Join-Path $legacy "Data/config.toml")) -match 'migrate=safe')) { throw "Legacy configuration overwritten" }
-& (Join-Path $legacy "VidOtter-Maintenance.exe") --confirm-command remove com.thinkerqaq.vidotter
-if ($LASTEXITCODE -ne 0) { throw "Legacy uninstall failed" }
+Invoke-QtExecutable (Join-Path $legacy "VidOtter-Maintenance.exe") @('--confirm-command', 'remove', 'com.thinkerqaq.vidotter')
 if (!(Test-Path (Join-Path $legacy "Data/config.toml"))) { throw "Legacy config removed" }
 Write-Host "Windows legacy adoption preserved Data"
