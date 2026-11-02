@@ -626,31 +626,6 @@
     const ready = state.ready && !busy;
     const shell = document.createElement("div");
     shell.className = "mcp-guide";
-    const progress = document.createElement("ol");
-    progress.className = "mcp-steps";
-    progress.setAttribute("aria-label", "连接步骤");
-    const step = ready ? 3 : (state.configured || busy ? 2 : 1);
-    for (const [index, title] of ["填写连接信息", "启动本机连接", "在 ChatGPT 中启用"].entries()) {
-      const item = document.createElement("li");
-      item.className = index + 1 < step ? "done" : index + 1 === step ? "current" : "";
-      if (index + 1 === step) item.setAttribute("aria-current", "step");
-      const number = document.createElement("span");
-      number.textContent = index + 1 < step ? "✓" : String(index + 1);
-      item.appendChild(number);
-      if (index === 2) {
-        const link = document.createElement("a");
-        link.href = chatGPTSettingsURL;
-        link.target = "_blank";
-        link.rel = "noopener noreferrer";
-        link.textContent = title;
-        item.appendChild(link);
-      } else {
-        item.appendChild(document.createTextNode(title));
-      }
-      progress.appendChild(item);
-    }
-    shell.appendChild(progress);
-
     const card = document.createElement("section");
     card.className = "mcp-connection-card" + (ready ? " is-ready" : "");
     card.setAttribute("aria-busy", String(busy));
@@ -693,24 +668,31 @@
       ? "已在本机保存（不显示内容）。更换配置时需要重新输入。"
       : "必填，点击连接后在本机安全窗口输入，不在网页或聊天中填写。");
     card.appendChild(credentials);
-    const credentialLinks = document.createElement("p");
-    credentialLinks.className = "settings-help";
-    for (const [text, url] of [
-      ["创建 Tunnel / 获取 Tunnel ID", "https://platform.openai.com/settings/organization/tunnels"],
-      ["创建 Runtime API Key", "https://platform.openai.com/api-keys"]
-    ]) {
+    const steps = document.createElement("ol");
+    steps.className = "mcp-steps";
+    steps.setAttribute("aria-label", "ChatGPT 连接指引");
+    for (const [index, [label, url, hint]] of [
+      ["创建 Tunnel", "https://platform.openai.com/settings/organization/tunnels",
+        "在 OpenAI Platform 创建 Tunnel，复制 Tunnel ID。"],
+      ["创建 Runtime API Key", "https://platform.openai.com/api-keys",
+        "在同一组织创建受限 Key，授予 Tunnels Read + Use。"],
+      ["打开 ChatGPT 插件设置", chatGPTSettingsURL,
+        "本机连接就绪后，在插件中选择同一 Tunnel 并启用 VidOtter。"]
+    ].entries()) {
+      const item = document.createElement("li");
       const link = document.createElement("a");
-      link.textContent = text;
+      link.className = "mcp-step-link";
       link.href = url;
       link.target = "_blank";
       link.rel = "noopener noreferrer";
-      credentialLinks.append(link, document.createTextNode("　"));
+      link.textContent = (index + 1) + ". " + label;
+      const description = document.createElement("p");
+      description.className = "settings-help";
+      description.textContent = hint;
+      item.append(link, description);
+      steps.appendChild(item);
     }
-    card.appendChild(credentialLinks);
-    const permissions = document.createElement("p");
-    permissions.className = "settings-help";
-    permissions.textContent = "在 OpenAI Platform 选择对应组织：创建 Tunnel 后复制 ID；创建受限 API Key，授予 Tunnels Read + Use。最后在 ChatGPT 插件中选择同一 Tunnel。";
-    card.appendChild(permissions);
+    card.appendChild(steps);
     if (!state.configured) {
       const label = document.createElement("label");
       label.className = "mcp-id-field";
@@ -737,19 +719,11 @@
     }
     const mainAction = document.createElement("div");
     mainAction.className = "mcp-main-action";
-    if (ready) {
-      const link = document.createElement("a");
-      link.href = chatGPTSettingsURL;
-      link.target = "_blank";
-      link.rel = "noopener noreferrer";
-      link.className = "mcp-doc-link primary-link";
-      link.textContent = "打开 ChatGPT 插件设置";
-      mainAction.appendChild(link);
-    } else {
+    if (!ready) {
       mcpButton(mainAction, busy ? phases[mcpUI.busy] : mcpUI.error ? "重试连接" :
         state.configured ? "连接" : "连接 ChatGPT", () => mcpAction("connect", tool, shell), true);
+      card.appendChild(mainAction);
     }
-    card.appendChild(mainAction);
     shell.appendChild(card);
 
     const advanced = document.createElement("details");
