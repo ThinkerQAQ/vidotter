@@ -30,6 +30,7 @@ try {
     $env:LOCALAPPDATA = $local
     $private = Join-Path $local 'VidOtter\MCP'
     $mcpBinary = (Join-Path $first 'bin\vidotter-windows-amd64.exe').Replace('\','/')
+    Write-Host "CI fixture Tunnel executable: $mcpBinary"
     Set-Content -Path (Join-Path $private 'vidotter.yaml') -Value ('mcp_command: "' + $mcpBinary + '" --mcp-stdio') -Encoding Ascii
     Set-Content -Path (Join-Path $private 'run-mcp.ps1') -Value '# CI fake runtime; never executed' -Encoding Ascii
 
@@ -39,6 +40,7 @@ try {
     $status = RunManager $first 'enable' 'tunnel'
     if (!$status.bridgeEnabled -or !$status.tunnelEnabled) { throw 'Enabling both tasks failed' }
 
+    $beforeOwner = [string](Get-ScheduledTask -TaskName 'VidOtter-bridge').Actions[0].WorkingDirectory
     $other = Join-Path $second ('scripts\' + $scriptName)
     $previousPreference = $ErrorActionPreference
     $ErrorActionPreference = 'Continue' # Expected refusal from the second install.
@@ -49,9 +51,8 @@ try {
     if ($badExit -eq 0) { throw 'Second installation silently stole the first install task' }
     $task = Get-ScheduledTask -TaskName 'VidOtter-bridge'
     $actualOwner = [string]$task.Actions[0].WorkingDirectory
-    $expectedOwner = [string][IO.Path]::GetFullPath($first).TrimEnd('\')
-    if (![string]::Equals($actualOwner.TrimEnd('\'), $expectedOwner, [StringComparison]::OrdinalIgnoreCase)) {
-        throw "Second install modified the original task: expected '$expectedOwner' actual '$actualOwner' (refusal exit $badExit)"
+    if (![string]::Equals($actualOwner.TrimEnd('\'), $beforeOwner.TrimEnd('\'), [StringComparison]::OrdinalIgnoreCase)) {
+        throw "Second install modified the original task: before '$beforeOwner' after '$actualOwner' (refusal exit $badExit)"
     }
 
     $status = RunManager $first 'uninstall'

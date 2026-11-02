@@ -46,8 +46,8 @@ function RegisterOwnTask($kind) {
         # A preserved profile from a removed installation can still point at
         # that installation's executable. Never restore a broken Tunnel task.
         $expected=(Join-Path $root 'bin\vidotter-windows-amd64.exe').Replace('\','/')
-        if (!(Get-Content -Raw -Path $profile).Replace('\','/').Contains($expected)) {
-            throw 'The Tunnel profile belongs to another installation. Reconfigure ChatGPT MCP first.'
+        if ((Get-Content -Raw -Path $profile).Replace('\','/').IndexOf($expected, [StringComparison]::OrdinalIgnoreCase) -lt 0) {
+            throw "The Tunnel profile does not reference this installation ($expected). Reconfigure ChatGPT MCP first."
         }
     }
     if (!(Test-Path $runner)) { throw "Missing VidOtter launcher: $runner" }
@@ -100,7 +100,7 @@ if ($Action -eq 'enable') {
     if ($saved.tunnelEnabled -and (Test-Path (Join-Path $private 'run-mcp.ps1'))) {
         $profile=Join-Path $private 'vidotter.yaml'
         $expected=(Join-Path $root 'bin\vidotter-windows-amd64.exe').Replace('\','/')
-        if ((Test-Path $profile) -and (Get-Content -Raw -Path $profile).Replace('\','/').Contains($expected)) {
+        if ((Test-Path $profile) -and (Get-Content -Raw -Path $profile).Replace('\','/').IndexOf($expected, [StringComparison]::OrdinalIgnoreCase) -ge 0) {
             RegisterOwnTask 'tunnel'
         }
     }
