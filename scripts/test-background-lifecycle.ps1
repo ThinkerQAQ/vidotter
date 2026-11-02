@@ -23,14 +23,16 @@ try {
     foreach ($dir in @((Join-Path $first 'scripts'), (Join-Path $second 'scripts'), (Join-Path $local 'VidOtter\MCP'))) {
         New-Item -ItemType Directory -Force -Path $dir | Out-Null
     }
+    $profileSourceRoot = $first # May contain an 8.3 Windows alias (RUNNER~1).
+    $first = (Get-Item -LiteralPath $first).FullName
+    $second = (Get-Item -LiteralPath $second).FullName
     foreach ($dir in @($first, $second)) {
         Copy-Item (Join-Path $PSScriptRoot $scriptName) (Join-Path $dir ('scripts\' + $scriptName))
         Copy-Item (Join-Path $PSScriptRoot 'Run-VidOtter-Bridge.ps1') (Join-Path $dir 'scripts\Run-VidOtter-Bridge.ps1')
     }
     $env:LOCALAPPDATA = $local
     $private = Join-Path $local 'VidOtter\MCP'
-    $mcpBinary = (Join-Path $first 'bin\vidotter-windows-amd64.exe').Replace('\','/')
-    Write-Host "CI fixture Tunnel executable: $mcpBinary"
+    $mcpBinary = (Join-Path $profileSourceRoot 'bin\vidotter-windows-amd64.exe').Replace('\','/')
     Set-Content -Path (Join-Path $private 'vidotter.yaml') -Value ('mcp_command: "' + $mcpBinary + '" --mcp-stdio') -Encoding Ascii
     Set-Content -Path (Join-Path $private 'run-mcp.ps1') -Value '# CI fake runtime; never executed' -Encoding Ascii
 

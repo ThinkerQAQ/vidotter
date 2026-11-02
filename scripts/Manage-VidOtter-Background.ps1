@@ -11,8 +11,9 @@ $legacy=Join-Path ([Environment]::GetFolderPath('Startup')) 'VidOtter MCP Tunnel
 function TaskName($kind) { return "VidOtter-$kind" }
 function OwnsTask($task) {
     if (!$task -or !$task.Actions -or !$task.Actions[0].WorkingDirectory) { return $false }
-    $path=[IO.Path]::GetFullPath($task.Actions[0].WorkingDirectory).TrimEnd('\')
-    return [string]::Equals($root, $path, [StringComparison]::OrdinalIgnoreCase)
+    $path=([IO.DirectoryInfo]$task.Actions[0].WorkingDirectory).FullName.TrimEnd('\')
+    $owner=([IO.DirectoryInfo]$root).FullName.TrimEnd('\')
+    return [string]::Equals($owner, $path, [StringComparison]::OrdinalIgnoreCase)
 }
 function GetOwnTask($kind) {
     $task=Get-ScheduledTask -TaskName (TaskName $kind) -ErrorAction SilentlyContinue
@@ -31,6 +32,20 @@ function SavePreferences {
     @{bridgeEnabled=(IsEnabled 'bridge'); tunnelEnabled=((IsEnabled 'tunnel') -or (Test-Path $legacy))} |
         ConvertTo-Json -Compress | Set-Content -Encoding UTF8 -Path $preferences
 }
+function TunnelProfileOwnedByCurrentInstall {
+    $profile=Join-Path $private 'vidotter.yaml'
+    if (!(Test-Path $profile)) { return $false }
+    $text=Get-Content -Raw -Path $profile
+    $match=[regex]::Match($text, '(?i)([a-z]:[\\/][^"\r\n]*[\\/]vidotter-windows-amd64\.exe)')
+    if (!$match.Success -or !$text.Contains('--mcp-stdio')) { return $false }
+    $binary=$match.Groups[1].Value.Replace('/','\')
+    $profileRoot=Split-Path -Parent (Split-Path -Parent $binary)
+    # DirectoryInfo expands Windows 8.3 aliases (RUNNER~1) when the directory
+    # exists, unlike Path.GetFullPath and direct string comparisons.
+    $profileRoot=([IO.DirectoryInfo]$profileRoot).FullName.TrimEnd('\')
+    $currentRoot=([IO.DirectoryInfo]$root).FullName.TrimEnd('\')
+    return [string]::Equals($profileRoot, $currentRoot, [StringComparison]::OrdinalIgnoreCase)
+}
 function RegisterOwnTask($kind) {
     $name=TaskName $kind
     $null=GetOwnTask $kind
@@ -45,9 +60,8 @@ function RegisterOwnTask($kind) {
         }
         # A preserved profile from a removed installation can still point at
         # that installation's executable. Never restore a broken Tunnel task.
-        $expected=(Join-Path $root 'bin\vidotter-windows-amd64.exe').Replace('\','/')
-        if ((Get-Content -Raw -Path $profile).Replace('\','/').IndexOf($expected, [StringComparison]::OrdinalIgnoreCase) -lt 0) {
-            throw "The Tunnel profile does not reference this installation ($expected). Reconfigure ChatGPT MCP first."
+        if (!(TunnelProfileOwnedByCurrentInstall)) {
+            throw 'The Tunnel profile belongs to another installation. Reconfigure ChatGPT MCP first.'
         }
     }
     if (!(Test-Path $runner)) { throw "Missing VidOtter launcher: $runner" }
@@ -98,9 +112,7 @@ if ($Action -eq 'enable') {
     foreach ($kind in @('bridge','tunnel')) { $null=GetOwnTask $kind }
     if ($saved.bridgeEnabled) { RegisterOwnTask 'bridge' }
     if ($saved.tunnelEnabled -and (Test-Path (Join-Path $private 'run-mcp.ps1'))) {
-        $profile=Join-Path $private 'vidotter.yaml'
-        $expected=(Join-Path $root 'bin\vidotter-windows-amd64.exe').Replace('\','/')
-        if ((Test-Path $profile) -and (Get-Content -Raw -Path $profile).Replace('\','/').IndexOf($expected, [StringComparison]::OrdinalIgnoreCase) -ge 0) {
+        if (TunnelProfileOwnedByCurrentInstall) {
             RegisterOwnTask 'tunnel'
         }
     }
