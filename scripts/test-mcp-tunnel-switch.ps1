@@ -8,11 +8,11 @@ $oldKey = $env:CONTROL_PLANE_API_KEY
 $oldBad = $env:VIDOTTER_FAKE_BAD_ID
 $oldHealth = $env:VIDOTTER_FAKE_FAIL_HEALTH
 $oldAttempts = $env:VIDOTTER_MCP_HEALTH_ATTEMPTS
+$oldMode = $env:VIDOTTER_MCP_TEST_MODE
+$oldStartupDir = $env:VIDOTTER_MCP_TEST_STARTUP_DIR
 $startup = Join-Path $work 'startup/VidOtter MCP Tunnel.lnk'
 $env:VIDOTTER_MCP_TEST_MODE = '1'
 $env:VIDOTTER_MCP_TEST_STARTUP_DIR = Split-Path -Parent $startup
-$oldMode = $null
-$oldStartupDir = $null
 try {
     foreach ($dir in @('app/scripts','app/bin','mock','local')) {
         New-Item -ItemType Directory -Force -Path (Join-Path $work $dir) | Out-Null
@@ -92,6 +92,7 @@ exit /b %ERRORLEVEL%
     $env:VIDOTTER_FAKE_BAD_ID = $oldBad
     $env:VIDOTTER_FAKE_FAIL_HEALTH = $oldHealth
     $env:VIDOTTER_MCP_HEALTH_ATTEMPTS = $oldAttempts
-    if (-not $existingShortcut -and (Test-Path $startup)) { Remove-Item $startup -Force }
+    $env:VIDOTTER_MCP_TEST_MODE = $oldMode
+    $env:VIDOTTER_MCP_TEST_STARTUP_DIR = $oldStartupDir
     if (Test-Path $work) { Remove-Item $work -Recurse -Force -ErrorAction SilentlyContinue }
 }
