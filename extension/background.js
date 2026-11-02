@@ -746,7 +746,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   // MV3 background may be older than refreshed popup after an in-place update.
   if (message.action === "bridge.mcp.capabilities") {
-    sendResponse({ ok: true, protocol: 2, actions: ["install-client", "setup", "service"] });
+    sendResponse({ ok: true, protocol: 3, actions: ["install-client", "setup", "service", "replace-tunnel"] });
     return;
   }
 
@@ -780,7 +780,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (tool === "chatgpt-mcp" && action === "setup") {
       bridgeFetch("/v1/mcp/setup", {
         method: "POST",
-        body: JSON.stringify({ tunnelId: String(message.tunnelId || "") })
+        body: JSON.stringify({ tunnelId: String(message.tunnelId || ""),
+          replace: message.replace === true,
+          previousTunnelId: message.replace === true ? String(message.previousTunnelId || "") : "" })
       })
         .then(result => sendResponse(result), error =>
           sendResponse({ ok: false, error: error.message || String(error) }));
