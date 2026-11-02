@@ -22,10 +22,8 @@ func writeInstallerAsset(from, to string) error {
 	return os.WriteFile(to, b, 0o644)
 }
 
-// The first-run browser activation guide opens on every successful GUI install;
-// headless installs never launch a browser.
-// Windows ships an explicit helper which opens the browser extensions page
-// and Explorer at the precise path. It never silently installs the extension.
+// GUI completion offers an unchecked option to open the local README.
+// Headless installs and unchecked GUI installs never launch another application.
 func writeInstallerOnboarding(dir, meta, payload string, targetOS string) error {
 	for _, file := range []struct{ asset, path string }{
 		{"controller.qs", filepath.Join(dir, "config", "controller.qs")},
@@ -58,8 +56,8 @@ Component.prototype.finishFirstRun = function() {
         if (!installer.isInstaller() || installer.isCommandLineInstance() ||
             installer.status != QInstaller.Success) return;
         var form = component.userInterface("VidOtterFirstRun");
-        if (!form) return;
-        console.log("VIDOTTER_EXTENSION_GUIDE_REQUIRED");
+        if (!form || !form.openGuideCheckBox || !form.openGuideCheckBox.checked) return;
+        console.log("VIDOTTER_LOCAL_GUIDE_REQUESTED");
         var target = installer.value("TargetDir");
         if ("__VIDOTTER_PLATFORM__" == "windows") {
             var script = installer.toNativeSeparators(target + "/scripts/VidOtter-FirstRun.ps1");
@@ -68,7 +66,6 @@ Component.prototype.finishFirstRun = function() {
                  "-File", script, "-Mode", "extension"], target);
 
         } else {
-            QDesktopServices.openUrl("file:///" + target + "/extension");
             QDesktopServices.openUrl("file:///" + target + "/README.md");
 
         }

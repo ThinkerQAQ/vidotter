@@ -227,7 +227,7 @@ func prepareInstallerWithUpdateURL(destination, stage, ver, targetOS, updateURL 
     component.addOperation("Mkdir", "@UserStartMenuProgramsPath@/VidOtter");
     component.addOperation("CreateShortcut",
         installer.environmentVariable("SystemRoot") + "/System32/WindowsPowerShell/v1.0/powershell.exe",
-        "@UserStartMenuProgramsPath@/VidOtter/Install Browser Extension.lnk",
+        "@UserStartMenuProgramsPath@/VidOtter/View Setup Instructions.lnk",
         "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File \"@TargetDir@/scripts/VidOtter-FirstRun.ps1\" -Mode extension");
     // Show a standard uninstall shortcut that launches Qt Maintenance Tool.
     // Removal is confirmed in the GUI; do not silently purge Data.

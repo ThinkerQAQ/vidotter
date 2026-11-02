@@ -203,8 +203,8 @@ func TestPrepareInstallerFirstRunOnboarding(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if strings.Contains(string(ui), "openExtensionCheckBox") {
-				t.Fatal("browser activation is required, not an optional checkbox")
+			if !strings.Contains(string(ui), "openGuideCheckBox") || !strings.Contains(string(ui), "<bool>false</bool>") {
+				t.Fatal("local guide must be opt-in")
 			}
 			if _, err := os.Stat(filepath.Join(base, "data", "docs")); !os.IsNotExist(err) {
 				t.Fatal("Qt payload must not carry a separate docs directory")
@@ -212,8 +212,8 @@ func TestPrepareInstallerFirstRunOnboarding(t *testing.T) {
 			if !strings.Contains(string(script), "/README.md") {
 				t.Fatal("installer finish must open root README for activation instructions")
 			}
-			if !strings.Contains(string(script), "VIDOTTER_EXTENSION_GUIDE_REQUIRED") {
-				t.Fatal("installer finish must always open browser activation guide")
+			if !strings.Contains(string(script), "!form.openGuideCheckBox.checked) return") || !strings.Contains(string(script), "VIDOTTER_LOCAL_GUIDE_REQUESTED") {
+				t.Fatal("installer finish must support opt-in local instructions")
 			}
 			if strings.Contains(string(script), "Connect ChatGPT MCP.lnk") || strings.Contains(string(ui), "configureMcpCheckBox") {
 				t.Fatal("ChatGPT activation must be configured from VidOtter Settings")
@@ -227,7 +227,7 @@ func TestPrepareInstallerFirstRunOnboarding(t *testing.T) {
 				if _, err := os.Stat(powershell); err != nil {
 					t.Fatal(err)
 				}
-				for _, shortcut := range []string{"Install Browser Extension.lnk", "Uninstall VidOtter.lnk"} {
+				for _, shortcut := range []string{"View Setup Instructions.lnk", "Uninstall VidOtter.lnk"} {
 					if !strings.Contains(string(script), shortcut) {
 						t.Fatalf("missing Start menu item %s", shortcut)
 					}

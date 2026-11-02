@@ -753,6 +753,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === "bridge.tool.action") {
     const tool = String(message.tool || "");
     const action = String(message.toolAction || "");
+    if (tool === "background" && ["status", "enable", "disable"].includes(action)) {
+      bridgeFetch("/v1/background", {
+        method: "POST", body: JSON.stringify({action, target: message.target || "bridge"})
+      }).then(result => sendResponse(result), error => sendResponse({ok: false, error: error.message || String(error)}));
+      return true;
+    }
     if (tool === "bridge" && action === "restart") {
       restartBridge()
         .then(session => sendResponse({ ok: true, pid: session.pid }), error => sendResponse({ ok: false, error: error.message || String(error) }));

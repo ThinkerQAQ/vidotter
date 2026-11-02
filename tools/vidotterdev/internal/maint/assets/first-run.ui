@@ -4,11 +4,11 @@
  <widget class="QWidget" name="VidOtterFirstRun">
   <layout class="QVBoxLayout" name="verticalLayout">
    <item><widget class="QLabel" name="setupTitle">
-    <property name="text"><string>Browser extension activation required</string></property>
+    <property name="text"><string>Continue setup</string></property>
     <property name="styleSheet"><string>font-weight: 600; font-size: 15px;</string></property>
    </widget></item>
    <item><widget class="QLabel" name="setupDescription">
-    <property name="text"><string>VidOtter is installed. To download videos from browser pages, you must activate the bundled Chrome/Edge extension. When you finish this installer, an offline guide and the extension folder open automatically.</string></property>
+    <property name="text"><string>VidOtter is installed. To download videos from browser pages, you must activate the bundled Chrome/Edge extension. You can read the local README to continue setup.</string></property>
     <property name="wordWrap"><bool>true</bool></property>
    </widget></item>
    <item><widget class="QLabel" name="requiredExtensionNote">
@@ -16,10 +16,14 @@
     <property name="wordWrap"><bool>true</bool></property>
    </widget></item>
    <item><widget class="QLabel" name="extensionInstructions">
-    <property name="text"><string>Browser permissions must be approved by you. The offline guide opens automatically; you can reopen it from the Start menu or installation folder.</string></property>
+    <property name="text"><string>Browser permissions must be approved by you. Use the option below to open the local guide, or read it later from the Start menu or installation folder.</string></property>
     <property name="wordWrap"><bool>true</bool></property>
    </widget></item>
 
+   <item><widget class="QCheckBox" name="openGuideCheckBox">
+    <property name="text"><string>View local setup instructions / 查看本地使用说明</string></property>
+    <property name="checked"><bool>false</bool></property>
+   </widget></item>
   </layout>
  </widget>
  <resources/>

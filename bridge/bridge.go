@@ -138,6 +138,17 @@ func readBridgeState() (bridgeState, error) {
 }
 
 func runBridge() error {
+	listener, err := net.Listen("tcp", bridgeAddress)
+	if err != nil {
+		// Persistent logs must not contain raw network errors or local paths.
+		reason := "bind_failed"
+		if errors.Is(err, syscall.EADDRINUSE) {
+			reason = "port_in_use"
+		}
+		appendRuntimeEvent("ERROR", "bridge", "listen_failed", "reason", reason)
+		return fmt.Errorf("Bridge 无法监听 %s（端口可能已被其他程序占用）：%w", bridgeAddress, err)
+	}
+	defer listener.Close()
 	appendRuntimeLog("bridge", "starting")
 	token, err := randomToken()
 	if err != nil {
@@ -185,6 +196,7 @@ func runBridge() error {
 	mux.HandleFunc("/v1/mcp/setup", server.handleMCPSetup)
 	mux.HandleFunc("/v1/mcp/client/install", server.handleMCPClientInstall)
 	mux.HandleFunc("/v1/mcp/service", server.handleMCPServiceManage)
+	mux.HandleFunc("/v1/background", server.handleBackground)
 	mux.HandleFunc("/v1/tools/yt-dlp/install", server.handleInstallYTDLP)
 	mux.HandleFunc("/v1/tools/whisper/models/install", server.handleInstallWhisperModel)
 	mux.HandleFunc("/v1/tools/llama/models/install", server.handleInstallTranslationModel)
@@ -207,16 +219,6 @@ func runBridge() error {
 		default:
 		}
 	}
-	listener, err := net.Listen("tcp", bridgeAddress)
-	if err != nil {
-		// Persistent logs must not contain raw network errors or local paths.
-		reason := "bind_failed"
-		if errors.Is(err, syscall.EADDRINUSE) {
-			reason = "port_in_use"
-		}
-		appendRuntimeEvent("ERROR", "bridge", "listen_failed", "reason", reason)
-		return fmt.Errorf("Bridge 无法监听 %s（端口可能已被其他程序占用）：%w", bridgeAddress, err)
-	}
 	if err := writeBridgeState(server.state); err != nil {
 		_ = listener.Close()
 		return err
@@ -230,6 +232,9 @@ func runBridge() error {
 	appendRuntimeLog("bridge", "stopped")
 	select {
 	case <-restartRequested:
+		if len(os.Args) > 1 && os.Args[1] == "--bridge-service" {
+			return nil
+		}
 		command, commandErr := bridgeCommand()
 		if commandErr != nil {
 			return commandErr

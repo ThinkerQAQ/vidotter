@@ -107,24 +107,16 @@ $secure = Get-Content -Path $keyFile -TotalCount 1 | ConvertTo-SecureString
 $bstr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure)
 try { $env:CONTROL_PLANE_API_KEY = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($bstr) }
 finally { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr) }
+$profile = Join-Path $private 'vidotter.yaml'
+$existing = @(Get-CimInstance Win32_Process -Filter "Name='tunnel-client.exe'" -ErrorAction SilentlyContinue |
+    Where-Object { $_.CommandLine -and $_.CommandLine.Contains($profile) })
+if ($existing.Count -gt 0) { exit 0 }
 try { & '__CLIENT__' run --config (Join-Path $private 'vidotter.yaml') --health.url-file (Join-Path $private 'health.url') }
 finally { Remove-Item Env:CONTROL_PLANE_API_KEY -ErrorAction SilentlyContinue }
+exit $LASTEXITCODE
 '@
 $runner = $runner.Replace('__CLIENT__', $clientPath.Replace("'", "''"))
 Set-Content -Path $launcher -Value $runner -Encoding UTF8
-$startup = [Environment]::GetFolderPath('Startup')
-# Isolated smoke tests never touch the user's real Startup folder.
-if ($env:VIDOTTER_MCP_TEST_MODE -eq '1' -and $env:VIDOTTER_MCP_TEST_STARTUP_DIR) {
-    $startup = $env:VIDOTTER_MCP_TEST_STARTUP_DIR
-    New-Item -ItemType Directory -Force -Path $startup | Out-Null
-}
-$shortcutPath = Join-Path $startup 'VidOtter MCP Tunnel.lnk'
-$shell = New-Object -ComObject WScript.Shell
-$link = $shell.CreateShortcut($shortcutPath)
-$link.TargetPath = (Get-Command powershell.exe).Source
-$link.Arguments = '-NoProfile -WindowStyle Hidden -File "' + $launcher + '"'
-$link.WorkingDirectory = $private
-$link.Save()
 $already = Get-CimInstance Win32_Process -Filter "name='tunnel-client.exe'" -ErrorAction SilentlyContinue |
     Where-Object { $_.CommandLine -and $_.CommandLine.Contains($profile) }
 if (-not $already) {

@@ -143,6 +143,16 @@ func logURLSummary(raw string) string {
 
 // Main runs the desktop command-line application.
 func Main() {
+	if len(os.Args) >= 2 && os.Args[1] == "--bridge-service" {
+		// The OS owns one supervisor. In-app restart never spawns another supervisor.
+		for {
+			if err := runBridge(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+				appendRuntimeEvent("WARN", "bridge", "service_retry")
+			}
+			time.Sleep(5 * time.Second)
+		}
+	}
+
 	if len(os.Args) >= 2 && os.Args[1] == "--mcp-stdio" {
 		if err := runVidOtterMCP(); err != nil {
 			fmt.Fprintln(os.Stderr, "VidOtter MCP:", err)

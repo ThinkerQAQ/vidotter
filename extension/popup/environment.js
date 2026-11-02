@@ -3,6 +3,8 @@
 
   const api = root.VidOtterPopup;
   let tools = [];
+  let background = null;
+  let backgroundBusy = false;
   const navigation = [];
 
   function setIndicator(state, text) {
@@ -747,6 +749,53 @@
       });
     }
     advanced.appendChild(controls);
+    const backgroundTitle = document.createElement("h4");
+    backgroundTitle.textContent = "登录后后台运行";
+    advanced.appendChild(backgroundTitle);
+    const backgroundHint = document.createElement("p");
+    backgroundHint.className = "settings-help";
+    backgroundHint.textContent = "不需要浏览器保持打开。关闭开关仅取消下次登录自启；断开连接仅停止本次 Tunnel。";
+    advanced.appendChild(backgroundHint);
+    if (!background) {
+      const unavailable = document.createElement("p");
+      unavailable.className = "settings-help";
+      unavailable.textContent = "后台设置暂不可用，请检查本地服务管理器后刷新。";
+      advanced.appendChild(unavailable);
+    } else {
+      for (const [target, text, enabled] of [
+        ["bridge", "登录后后台运行 VidOtter", background.bridgeEnabled],
+        ["tunnel", "登录后自动连接 ChatGPT", background.tunnelEnabled]
+      ]) {
+        const label = document.createElement("label");
+        label.className = "settings-help";
+        label.style.display = "block";
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.checked = Boolean(enabled);
+        checkbox.disabled = backgroundBusy || busy || (target === "tunnel" && !state.configured);
+        checkbox.addEventListener("change", async () => {
+          backgroundBusy = true;
+          renderTools(tools);
+          try {
+            background = await api.send("bridge.tool.action", {
+              tool: "background", toolAction: checkbox.checked ? "enable" : "disable", target
+            });
+            await refresh();
+          } catch (error) {
+            mcpUI.error = error.message || String(error);
+          } finally {
+            backgroundBusy = false;
+            renderTools(tools);
+          }
+        });
+        label.append(checkbox, document.createTextNode(" " + text));
+        advanced.appendChild(label);
+      }
+    }
+    const runtimeStatus = document.createElement("p");
+    runtimeStatus.className = "settings-help";
+    runtimeStatus.textContent = "Bridge：运行中 · Tunnel：" + (state.ready ? "运行中" : "未就绪");
+    advanced.appendChild(runtimeStatus);
     if (state.configured && mcpUI.editing) {
       const editor = document.createElement("div");
       editor.className = "mcp-switch-editor";
@@ -957,6 +1006,8 @@
     api.setMessage("environmentMessage", "");
     try {
       const result = await api.send("bridge.tools");
+      try { background = await api.send("bridge.tool.action", {tool: "background", toolAction: "status", target: "bridge"}); }
+      catch (_) { background = null; }
       renderTools(result.tools);
       const requiredTools = tools.filter(tool => tool.required);
       const requiredReady = requiredTools.length > 0 && requiredTools.every(tool => tool.health && tool.health.ok);

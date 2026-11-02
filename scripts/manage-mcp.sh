@@ -13,6 +13,18 @@ elif [[ "$os" == "Darwin" ]]; then
     label="gui/$uid/com.vidotter.mcp"
     agent="$HOME/Library/LaunchAgents/com.vidotter.mcp.plist"
     [[ -f "$agent" ]] || { echo 'VidOtter Tunnel LaunchAgent not configured.' >&2; exit 1; }
+    # A manual connection must also work when login auto-connect is disabled.
+    bootstrap_once() {
+        local disabled=false
+        if launchctl print-disabled "gui/$uid" | grep -F "\"com.vidotter.mcp\" => true" >/dev/null; then
+            disabled=true
+            launchctl enable "$label"
+        fi
+        local result=0
+        launchctl bootstrap "gui/$uid" "$agent" || result=$?
+        if [[ "$disabled" == true ]]; then launchctl disable "$label"; fi
+        return "$result"
+    }
     case "$action" in
       stop)
         launchctl bootout "$label" || { echo 'Tunnel already stopped or LaunchAgent unavailable' >&2; exit 1; } ;;
@@ -20,11 +32,11 @@ elif [[ "$os" == "Darwin" ]]; then
         if launchctl print "$label" >/dev/null 2>&1; then
           launchctl kickstart "$label"
         else
-          launchctl bootstrap "gui/$uid" "$agent"
+          bootstrap_once
         fi ;;
       restart)
         launchctl bootout "$label" >/dev/null 2>&1 || true
-        launchctl bootstrap "gui/$uid" "$agent" ;;
+        bootstrap_once ;;
     esac
 else
     echo 'Unsupported operating system' >&2

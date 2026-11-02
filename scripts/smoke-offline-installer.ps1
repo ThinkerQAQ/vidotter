@@ -29,12 +29,12 @@ $parseErrors = $null
 [System.Management.Automation.Language.Parser]::ParseFile($firstRun, [ref]$null, [ref]$parseErrors) | Out-Null
 if ($parseErrors.Count -gt 0) { throw "Windows first-run PowerShell script has syntax errors: $parseErrors" }
 $helperText = Get-Content -Raw -Encoding UTF8 $firstRun
-if ($helperText -notmatch 'Start-Process -FilePath \$guide' -or $helperText -notmatch 'edge://extensions/') {
-    throw "First-run helper does not open offline guide and extension manager"
+if ($helperText -notmatch 'Start-Process -FilePath \$guide' -or $helperText -match 'Start-Process -FilePath explorer.exe') {
+    throw "First-run helper must open only the local guide"
 }
 
 $startMenu = Join-Path ([Environment]::GetFolderPath('Programs')) 'VidOtter'
-foreach ($shortcut in @('Install Browser Extension.lnk', 'Uninstall VidOtter.lnk')) {
+foreach ($shortcut in @('View Setup Instructions.lnk', 'Uninstall VidOtter.lnk')) {
     if (!(Test-Path (Join-Path $startMenu $shortcut))) {
         throw "Missing Start Menu setup shortcut: $shortcut"
     }
