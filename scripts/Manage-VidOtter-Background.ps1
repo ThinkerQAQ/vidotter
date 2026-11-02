@@ -39,8 +39,15 @@ function RegisterOwnTask($kind) {
         $runner=Join-Path $PSScriptRoot 'Run-VidOtter-Bridge.ps1'
     } else {
         $runner=Join-Path $private 'run-mcp.ps1'
-        if (!(Test-Path $runner) -or !(Test-Path (Join-Path $private 'vidotter.yaml'))) {
+        $profile=Join-Path $private 'vidotter.yaml'
+        if (!(Test-Path $runner) -or !(Test-Path $profile)) {
             throw 'Configure ChatGPT MCP first.'
+        }
+        # A preserved profile from a removed installation can still point at
+        # that installation's executable. Never restore a broken Tunnel task.
+        $expected=(Join-Path $root 'bin\vidotter-windows-amd64.exe').Replace('\','/')
+        if (!(Get-Content -Raw -Path $profile).Replace('\','/').Contains($expected)) {
+            throw 'The Tunnel profile belongs to another installation. Reconfigure ChatGPT MCP first.'
         }
     }
     if (!(Test-Path $runner)) { throw "Missing VidOtter launcher: $runner" }
@@ -91,7 +98,11 @@ if ($Action -eq 'enable') {
     foreach ($kind in @('bridge','tunnel')) { $null=GetOwnTask $kind }
     if ($saved.bridgeEnabled) { RegisterOwnTask 'bridge' }
     if ($saved.tunnelEnabled -and (Test-Path (Join-Path $private 'run-mcp.ps1'))) {
-        RegisterOwnTask 'tunnel'
+        $profile=Join-Path $private 'vidotter.yaml'
+        $expected=(Join-Path $root 'bin\vidotter-windows-amd64.exe').Replace('\','/')
+        if ((Test-Path $profile) -and (Get-Content -Raw -Path $profile).Replace('\','/').Contains($expected)) {
+            RegisterOwnTask 'tunnel'
+        }
     }
 }
 @{bridgeEnabled=(IsEnabled 'bridge'); tunnelEnabled=((IsEnabled 'tunnel') -or (Test-Path $legacy))} | ConvertTo-Json -Compress

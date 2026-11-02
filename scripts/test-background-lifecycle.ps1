@@ -29,7 +29,8 @@ try {
     }
     $env:LOCALAPPDATA = $local
     $private = Join-Path $local 'VidOtter\MCP'
-    Set-Content -Path (Join-Path $private 'vidotter.yaml') -Value 'tunnel_id: FAKE_TEST_ONLY' -Encoding Ascii
+    $mcpBinary = (Join-Path $first 'bin\vidotter-windows-amd64.exe').Replace('\','/')
+    Set-Content -Path (Join-Path $private 'vidotter.yaml') -Value ('mcp_command: "' + $mcpBinary + '" --mcp-stdio') -Encoding Ascii
     Set-Content -Path (Join-Path $private 'run-mcp.ps1') -Value '# CI fake runtime; never executed' -Encoding Ascii
 
     $status = RunManager $first 'status'
@@ -47,8 +48,10 @@ try {
     } finally { $ErrorActionPreference = $previousPreference }
     if ($badExit -eq 0) { throw 'Second installation silently stole the first install task' }
     $task = Get-ScheduledTask -TaskName 'VidOtter-bridge'
-    if (![string]::Equals($task.Actions[0].WorkingDirectory, $first, [StringComparison]::OrdinalIgnoreCase)) {
-        throw 'Second install modified the original task'
+    $actualOwner = [string]$task.Actions[0].WorkingDirectory
+    $expectedOwner = [string][IO.Path]::GetFullPath($first).TrimEnd('\')
+    if (![string]::Equals($actualOwner.TrimEnd('\'), $expectedOwner, [StringComparison]::OrdinalIgnoreCase)) {
+        throw "Second install modified the original task: expected '$expectedOwner' actual '$actualOwner' (refusal exit $badExit)"
     }
 
     $status = RunManager $first 'uninstall'

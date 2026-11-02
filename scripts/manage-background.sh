@@ -93,6 +93,7 @@ write_tunnel_service_if_missing() {
   file="$(service_file tunnel)"
   [[ -f "$file" ]] && return 0
   [[ -f "$profile" ]] || { echo 'Configure MCP first' >&2; return 1; }
+  grep -Fq -- "$root/bin/" "$profile" || { echo 'Tunnel profile belongs to another installation; reconfigure MCP first' >&2; return 1; }
   client="$(command -v tunnel-client || true)"
   [[ -n "$client" ]] || client="$HOME/.local/bin/tunnel-client"
   [[ -x "$client" ]] || { echo 'Tunnel Client missing' >&2; return 1; }
@@ -133,6 +134,12 @@ EOF
 toggle() {
   local kind="$1" mode="$2" label
   owned_service "$kind"
+  if [[ "$kind" == tunnel && "$mode" == enable ]]; then
+    [[ -f "$profile" ]] && grep -Fq -- "$root/bin/" "$profile" || {
+      echo 'Tunnel profile belongs to another installation; reconfigure MCP first' >&2
+      return 1
+    }
+  fi
   if [[ "$os" == Linux ]]; then
     if [[ "$mode" == enable ]]; then
       if [[ "$kind" == bridge ]]; then write_bridge_service
@@ -180,7 +187,7 @@ case "$action" in
       owned_service bridge
       owned_service tunnel
       if grep -qx 'bridge=true' "$preferences"; then toggle bridge enable; fi
-      if grep -qx 'tunnel=true' "$preferences" && [[ -f "$profile" ]]; then
+      if grep -qx 'tunnel=true' "$preferences" && [[ -f "$profile" ]] && grep -Fq -- "$root/bin/" "$profile"; then
         toggle tunnel enable
       fi
     fi
