@@ -135,31 +135,7 @@ if ($switching) {
     $healthFile = Join-Path $private 'health.url'
     $healthy = $false
     $maxAttempts = 35
-    # Shorter retries are useful for isolated installer smoke tests.
-    if ($env:VIDOTTER_MCP_HEALTH_ATTEMPTS -match '^[1-9][0-9]?
-        Start-Sleep -Seconds 1
-        & $clientPath health --url-file $healthFile --require-control-plane-poll --json 1>$null 2>$null
-        if ($LASTEXITCODE -eq 0) { $healthy = $true; break }
-    }
-    if (-not $healthy) { throw 'New Tunnel did not become ready; restoring previous profile.' }
-}
-$completed = $true
-Write-Host 'VidOtter Tunnel configured. In ChatGPT: Plugins -> Add custom MCP server -> Tunnel.'
-} catch {
-    if ($replaced -and (Test-Path $rollback)) {
-        Stop-OwnTunnel
-        Copy-Item -LiteralPath $rollback -Destination $profile -Force
-        Start-OwnTunnel (Join-Path $private 'run-mcp.ps1')
-        Write-Warning 'Previous VidOtter Tunnel profile was restored.'
-    }
-    throw
-} finally {
-    if ($staging -and (Test-Path $staging)) { Remove-Item -LiteralPath $staging -Recurse -Force }
-    if ($completed -and $rollback -and (Test-Path $rollback)) { Remove-Item -LiteralPath $rollback -Force }
-}
-# A successful setup closes the configuration terminal normally.
-exit 0
-) {
+    if ($env:VIDOTTER_MCP_HEALTH_ATTEMPTS -match '^[1-9][0-9]?$') {
         $maxAttempts = [int]$env:VIDOTTER_MCP_HEALTH_ATTEMPTS
     }
     for ($attempt = 0; $attempt -lt $maxAttempts; $attempt++) {
