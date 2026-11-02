@@ -17,7 +17,7 @@ Web video downloads can involve temporary playback URLs, HLS segments, and file 
 - A popup, side panel, and full-screen workspace sharing the same jobs, settings, and history.
 - Optional subtitles, speech recognition, translation, and ChatGPT MCP.
 
-![VidOtter Detect interface](assets/first-run-detect-zh.png)
+![VidOtter Detect interface](https://pub-366a15b6733345039775c083a1fffb3e.r2.dev/images/v1/43fbea4fe2fa73899c6f047c405b3651.webp)
 
 Interface example; the installed version's layout may differ.
 

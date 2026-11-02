@@ -17,7 +17,7 @@
 - 在弹窗、侧边栏和全屏工作区中管理同一份任务、配置及历史记录。
 - 按需使用字幕、语音识别、翻译和 ChatGPT MCP。
 
-![VidOtter 资源嗅探界面](assets/first-run-detect-zh.png)
+![VidOtter 资源嗅探界面](https://pub-366a15b6733345039775c083a1fffb3e.r2.dev/images/v1/43fbea4fe2fa73899c6f047c405b3651.webp)
 
 界面示意，实际布局以所安装版本为准。
 
