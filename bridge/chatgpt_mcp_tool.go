@@ -137,6 +137,7 @@ func (chatGPTMCPTool) Snapshot(_ context.Context, _ bridgeConfig) toolSnapshot {
 	private := filepath.Dir(tunnelHealthURLFile(runtime.GOOS, home, os.Getenv("LOCALAPPDATA"), os.Getenv("XDG_CONFIG_HOME")))
 	revision, _ := os.ReadFile(filepath.Join(private, "configuration-revision"))
 	setupState, _ := os.ReadFile(filepath.Join(private, "setup-state"))
+	_, restartRequiredErr := os.Stat(filepath.Join(private, "restart-required"))
 	keyName := "runtime.env"
 	if runtime.GOOS == "windows" {
 		keyName = "runtime-key.dpapi"
@@ -149,8 +150,8 @@ func (chatGPTMCPTool) Snapshot(_ context.Context, _ bridgeConfig) toolSnapshot {
 		Platforms:   []string{"windows", "linux", "darwin"}, Delivery: "bundled", Required: false,
 		Capabilities: []string{"mcp.stdio", "tunnel.optional"}, SortOrder: 25,
 		Config: toolConfigView{Schema: []toolConfigField{}, Values: map[string]any{
-			"tunnelId": tunnelID, "configured": configured, "clientInstalled": client != "", "ready": ready,
-			"revision": strings.TrimSpace(string(revision)), "runtimeKeySaved": keySaved, "setupState": strings.TrimSpace(string(setupState)),
+			"tunnelId": tunnelID, "configured": configured, "clientInstalled": client != "", "ready": ready, "running": tunnelProcessRunning(profile),
+			"revision": strings.TrimSpace(string(revision)), "runtimeKeySaved": keySaved, "setupState": strings.TrimSpace(string(setupState)), "restartRequired": restartRequiredErr == nil,
 		}},
 		Health: toolHealth{Status: status, OK: ready, Summary: summary,
 			Detail: detail, CheckedAt: time.Now()},
@@ -166,6 +167,10 @@ func (chatGPTMCPTool) Snapshot(_ context.Context, _ bridgeConfig) toolSnapshot {
 var mcpSetupMu sync.Mutex
 
 func mcpSetupCommand(goos, root, tunnelID string, replace bool, previousID string) (*exec.Cmd, error) {
+	return mcpSaveCommand(goos, root, tunnelID, replace, previousID, false, false)
+}
+
+func mcpSaveCommand(goos, root, tunnelID string, replace bool, previousID string, saveOnly, reuseKey bool) (*exec.Cmd, error) {
 	if !validTunnelID(tunnelID) || (replace && !validTunnelID(previousID)) {
 		return nil, errors.New("invalid Tunnel ID")
 	}
@@ -181,6 +186,12 @@ func mcpSetupCommand(goos, root, tunnelID string, replace bool, previousID strin
 		if replace {
 			args = append(args, "-ReplaceExisting", "-ExpectedTunnelId", previousID)
 		}
+		if saveOnly {
+			args = append(args, "-SaveOnly")
+		}
+		if reuseKey {
+			args = append(args, "-ReuseSavedKey")
+		}
 		cmd = exec.Command("powershell.exe", args...)
 		hideMCPSetupWindow(cmd)
 	} else if goos == "linux" || goos == "darwin" {
@@ -189,6 +200,12 @@ func mcpSetupCommand(goos, root, tunnelID string, replace bool, previousID strin
 		cmd.Env = append(os.Environ(), "VIDOTTER_TUNNEL_ID="+tunnelID, "VIDOTTER_MCP_KEY_STDIN=1")
 		if replace {
 			cmd.Env = append(cmd.Env, "VIDOTTER_REPLACE_TUNNEL=1", "VIDOTTER_EXPECTED_TUNNEL_ID="+previousID)
+		}
+		if saveOnly {
+			cmd.Env = append(cmd.Env, "VIDOTTER_MCP_SAVE_ONLY=1")
+		}
+		if reuseKey {
+			cmd.Env = append(cmd.Env, "VIDOTTER_MCP_REUSE_KEY=1")
 		}
 	} else {
 		return nil, errors.New("unsupported platform")
@@ -214,6 +231,8 @@ func (s *bridgeServer) handleMCPSetup(w http.ResponseWriter, r *http.Request) {
 		TunnelID         string `json:"tunnelId"`
 		Replace          bool   `json:"replace"`
 		PreviousTunnelID string `json:"previousTunnelId"`
+		SaveOnly         bool   `json:"saveOnly"`
+		ReuseKey         bool   `json:"reuseKey"`
 	}
 	decoder := json.NewDecoder(http.MaxBytesReader(w, r.Body, 4096))
 	decoder.DisallowUnknownFields()
@@ -234,9 +253,24 @@ func (s *bridgeServer) handleMCPSetup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	body.RuntimeAPIKey = strings.TrimSpace(body.RuntimeAPIKey)
-	if len(body.RuntimeAPIKey) < 16 || len(body.RuntimeAPIKey) > 512 || strings.ContainsAny(body.RuntimeAPIKey, "\r\n\x00") {
+	if (len(body.RuntimeAPIKey) < 16 && !body.ReuseKey) || len(body.RuntimeAPIKey) > 512 || strings.ContainsAny(body.RuntimeAPIKey, "\r\n\x00") || (body.ReuseKey && body.RuntimeAPIKey != "") {
 		writeJSON(w, http.StatusBadRequest, map[string]any{"ok": false, "error": "请填写有效的 Runtime API Key"})
 		return
+	}
+	if body.ReuseKey {
+		keyName := "runtime.env"
+		if runtime.GOOS == "windows" {
+			keyName = "runtime-key.dpapi"
+		}
+		keyPath := filepath.Join(filepath.Dir(tunnelHealthURLFile(runtime.GOOS, home, os.Getenv("LOCALAPPDATA"), os.Getenv("XDG_CONFIG_HOME"))), keyName)
+		if !body.Replace || !validTunnelID(existingID) {
+			writeJSON(w, http.StatusConflict, map[string]any{"ok": false, "error": "No existing Tunnel credentials to reuse"})
+			return
+		}
+		if info, err := os.Stat(keyPath); err != nil || info.IsDir() || info.Size() == 0 {
+			writeJSON(w, http.StatusConflict, map[string]any{"ok": false, "error": "Saved runtime key is unavailable"})
+			return
+		}
 	}
 	if findTunnelClient(runtime.GOOS, home) == "" {
 		writeJSON(w, http.StatusConflict, map[string]any{"ok": false,
@@ -249,7 +283,7 @@ func (s *bridgeServer) handleMCPSetup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	root := filepath.Dir(filepath.Dir(executable))
-	command, err := mcpSetupCommand(runtime.GOOS, root, body.TunnelID, body.Replace, body.PreviousTunnelID)
+	command, err := mcpSaveCommand(runtime.GOOS, root, body.TunnelID, body.Replace, body.PreviousTunnelID, body.SaveOnly, body.ReuseKey)
 	if err != nil {
 		writeJSON(w, http.StatusConflict, map[string]any{"ok": false, "error": err.Error()})
 		return

@@ -40,6 +40,9 @@ jobs:
       - name: Test Linux background lifecycle in isolated user-service manager
         if: runner.os == 'Linux'
         run: bash scripts/test-background-lifecycle.sh
+      - name: Test manual MCP service start without enabling login startup
+        if: runner.os == 'Linux'
+        run: bash scripts/test-mcp-manual-start.sh
       - name: Verify Windows MCP setup syntax
         if: runner.os == 'Windows'
         shell: pwsh

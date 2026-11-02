@@ -65,10 +65,10 @@ bash "$first_script" uninstall >/dev/null
 [[ -f "$HOME/.config/vidotter/background-preferences" ]]
 check_state false false
 bash "$first_script" restore >/dev/null
-check_state true true
+check_state false true
 bash "$first_script" disable tunnel >/dev/null
-check_state true false
+check_state false false
 bash "$first_script" uninstall >/dev/null
 bash "$first_script" restore >/dev/null
-check_state true false
+check_state false false
 echo 'Linux background lifecycle: no task theft, clean uninstall, persisted preferences and restore passed.'

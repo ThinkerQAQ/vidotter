@@ -559,3 +559,10 @@ html[data-surface="side-panel"] .log-follow { grid-column: 1; }
   .mcp-connection-card { padding: 17px; }
   .mcp-main-action button, .mcp-main-action .primary-link { width: 100%; justify-content: center; }
 }
+
+/* Three fixed MCP controls, aligned with Remote Desktop MCP. */
+.mcp-help-links { display: grid; gap: 8px; margin: 12px 0 18px; }
+.mcp-help-links a { font-size: 13px; color: var(--accent); text-decoration: none; }
+.mcp-help-links a:hover { text-decoration: underline; }
+.mcp-service-actions { justify-content: flex-start; align-items: center; }
+.mcp-service-actions button { min-height: 36px; }

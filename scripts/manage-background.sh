@@ -183,14 +183,25 @@ case "$action" in
     [[ "$os" != Linux ]] || systemctl --user daemon-reload >/dev/null 2>&1 || true
     ;;
   restore)
+    owned_service bridge
+    owned_service tunnel
+    # Migrate pre-existing Bridge login tasks/agents to on-demand launch.
+    # Do not stop the current Bridge process or interfere with downloads.
+    if [[ -f "$(service_file bridge)" ]]; then
+      if [[ "$os" == Linux ]]; then
+        systemctl --user disable vidotter-bridge.service >/dev/null 2>&1 || true
+      else
+        launchctl disable "gui/$(id -u)/com.vidotter.bridge" >/dev/null 2>&1 || true
+      fi
+      rm -f "$(service_file bridge)"
+      [[ "$os" != Linux ]] || systemctl --user daemon-reload >/dev/null 2>&1 || true
+    fi
     if [[ -f "$preferences" ]]; then
-      owned_service bridge
-      owned_service tunnel
-      if grep -qx 'bridge=true' "$preferences"; then toggle bridge enable; fi
       if grep -qx 'tunnel=true' "$preferences" && [[ -f "$profile" ]] && grep -Fq -- "$root/bin/" "$profile"; then
         toggle tunnel enable
       fi
     fi
+    save_preferences
     ;;
 esac
 bridge=false; tunnel=false

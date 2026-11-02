@@ -112,6 +112,27 @@ exit /b %ERRORLEVEL%
     if ((Get-Content -Raw $profile) -notmatch [regex]::Escape($other)) { throw 'Health failure did not restore original ID' }
     if ([IO.File]::ReadAllText($keyPath) -cne $expectedKey) { throw 'Failed update did not restore the original key' }
     if ((Get-Content -Raw $revisionPath) -cne $expectedRevision) { throw 'Failed update marked successful' }
+    # Save-only with the saved DPAPI key works without a control-plane health check,
+    # never starts/stops the existing Tunnel and does not change login tasks.
+    $savedBefore = [IO.File]::ReadAllText($keyPath)
+    $revisionBefore = Get-Content -Raw $revisionPath
+    $keyOnly = @('-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass',
+      '-File',$setup,'-TunnelId',$other,'-ReplaceExisting','-ExpectedTunnelId',$other,
+      '-KeyFromStdin','-ReuseSavedKey','-SaveOnly')
+    '' | & powershell.exe @keyOnly 1>$null 2>$null
+    if ($LASTEXITCODE -ne 0) { throw 'Save-only with saved DPAPI key failed' }
+    $savedAfter = Get-Content $keyPath | ConvertTo-SecureString
+    $ptr=[Runtime.InteropServices.Marshal]::SecureStringToBSTR($savedAfter)
+    try {
+        if ([Runtime.InteropServices.Marshal]::PtrToStringBSTR($ptr) -cne $inlineKey) {
+            throw 'Save-only modified the plaintext saved key'
+        }
+    } finally { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($ptr) }
+    if ((Get-Content -Raw $revisionPath) -eq $revisionBefore) { throw 'Save-only did not record new revision' }
+    if (!(Test-Path (Join-Path $env:LOCALAPPDATA 'VidOtter/MCP/restart-required'))) {
+        throw 'Save-only did not record pending activation'
+    }
+    Write-Host 'Windows Tunnel save-only smoke: saved key reuse without health/start/stop passed.'
     Write-Host 'Windows Tunnel switch smoke: initial setup, explicit switch, stale ID, doctor failure, rollback all passed.'
 } finally {
     $env:LOCALAPPDATA = $oldLocal

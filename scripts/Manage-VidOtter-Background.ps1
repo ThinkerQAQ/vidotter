@@ -107,14 +107,17 @@ if ($Action -eq 'enable') {
     foreach ($kind in @('bridge','tunnel')) { RemoveOwnTask $kind $true }
     StopOwnProcesses
     Remove-Item -LiteralPath $legacy -ErrorAction SilentlyContinue
-} elseif ($Action -eq 'restore' -and (Test-Path $preferences)) {
-    $saved=Get-Content -Raw -Path $preferences | ConvertFrom-Json
+} elseif ($Action -eq 'restore') {
     foreach ($kind in @('bridge','tunnel')) { $null=GetOwnTask $kind }
-    if ($saved.bridgeEnabled) { RegisterOwnTask 'bridge' }
-    if ($saved.tunnelEnabled -and (Test-Path (Join-Path $private 'run-mcp.ps1'))) {
-        if (TunnelProfileOwnedByCurrentInstall) {
-            RegisterOwnTask 'tunnel'
+    # Legacy Bridge login startup is replaced by Native Messaging on-demand
+    # launch. Unregister its task without stopping a currently active download.
+    RemoveOwnTask 'bridge' $false
+    if (Test-Path $preferences) {
+        $saved=Get-Content -Raw -Path $preferences | ConvertFrom-Json
+        if ($saved.tunnelEnabled -and (Test-Path (Join-Path $private 'run-mcp.ps1'))) {
+            if (TunnelProfileOwnedByCurrentInstall) { RegisterOwnTask 'tunnel' }
         }
     }
+    SavePreferences
 }
 @{bridgeEnabled=(IsEnabled 'bridge'); tunnelEnabled=((IsEnabled 'tunnel') -or (Test-Path $legacy))} | ConvertTo-Json -Compress

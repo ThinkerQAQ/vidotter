@@ -65,13 +65,13 @@ try {
     if (!(Test-Path $settings)) { throw 'Update preferences were not preserved' }
 
     $status = RunManager $first 'restore'
-    if (!$status.bridgeEnabled -or !$status.tunnelEnabled) { throw 'In-place upgrade did not restore both switches' }
+    if ($status.bridgeEnabled -or !$status.tunnelEnabled) { throw 'Migration must remove Bridge startup and preserve Tunnel auto-start' }
 
     $status = RunManager $first 'disable' 'tunnel'
     if ($status.tunnelEnabled) { throw 'Disabling Tunnel did not unregister the task' }
     $status = RunManager $first 'uninstall'
     $status = RunManager $first 'restore'
-    if (!$status.bridgeEnabled -or $status.tunnelEnabled) { throw 'Restored settings ignored the disabled Tunnel state' }
+    if ($status.bridgeEnabled -or $status.tunnelEnabled) { throw 'Restored settings ignored the disabled Tunnel state' }
     Write-Host 'Windows background lifecycle: duplicate-install rejection, uninstall cleanup, restore and disabled preference passed.'
 } finally {
     try { $null = RunManager $first 'uninstall' } catch { Write-Warning $_.Exception.Message }

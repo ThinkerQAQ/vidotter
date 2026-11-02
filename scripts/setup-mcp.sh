@@ -44,6 +44,9 @@ if [[ "${VIDOTTER_MCP_KEY_STDIN:-}" == 1 ]]; then
 elif [[ "${VIDOTTER_MCP_TEST_MODE:-}" == 1 ]]; then
   key="${CONTROL_PLANE_API_KEY:-}"
 fi
+if [[ -z "$key" && "${VIDOTTER_MCP_REUSE_KEY:-}" == 1 && -s "$env_file" ]]; then
+  key="$(sed -n 's/^CONTROL_PLANE_API_KEY=//p' "$env_file" | head -n1)"
+fi
 if [[ -z "$key" && "${VIDOTTER_MCP_KEY_STDIN:-}" != 1 ]]; then
   echo 'Enter the key for this connection; the saved key is not reused automatically.'
   read -r -s -p 'Runtime API Key (hidden input): ' key
@@ -65,10 +68,10 @@ restore_on_exit() {
   local status=$?
   trap - EXIT
   if [[ "$completed" != true && "$committing" == true ]]; then
-    stop_own
+    if [[ "${VIDOTTER_MCP_SAVE_ONLY:-}" != 1 ]]; then stop_own; fi
     if [[ "$had_profile" == true ]]; then cp -p "$staging/old.yaml" "$profile"; else rm -f "$profile"; fi
     if [[ "$had_key" == true ]]; then cp -p "$staging/old.env" "$env_file"; else rm -f "$env_file"; fi
-    if [[ "$had_profile" == true && "$had_key" == true ]]; then
+    if [[ "${VIDOTTER_MCP_SAVE_ONLY:-}" != 1 && "$had_profile" == true && "$had_key" == true ]]; then
       if [[ "$os" == Linux ]]; then systemctl --user start vidotter-tunnel.service >/dev/null 2>&1 || true
       else launchctl bootstrap "gui/$(id -u)" "$HOME/Library/LaunchAgents/com.vidotter.mcp.plist" >/dev/null 2>&1 || true; fi
     fi
@@ -85,11 +88,20 @@ unset key
 "$client" init --sample sample_mcp_stdio_local --profile-dir "$staging" --profile vidotter \
   --tunnel-id "$id" --mcp-command "\"$app\" --mcp-stdio" --health-listen-addr 127.0.0.1:0
 "$client" doctor --config "$staging/vidotter.yaml"
-stop_own
+if [[ "${VIDOTTER_MCP_SAVE_ONLY:-}" != 1 ]]; then stop_own; fi
 committing=true
 cp "$staging/vidotter.yaml" "$profile"
 cp "$staging/runtime.env" "$env_file"
 chmod 600 "$profile" "$env_file"
+if [[ "${VIDOTTER_MCP_SAVE_ONLY:-}" == 1 ]]; then
+  printf '%s
+' "$(basename "$staging")" > "$private/configuration-revision"
+  printf '%s
+' true > "$private/restart-required"
+  completed=true
+  echo 'MCP configuration saved; running service and login tasks unchanged.'
+  exit 0
+fi
 rm -f "$private/health.url"
 if [[ "$os" == "Linux" ]] && command -v systemctl >/dev/null && systemctl --user is-system-running >/dev/null 2>&1; then
   unit="$HOME/.config/systemd/user/vidotter-tunnel.service"
@@ -154,5 +166,6 @@ for _ in $(seq 1 "$health_attempts"); do
 done
 [[ "$healthy" == true ]] || { echo 'New connection failed live polling verification.' >&2; exit 1; }
 printf '%s\n' "$(basename "$staging")" > "$private/configuration-revision"
+rm -f "$private/restart-required"
 completed=true
 echo 'Tunnel ID and Runtime API Key verified. Continue in ChatGPT Plugins.'

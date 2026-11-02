@@ -74,6 +74,42 @@ func TestMCPSetupLaunchesOnlyBundledScripts(t *testing.T) {
 	}
 }
 
+func TestMCPSaveOnlyCommandIsolation(t *testing.T) {
+	root := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(root, "scripts"), 0700); err != nil {
+		t.Fatal(err)
+	}
+	for _, script := range []string{"Setup-VidOtter-MCP.ps1", "setup-mcp.sh"} {
+		if err := os.WriteFile(filepath.Join(root, "scripts", script), []byte("# test"), 0600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	id := "tunnel_0123456789abcdef0123456789abcdef"
+	win, err := mcpSaveCommand("windows", root, id, true, id, true, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	args := strings.Join(win.Args, " ")
+	for _, flag := range []string{"-SaveOnly", "-ReuseSavedKey", "-ReplaceExisting", "-KeyFromStdin"} {
+		if !strings.Contains(args, flag) {
+			t.Errorf("missing option %s: %s", flag, args)
+		}
+	}
+	if strings.Contains(args, "FAKE_RUNTIME_KEY") {
+		t.Fatal("secret must never be a command argument")
+	}
+	unix, err := mcpSaveCommand("linux", root, id, true, id, true, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	env := strings.Join(unix.Env, "\n")
+	for _, variable := range []string{"VIDOTTER_MCP_SAVE_ONLY=1", "VIDOTTER_MCP_REUSE_KEY=1", "VIDOTTER_REPLACE_TUNNEL=1"} {
+		if !strings.Contains(env, variable) {
+			t.Errorf("missing environment option %s", variable)
+		}
+	}
+}
+
 func TestTunnelIDValidation(t *testing.T) {
 	good := []string{"tunnel_0123456789abcdef0123456789abcdef",
 		"tunnel_ab12_0123456789abcdef0123456789abcdef"}

@@ -1,5 +1,5 @@
 # Optional ChatGPT Tunnel setup. Credentials are entered only on this computer.
-param([string]$TunnelId, [switch]$ReplaceExisting, [string]$ExpectedTunnelId, [switch]$KeyFromStdin)
+param([string]$TunnelId, [switch]$ReplaceExisting, [string]$ExpectedTunnelId, [switch]$KeyFromStdin, [switch]$SaveOnly, [switch]$ReuseSavedKey)
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
 $binary = Join-Path $root 'bin\vidotter-windows-amd64.exe'
@@ -31,8 +31,12 @@ if (Test-Path $profile) {
 # Never silently import another application's inherited API key.
 if ($KeyFromStdin) {
     $value = [Console]::In.ReadLine()
-    if ([string]::IsNullOrWhiteSpace($value)) { throw 'Runtime API Key is required.' }
-    $secure = ConvertTo-SecureString -String $value -AsPlainText -Force
+    if ([string]::IsNullOrWhiteSpace($value) -and $ReuseSavedKey -and (Test-Path $keyFile)) {
+        $secure = Get-Content -Path $keyFile -TotalCount 1 | ConvertTo-SecureString
+    } else {
+        if ([string]::IsNullOrWhiteSpace($value)) { throw 'Runtime API Key is required.' }
+        $secure = ConvertTo-SecureString -String $value -AsPlainText -Force
+    }
     $value = $null
 } elseif ($env:VIDOTTER_MCP_TEST_MODE -eq '1' -and $env:CONTROL_PLANE_API_KEY) {
     $secure = ConvertTo-SecureString -String $env:CONTROL_PLANE_API_KEY -AsPlainText -Force
@@ -85,7 +89,7 @@ try {
     Invoke-TunnelClient doctor --config $candidate
     if ($LASTEXITCODE -ne 0) { throw 'Candidate Tunnel configuration check failed.' }
     # Commit ID and key together; retain both backups until live polling succeeds.
-    Stop-OwnTunnel
+    if (!$SaveOnly) { Stop-OwnTunnel }
     $committing = $true
     Copy-Item $candidate $profile -Force
     Copy-Item $candidateKey $keyFile -Force
@@ -109,6 +113,13 @@ exit $LASTEXITCODE
 $runner = $runner.Replace('__CLIENT__', $clientPath.Replace("'", "''"))
 Set-Content -Path $launcher -Value $runner -Encoding UTF8
 
+    if ($SaveOnly) {
+        Set-Content -Path (Join-Path $private 'configuration-revision') -Value ([guid]::NewGuid().ToString('N')) -Encoding ASCII
+        Set-Content -Path (Join-Path $private 'restart-required') -Value 'true' -Encoding ASCII
+        $completed=$true
+        Write-Host 'MCP configuration saved. Service state and login tasks unchanged.'
+        exit 0
+    }
     Remove-Item (Join-Path $private 'health.url') -ErrorAction SilentlyContinue
     Start-OwnTunnel
     $healthy=$false
@@ -121,16 +132,17 @@ Set-Content -Path $launcher -Value $runner -Encoding UTF8
     }
     if (!$healthy) { throw 'New connection failed its live polling check.' }
     Set-Content -Path (Join-Path $private 'configuration-revision') -Value ([guid]::NewGuid().ToString('N')) -Encoding ASCII
+    Remove-Item (Join-Path $private 'restart-required') -ErrorAction SilentlyContinue
     $completed=$true
     Write-Host 'Tunnel ID and Runtime API Key saved and verified. Continue in ChatGPT Plugins.'
 } catch {
     if ($committing) {
-        Stop-OwnTunnel
+        if (!$SaveOnly) { Stop-OwnTunnel }
         if ($hadProfile) { Copy-Item (Join-Path $staging 'old.yaml') $profile -Force }
         else { Remove-Item $profile -ErrorAction SilentlyContinue }
         if ($hadKey) { Copy-Item (Join-Path $staging 'old.dpapi') $keyFile -Force }
         else { Remove-Item $keyFile -ErrorAction SilentlyContinue }
-        if ($hadProfile -and $hadKey) { Start-OwnTunnel }
+        if (!$SaveOnly -and $hadProfile -and $hadKey) { Start-OwnTunnel }
         Write-Warning 'The previous Tunnel ID and Runtime API Key were restored.'
     }
     throw

@@ -746,7 +746,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   // MV3 background may be older than refreshed popup after an in-place update.
   if (message.action === "bridge.mcp.capabilities") {
-    sendResponse({ ok: true, protocol: 4, actions: ["install-client", "setup", "service", "replace-tunnel", "inline-credentials"] });
+    sendResponse({ ok: true, protocol: 5, actions: ["install-client", "setup", "service", "replace-tunnel", "inline-credentials", "save-only", "reuse-saved-key"] });
     return;
   }
 
@@ -789,7 +789,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         body: JSON.stringify({ tunnelId: String(message.tunnelId || ""),
           runtimeApiKey: String(message.runtimeApiKey || ""),
           replace: message.replace === true,
-          previousTunnelId: message.replace === true ? String(message.previousTunnelId || "") : "" })
+          previousTunnelId: message.replace === true ? String(message.previousTunnelId || "") : "",
+          saveOnly: message.saveOnly === true, reuseKey: message.reuseKey === true })
       })
         .then(result => sendResponse(result), error =>
           sendResponse({ ok: false, error: error.message || String(error) }));
