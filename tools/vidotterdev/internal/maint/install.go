@@ -227,10 +227,8 @@ func Deploy(root, target, targetOS, targetArch string) error {
 	if err := run(filepath.Join(root, "tools", "vidotterdev"), []string{"CGO_ENABLED=0", "GOOS=" + targetOS, "GOARCH=" + targetArch}, "go", "build", "-trimpath", "-o", filepath.Join(destination, "bin", "vidotterdev"+ext), "."); err != nil {
 		return err
 	}
-	for _, dir := range []string{"extension", "assets"} {
-		if err := copyTree(filepath.Join(root, dir), filepath.Join(destination, dir), nil); err != nil {
-			return err
-		}
+	if err := copyDeploymentResources(root, destination); err != nil {
+		return err
 	}
 	for _, file := range []string{"README.md", "README_ZH.md", "LICENSE", "NOTICE", "THIRD_PARTY_NOTICES.md"} {
 		if err := copyFile(filepath.Join(root, file), filepath.Join(destination, file)); err != nil {
@@ -241,5 +239,23 @@ func Deploy(root, target, targetOS, targetArch string) error {
 		return err
 	}
 	fmt.Println("Deployed program files; existing Data/ was not modified:", destination)
+	return nil
+}
+
+// A development deployment must ship the same MCP scripts as the tested
+// source. Older source checkouts have no top-level assets/ directory; existing
+// installed assets must be preserved rather than making deployment fail.
+func copyDeploymentResources(root, destination string) error {
+	for _, dir := range []string{"extension", "scripts"} {
+		if err := copyTree(filepath.Join(root, dir), filepath.Join(destination, dir), nil); err != nil {
+			return fmt.Errorf("copy %s: %w", dir, err)
+		}
+	}
+	assets := filepath.Join(root, "assets")
+	if info, err := os.Stat(assets); err == nil && info.IsDir() {
+		return copyTree(assets, filepath.Join(destination, "assets"), nil)
+	} else if err != nil && !os.IsNotExist(err) {
+		return err
+	}
 	return nil
 }
