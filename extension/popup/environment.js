@@ -48,7 +48,7 @@
     if (kind === "runtime" || kind === "infra") return "runtime";
     if (kind === "capability" || kind === "core" || kind === "platform") return "capability";
     if (kind === "dependency") return "dependency";
-    if (kind === "integration") return "integration";
+    if (kind === "integration") return "dependency";
     return "other";
   }
 
@@ -322,8 +322,7 @@
     appearance: { title: "界面与交互", description: "语言、导航方式与工作台偏好", icon: "appearance" },
     runtime: { title: "连接与运行时", description: "浏览器连接、Bridge 与网络", icon: "runtime" },
     capability: { title: "下载能力", description: "媒体嗅探、下载与处理", icon: "capability" },
-    dependency: { title: "外部组件", description: "FFmpeg、yt-dlp、识别和翻译", icon: "dependency" },
-    integration: { title: "AI 集成", description: "连接 ChatGPT 的可选本地服务", icon: "runtime" },
+    dependency: { title: "外部组件", description: "ChatGPT、FFmpeg、yt-dlp、识别和翻译", icon: "dependency" },
     other: { title: "其他组件", description: "其他可选模块", icon: "settings" }
   };
 
@@ -949,7 +948,7 @@
         icon: "appearance", action: () => enter("category", "appearance")
       }));
       addSection(list, "系统与组件");
-      for (const kind of ["runtime", "capability", "integration", "dependency", "other"]) {
+      for (const kind of ["runtime", "capability", "dependency", "other"]) {
         const count = tools.filter(tool => normalizedKind(tool) === kind).length;
         if (!count) continue;
         list.appendChild(settingsRow({

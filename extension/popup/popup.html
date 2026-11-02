@@ -48,7 +48,7 @@
   <nav class="tabs" role="tablist" aria-label="VidOtter 功能导航">
     <button id="snifferTab" class="tab active" data-tab="sniffer" title="资源嗅探" aria-label="资源嗅探" role="tab" aria-controls="snifferPanel" aria-selected="true" tabindex="0"><svg class="ui-icon" aria-hidden="true"><use href="#i-detect"></use></svg><span>资源嗅探</span></button>
     <button id="jobsTab" class="tab" data-tab="jobs" title="下载任务" aria-label="下载任务" role="tab" aria-controls="jobsPanel" aria-selected="false" tabindex="-1"><svg class="ui-icon" aria-hidden="true"><use href="#i-download"></use></svg><span>下载任务</span></button>
-    <button id="logsTab" class="tab" data-tab="logs" title="日志" aria-label="日志" role="tab" aria-controls="logsPanel" aria-selected="false" tabindex="-1"><svg class="ui-icon" aria-hidden="true"><use href="#i-logs"></use></svg><span>日志</span></button>
+    <button id="logsTab" hidden class="tab" data-tab="logs" title="日志" aria-label="日志" role="tab" aria-controls="logsPanel" aria-selected="false" tabindex="-1"><svg class="ui-icon" aria-hidden="true"><use href="#i-logs"></use></svg><span>日志</span></button>
     <button id="environmentTab" class="tab" data-tab="environment" title="设置" aria-label="设置" role="tab" aria-controls="environmentPanel" aria-selected="false" tabindex="-1"><svg class="ui-icon" aria-hidden="true"><use href="#i-settings"></use></svg><span>设置</span></button>
   </nav>
 
@@ -219,7 +219,7 @@
         </div>
         <div class="settings-preference-row">
           <div><label for="showLogsTab">显示日志入口</label><small>仅隐藏导航入口，不影响日志写入</small></div>
-          <input id="showLogsTab" type="checkbox" checked role="switch" aria-label="显示日志入口">
+          <input id="showLogsTab" type="checkbox" role="switch" aria-label="显示日志入口">
         </div>
         <p class="settings-help">配置统一保存在 Data/config.toml。</p>
       </div>

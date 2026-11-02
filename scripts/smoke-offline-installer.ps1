@@ -1,8 +1,23 @@
 $ErrorActionPreference = "Stop"
+function Assert-GUIExecutable([string]$path) {
+    $stream = [IO.File]::OpenRead($path)
+    $reader = [IO.BinaryReader]::new($stream)
+    try {
+        if ($reader.ReadUInt16() -ne 0x5a4d) { throw "Invalid executable: $path" }
+        $stream.Position = 0x3c
+        $offset = $reader.ReadUInt32()
+        $stream.Position = $offset
+        if ($reader.ReadUInt32() -ne 0x4550) { throw "Invalid PE signature: $path" }
+        $stream.Position = $offset + 24 + 68
+        $subsystem = $reader.ReadUInt16()
+        if ($subsystem -ne 2) { throw "Expected GUI subsystem 2, got $subsystem in $path" }
+    } finally { $reader.Dispose() }
+}
 $setup = Join-Path $env:RUNNER_TEMP ("installer-output/VidOtter-Setup-" + $env:RELEASE_TAG + "-windows-amd64.exe")
 $sandbox = Join-Path $env:RUNNER_TEMP "vidotter-windows-qa"
 $target = Join-Path $sandbox "install with spaces"
 New-Item -ItemType Directory -Force -Path $sandbox | Out-Null
+Assert-GUIExecutable $setup
 & $setup --root $target --accept-licenses --confirm-command install
 if ($LASTEXITCODE -ne 0) { throw "Windows installer failed" }
 if (!(Test-Path (Join-Path $target "bin/vidotter-windows-amd64.exe"))) { throw "Bridge not installed" }
@@ -52,6 +67,7 @@ $uninstallLink = Join-Path $startMenu 'Uninstall VidOtter.lnk'
 $wsh = New-Object -ComObject WScript.Shell
 $linkTarget = $wsh.CreateShortcut($uninstallLink).TargetPath
 $maintenance = Join-Path $target 'VidOtter-Maintenance.exe'
+Assert-GUIExecutable $maintenance
 if (![string]::Equals($linkTarget, $maintenance, [System.StringComparison]::OrdinalIgnoreCase)) {
     throw "Unexpected uninstall shortcut target: $linkTarget"
 }
@@ -80,6 +96,7 @@ if ($env:VIDOTTER_TEST_UPDATE_REPO) {
     if ($LASTEXITCODE -ne 0) { throw "Update check failed" }
     & (Join-Path $target "VidOtter-Maintenance.exe") --at $repoUri --confirm-command update
     if ($LASTEXITCODE -ne 0) { throw "Update failed" }
+    Assert-GUIExecutable $maintenance
     if (-not ((Get-Content -Raw (Join-Path $target "components.xml")) -match "<Version>$($env:VIDOTTER_TEST_UPDATE_VERSION)</Version>")) { throw "Installed component version did not update" }
     if (!(Test-Path (Join-Path $data "config.toml"))) { throw "Config lost on update" }
     if (!(Test-Path $key)) { throw "MCP Native Messaging registration lost on update" }

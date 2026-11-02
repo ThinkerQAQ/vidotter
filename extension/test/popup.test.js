@@ -58,7 +58,7 @@ assert.match(environmentSource, /enter\("about", "vidotter"\)/);
 assert.match(environmentSource, /frame\.type === "about"/);
 assert.match(environmentSource, /api\.send\("ui\.about"\)/);
 
-assert.match(html, /id="logsTab"/);
+assert.match(html, /id="logsTab" hidden/);
 assert.match(html, /id="logsPanel"/);
 assert.match(html, /id="logOutput"/);
 assert.match(html, /id="logAutoRefresh"/);

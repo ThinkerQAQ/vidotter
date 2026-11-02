@@ -62,7 +62,7 @@ function setLogsVisible(visible) {
 async function refreshLogsVisibility() {
   try {
     const result = await VidOtterPopup.send("ui.logs.get");
-    setLogsVisible(result.showLogs !== false);
+    setLogsVisible(result.showLogs === true);
   } catch (error) {
     VidOtterPopup.setMessage("environmentMessage", error.message || String(error), "error");
   }
@@ -75,7 +75,7 @@ function initLogsVisibility() {
     control.disabled = true;
     try {
       const result = await VidOtterPopup.send("ui.logs.set", { showLogs: wanted });
-      setLogsVisible(result.showLogs !== false);
+      setLogsVisible(result.showLogs === true);
       VidOtterPopup.setMessage("environmentMessage", "日志入口设置已保存。", "ok");
     } catch (error) {
       control.checked = !wanted;

@@ -663,7 +663,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   if (message.action === "ui.logs.get") {
     bridgeFetch("/v1/preferences")
-      .then(result => sendResponse({ ok: true, showLogs: result.preferences.showLogs !== false }),
+      .then(result => sendResponse({ ok: true, showLogs: result.preferences.showLogs === true }),
         error => sendResponse({ ok: false, error: String(error) }));
     return true;
   }

@@ -88,7 +88,15 @@ func Installer(stage, targetOS, targetArch, binarycreator, output, updateURL str
 	if err := prepareInstallerWithUpdateURL(dir, stage, ver, targetOS, updateURL); err != nil {
 		return err
 	}
-	args := []string{"-p", filepath.Join(dir, "packages"), "-c", filepath.Join(dir, "config", "config.xml"), output}
+	templateArgs := []string{}
+	if targetOS == "windows" {
+		template := filepath.Join(dir, "installerbase-gui.exe")
+		if err := prepareWindowsGUITemplate(filepath.Join(filepath.Dir(executable), "installerbase.exe"), template); err != nil {
+			return fmt.Errorf("prepare Windows GUI installer template: %w", err)
+		}
+		templateArgs = []string{"-t", template}
+	}
+	args := append(templateArgs, []string{"-p", filepath.Join(dir, "packages"), "-c", filepath.Join(dir, "config", "config.xml"), output}...)
 	if updateURL == "" {
 		args = append([]string{"--offline-only"}, args...)
 	}
@@ -97,6 +105,11 @@ func Installer(stage, targetOS, targetArch, binarycreator, output, updateURL str
 	command.Stdout, command.Stderr = os.Stdout, os.Stderr
 	if err := command.Run(); err != nil {
 		return fmt.Errorf("binarycreator failed: %w", err)
+	}
+	if targetOS == "windows" {
+		if err := requireWindowsGUI(output); err != nil {
+			return err
+		}
 	}
 	fmt.Println("Installer:", output)
 	return nil

@@ -106,7 +106,7 @@ func defaultBridgeConfig() bridgeConfig {
 	disabled := false
 	return bridgeConfig{
 		OutputDir: dir, Concurrent: 12, ProxyEnabled: &disabled,
-		OpenMode: "popup", UILanguage: "zh-CN", ShowLogs: true,
+		OpenMode: "popup", UILanguage: "zh-CN", ShowLogs: false,
 		DetectHls: true, DetectDash: true, DetectMp4: true,
 		LogEnabled: true, LogMaxMB: 10,
 	}
@@ -199,7 +199,7 @@ func configToFile(c bridgeConfig) fileConfig {
 	return f
 }
 func configFromFile(f fileConfig) bridgeConfig {
-	showLogs := true
+	showLogs := false
 	if f.Interface.ShowLogs != nil {
 		showLogs = *f.Interface.ShowLogs
 	}
