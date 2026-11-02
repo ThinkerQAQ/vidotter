@@ -78,6 +78,18 @@ exit /b %ERRORLEVEL%
     if ((Setup $other $true $bad) -eq 0) { throw 'Stale original ID must be rejected' }
     if ((Setup $other $true $original) -ne 0) { throw 'Explicit replacement failed' }
     if ((Get-Content -Raw $profile) -notmatch [regex]::Escape($other)) { throw 'Replacement ID not saved' }
+    $env:CONTROL_PLANE_API_KEY = 'FAKE_ROTATED_RUNTIME_KEY_FOR_TEST_456'
+    if ((Setup $other $true $other) -ne 0) { throw 'Same-ID key rotation failed' }
+    $keyPath = Join-Path $env:LOCALAPPDATA 'VidOtter/MCP/runtime-key.dpapi'
+    $saved = Get-Content $keyPath | ConvertTo-SecureString
+    $ptr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($saved)
+    try {
+        if ([Runtime.InteropServices.Marshal]::PtrToStringBSTR($ptr) -cne $env:CONTROL_PLANE_API_KEY) { throw 'Rotated key not saved' }
+    } finally { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($ptr) }
+    $expectedKey = [IO.File]::ReadAllText($keyPath)
+    $revisionPath = Join-Path $env:LOCALAPPDATA 'VidOtter/MCP/configuration-revision'
+    $expectedRevision = Get-Content -Raw $revisionPath
+    $env:CONTROL_PLANE_API_KEY = 'FAKE_FAILED_CANDIDATE_KEY_FOR_TEST_789'
     $env:VIDOTTER_FAKE_BAD_ID = $bad
     if ((Setup $bad $true $other) -eq 0) { throw 'Invalid candidate doctor must fail' }
     if ((Get-Content -Raw $profile) -notmatch [regex]::Escape($other)) { throw 'Doctor failure modified saved ID' }
@@ -85,6 +97,8 @@ exit /b %ERRORLEVEL%
     $env:VIDOTTER_FAKE_FAIL_HEALTH = '1'
     if ((Setup $original $true $other) -eq 0) { throw 'Failed control-plane health must roll back' }
     if ((Get-Content -Raw $profile) -notmatch [regex]::Escape($other)) { throw 'Health failure did not restore original ID' }
+    if ([IO.File]::ReadAllText($keyPath) -cne $expectedKey) { throw 'Failed update did not restore the original key' }
+    if ((Get-Content -Raw $revisionPath) -cne $expectedRevision) { throw 'Failed update marked successful' }
     Write-Host 'Windows Tunnel switch smoke: initial setup, explicit switch, stale ID, doctor failure, rollback all passed.'
 } finally {
     $env:LOCALAPPDATA = $oldLocal

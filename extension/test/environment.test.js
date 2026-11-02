@@ -9,7 +9,7 @@ assert.equal(environment.isOutdatedMcpWorkerError(new Error("不支持的 Tool �
 assert.equal(environment.isOutdatedMcpWorkerError(new Error("unsupported tool action")), true);
 assert.equal(environment.isOutdatedMcpWorkerError(new Error("Tunnel download HTTP 404")), false);
 assert.deepEqual(environment.mcpStatus({config:{values:{configured:true,clientInstalled:true,tunnelId:"tunnel_test",ready:false}},health:{ok:false}}),
-  { tunnelID:"tunnel_test", configured:true, clientInstalled:true, ready:false });
+  { tunnelID:"tunnel_test", configured:true, clientInstalled:true, ready:false, revision:"", runtimeKeySaved:false });
 assert.equal(environment.mcpStatus({config:{values:{}},health:{ok:true}}).ready, true);
 assert.equal(environment.mcpStatus({}).configured, false);
 
@@ -92,3 +92,10 @@ assert.match(environmentSource, /field\.type === "boolean"/);
 assert.match(environmentSource, /tool\.config\.scope === "extension"/);
 
 console.log("extension environment tests passed");
+
+// An already-ready old connection is not evidence that key rotation completed.
+const oldConnection = {ready:true, tunnelID:"tunnel_test", revision:"before"};
+assert.equal(environment.mcpSetupIsComplete(oldConnection, "tunnel_test", "before"), false);
+assert.equal(environment.mcpSetupIsComplete({...oldConnection, revision:"after"}, "tunnel_test", "before"), true);
+assert.equal(environment.mcpSetupIsComplete({...oldConnection, ready:false, revision:"after"}, "tunnel_test", "before"), false);
+assert.equal(environment.mcpSetupIsComplete({...oldConnection, tunnelID:"different", revision:"after"}, "tunnel_test", "before"), false);

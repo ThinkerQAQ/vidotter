@@ -49,7 +49,7 @@ elif [[ "$os" == Darwin ]]; then
   if [[ "$action" == enable ]]; then
     if [[ "$target" == bridge ]]; then
       arch="$(uname -m)"; [[ "$arch" == x86_64 ]] && arch=amd64
-      bin="$root/bin/vidotter-darwin-$arch"
+      bin="$root/bin/vidotter-macos-$arch"
       [[ -x "$bin" ]] || { echo 'Bridge binary missing' >&2; exit 1; }
       mkdir -p "$(dirname "$agent")"
       xml="$(printf '%s' "$bin" | sed -e 's/&/\&amp;/g' -e 's/</\&lt;/g' -e 's/>/\&gt;/g')"

@@ -131,8 +131,16 @@ func (chatGPTMCPTool) Snapshot(_ context.Context, _ bridgeConfig) toolSnapshot {
 			detail = "本机 Tunnel 已经通过控制平面轮询健康检查；ChatGPT 插件是否创建还需用户确认。"
 		}
 	} else {
-		detail = "输入 Tunnel ID；首次需要本机有效的 Runtime API Key，已保存的凭据可以复用。"
+		detail = "填写 Tunnel ID，然后在本机安全窗口输入 Runtime API Key；两者验证通过后才会保存。"
 	}
+	private := filepath.Dir(tunnelHealthURLFile(runtime.GOOS, home, os.Getenv("LOCALAPPDATA"), os.Getenv("XDG_CONFIG_HOME")))
+	revision, _ := os.ReadFile(filepath.Join(private, "configuration-revision"))
+	keyName := "runtime.env"
+	if runtime.GOOS == "windows" {
+		keyName = "runtime-key.dpapi"
+	}
+	keyInfo, keyErr := os.Stat(filepath.Join(private, keyName))
+	keySaved := keyErr == nil && !keyInfo.IsDir()
 	return toolSnapshot{
 		Name: "chatgpt-mcp", DisplayName: "ChatGPT MCP", Kind: "integration",
 		Description: "可选云端连接：不影响普通视频下载，也不会默认开放远程访问。",
@@ -140,6 +148,7 @@ func (chatGPTMCPTool) Snapshot(_ context.Context, _ bridgeConfig) toolSnapshot {
 		Capabilities: []string{"mcp.stdio", "tunnel.optional"}, SortOrder: 25,
 		Config: toolConfigView{Schema: []toolConfigField{}, Values: map[string]any{
 			"tunnelId": tunnelID, "configured": configured, "clientInstalled": client != "", "ready": ready,
+			"revision": strings.TrimSpace(string(revision)), "runtimeKeySaved": keySaved,
 		}},
 		Health: toolHealth{Status: status, OK: ready, Summary: summary,
 			Detail: detail, CheckedAt: time.Now()},
@@ -157,11 +166,11 @@ func mcpSetupCommand(goos, root, tunnelID string, replace bool, previousID strin
 		return nil, errors.New("invalid Tunnel ID")
 	}
 	if root == "" {
-        return nil, errors.New("missing VidOtter installation root")
-    }
-    if replace && (!validTunnelID(previousID) || previousID == tunnelID) {
-        return nil, errors.New("invalid prior Tunnel ID for replacement")
-    }
+		return nil, errors.New("missing VidOtter installation root")
+	}
+	if replace && !validTunnelID(previousID) {
+		return nil, errors.New("invalid prior Tunnel ID for replacement")
+	}
 	if goos == "windows" {
 		script := filepath.Join(root, "scripts", "Setup-VidOtter-MCP.ps1")
 		if info, err := os.Stat(script); err != nil || info.IsDir() {
@@ -170,11 +179,11 @@ func mcpSetupCommand(goos, root, tunnelID string, replace bool, previousID strin
 		// Tunnel ID is an identifier; the restricted Runtime API Key is
 		// entered in the local terminal and never passed over HTTP.
 		args := []string{"-NoProfile", "-ExecutionPolicy", "Bypass", "-NoExit",
-            "-File", script, "-TunnelId", tunnelID}
-        if replace {
-            args = append(args, "-ReplaceExisting", "-ExpectedTunnelId", previousID)
-        }
-        return exec.Command("powershell.exe", args...), nil
+			"-File", script, "-TunnelId", tunnelID}
+		if replace {
+			args = append(args, "-ReplaceExisting", "-ExpectedTunnelId", previousID)
+		}
+		return exec.Command("powershell.exe", args...), nil
 	}
 	script := filepath.Join(root, "scripts", "setup-mcp.sh")
 	if info, err := os.Stat(script); err != nil || info.IsDir() {
@@ -183,10 +192,10 @@ func mcpSetupCommand(goos, root, tunnelID string, replace bool, previousID strin
 	if goos == "darwin" {
 		// Escape for the shell, then AppleScript: only the fixed local script.
 		environment := "VIDOTTER_TUNNEL_ID=" + tunnelID + " "
-        if replace {
-            environment += "VIDOTTER_REPLACE_TUNNEL=1 VIDOTTER_EXPECTED_TUNNEL_ID=" + previousID + " "
-        }
-        shellCmd := environment + "bash " + "'" + strings.ReplaceAll(script, "'", "'\\''") + "'"
+		if replace {
+			environment += "VIDOTTER_REPLACE_TUNNEL=1 VIDOTTER_EXPECTED_TUNNEL_ID=" + previousID + " "
+		}
+		shellCmd := environment + "bash " + "'" + strings.ReplaceAll(script, "'", "'\\''") + "'"
 		command := "tell application \"Terminal\" to do script " + strconv.Quote(shellCmd)
 		return exec.Command("osascript", "-e", command), nil
 	}
@@ -194,14 +203,18 @@ func mcpSetupCommand(goos, root, tunnelID string, replace bool, previousID strin
 		if terminal, err := exec.LookPath("x-terminal-emulator"); err == nil {
 			cmd := exec.Command(terminal, "-e", "bash", script)
 			cmd.Env = append(os.Environ(), "VIDOTTER_TUNNEL_ID="+tunnelID)
-            if replace { cmd.Env = append(cmd.Env, "VIDOTTER_REPLACE_TUNNEL=1", "VIDOTTER_EXPECTED_TUNNEL_ID="+previousID) }
-            return cmd, nil
+			if replace {
+				cmd.Env = append(cmd.Env, "VIDOTTER_REPLACE_TUNNEL=1", "VIDOTTER_EXPECTED_TUNNEL_ID="+previousID)
+			}
+			return cmd, nil
 		}
 		if terminal, err := exec.LookPath("gnome-terminal"); err == nil {
 			cmd := exec.Command(terminal, "--", "bash", script)
 			cmd.Env = append(os.Environ(), "VIDOTTER_TUNNEL_ID="+tunnelID)
-            if replace { cmd.Env = append(cmd.Env, "VIDOTTER_REPLACE_TUNNEL=1", "VIDOTTER_EXPECTED_TUNNEL_ID="+previousID) }
-            return cmd, nil
+			if replace {
+				cmd.Env = append(cmd.Env, "VIDOTTER_REPLACE_TUNNEL=1", "VIDOTTER_EXPECTED_TUNNEL_ID="+previousID)
+			}
+			return cmd, nil
 		}
 		return nil, errors.New("no graphical terminal; run scripts/setup-mcp.sh in a local terminal")
 	}
@@ -219,10 +232,10 @@ func (s *bridgeServer) handleMCPSetup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var body struct {
-		TunnelID string `json:"tunnelId"`
-        Replace bool `json:"replace"`
-        PreviousTunnelID string `json:"previousTunnelId"`
-    }
+		TunnelID         string `json:"tunnelId"`
+		Replace          bool   `json:"replace"`
+		PreviousTunnelID string `json:"previousTunnelId"`
+	}
 	decoder := json.NewDecoder(http.MaxBytesReader(w, r.Body, 4096))
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&body); err != nil || decoder.Decode(new(any)) != io.EOF || !validTunnelID(body.TunnelID) {
@@ -230,18 +243,18 @@ func (s *bridgeServer) handleMCPSetup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	home, _ := os.UserHomeDir()
-    existingID := tunnelIDFromProfile(mcpProfilePath(runtime.GOOS, home, os.Getenv("LOCALAPPDATA"), os.Getenv("XDG_CONFIG_HOME")))
-    if body.Replace {
-        if !validTunnelID(existingID) || !validTunnelID(body.PreviousTunnelID) ||
-            existingID != body.PreviousTunnelID || existingID == body.TunnelID {
-            writeJSON(w, http.StatusConflict, map[string]any{"ok": false, "error": "旧 Tunnel ID 已变化，刷新页面后重试"})
-            return
-        }
-    } else if existingID != "" && existingID != body.TunnelID {
-        writeJSON(w, http.StatusConflict, map[string]any{"ok": false, "error": "需要先在设置中确认更换 Tunnel ID"})
-        return
-    }
-    if findTunnelClient(runtime.GOOS, home) == "" {
+	existingID := tunnelIDFromProfile(mcpProfilePath(runtime.GOOS, home, os.Getenv("LOCALAPPDATA"), os.Getenv("XDG_CONFIG_HOME")))
+	if body.Replace {
+		if !validTunnelID(existingID) || !validTunnelID(body.PreviousTunnelID) ||
+			existingID != body.PreviousTunnelID {
+			writeJSON(w, http.StatusConflict, map[string]any{"ok": false, "error": "旧 Tunnel ID 已变化，刷新页面后重试"})
+			return
+		}
+	} else if existingID != "" {
+		writeJSON(w, http.StatusConflict, map[string]any{"ok": false, "error": "需要先在设置中确认更换连接配置"})
+		return
+	}
+	if findTunnelClient(runtime.GOOS, home) == "" {
 		writeJSON(w, http.StatusConflict, map[string]any{"ok": false,
 			"error": "尚未安装官方 tunnel-client。请先打开 VidOtter 的配置文档，安装后再继续。"})
 		return

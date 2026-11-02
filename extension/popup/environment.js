@@ -435,7 +435,7 @@
   // The guided MCP flow mirrors Reverfolio. Only the Tunnel ID passes through
   // the extension; Runtime API Keys stay in the platform's private OS storage.
   const mcpUI = { draftID: "", busy: "", error: "", deadline: 0, timer: null, polling: false, advanced: false, workerOutdated: false,
-    editing: false, pendingID: "" };
+    editing: false, pendingID: "", pendingSetup: false, pendingRevision: "" };
   const mcpIDPattern = /^tunnel_(?:[a-z0-9]{32}|[a-z0-9]{4}_[a-z0-9]{32})$/;
   const chatGPTSettingsURL = "https://chatgpt.com/settings/plugins-settings";
 
@@ -484,8 +484,14 @@
       tunnelID: values.tunnelId || "",
       configured: Boolean(values.configured),
       clientInstalled: Boolean(values.clientInstalled),
-      ready: Boolean(values.ready || status.ok)
+      ready: Boolean(values.ready || status.ok),
+      revision: values.revision || "", runtimeKeySaved: Boolean(values.runtimeKeySaved)
     };
+  }
+
+  function mcpSetupIsComplete(status, tunnelID, previousRevision) {
+    return status.ready && status.tunnelID === tunnelID &&
+      Boolean(status.revision) && status.revision !== previousRevision;
   }
 
   async function mcpPoll() {
@@ -501,7 +507,8 @@
       let changed = JSON.stringify([mcpStatus(previous), previous?.health?.status]) !==
         JSON.stringify([status, current?.health?.status]);
       if (status.ready && mcpUI.busy === "waiting" &&
-          (!mcpUI.pendingID || status.tunnelID === mcpUI.pendingID)) {
+          (!mcpUI.pendingID || status.tunnelID === mcpUI.pendingID) &&
+          (!mcpUI.pendingSetup || mcpSetupIsComplete(status, mcpUI.pendingID, mcpUI.pendingRevision))) {
         mcpUI.busy = "";
         mcpUI.error = "";
         mcpUI.pendingID = "";
@@ -537,12 +544,12 @@
       return;
     }
     if (action === "replace") {
-      if (!state.configured || !mcpIDPattern.test(state.tunnelID) || tunnelId === state.tunnelID) {
-        mcpUI.error = "请填写一个不同于当前连接的有效 Tunnel ID。";
+      if (!state.configured || !mcpIDPattern.test(state.tunnelID)) {
+        mcpUI.error = "请填写有效的 Tunnel ID；保持原 ID 可以仅更换 Runtime API Key。";
         renderTools(tools);
         return;
       }
-      if (root.confirm && !root.confirm("切换到新的 Tunnel ID？旧连接将先停止，新连接验证失败时会自动恢复原配置。ChatGPT 中仍需单独授权。")) return;
+      if (root.confirm && !root.confirm("更新连接配置？随后需要在本机安全窗口输入 Runtime API Key。验证失败会恢复原 ID 和密钥；不会自动复用旧 Key。")) return;
     }
     if (action === "stop" && root.confirm && !root.confirm("断开 VidOtter Tunnel？已保存的配置不会删除。")) return;
     const update = phase => {
@@ -580,12 +587,14 @@
         });
       }
       mcpUI.busy = action === "stop" ? "" : "waiting";
-      mcpUI.pendingID = action === "replace" || (action === "connect" && !state.configured) ? tunnelId : "";
+      mcpUI.pendingSetup = action === "replace" || (action === "connect" && !state.configured);
+      mcpUI.pendingRevision = state.revision;
+      mcpUI.pendingID = mcpUI.pendingSetup ? tunnelId : "";
       if (action === "replace") {
         mcpUI.editing = false;
         mcpUI.draftID = "";
       }
-      mcpUI.deadline = Date.now() + 120000;
+      mcpUI.deadline = Date.now() + (mcpUI.pendingSetup ? 300000 : 120000);
       await refresh();
     } catch (error) {
       mcpUI.busy = "";
@@ -664,20 +673,44 @@
     };
     if (busy) {
       title.textContent = phases[mcpUI.busy] || "正在连接…";
-      description.textContent = mcpUI.busy === "waiting" && !state.configured
-        ? "首次配置请在本机终端输入 Runtime API Key；已保存的密钥会自动复用。"
+      description.textContent = mcpUI.busy === "waiting" && mcpUI.pendingSetup
+        ? "请在本机安全窗口输入 Runtime API Key（必填），验证通过后自动保存。旧连接 Ready 不代表本次修改完成。"
         : "本页会自动刷新连接状态。";
     } else if (ready) {
       title.textContent = "本机连接已就绪";
       description.textContent = "Tunnel 已通过控制平面健康检查。请在 ChatGPT 插件设置中启用 VidOtter 并完成授权。";
     } else if (state.configured) {
       title.textContent = "连接已保存";
-      description.textContent = "点击连接即可启动本机服务，无需重复填写密钥。";
+      description.textContent = "已保存 Tunnel ID 和 Runtime API Key。重新连接使用已保存的凭据；更换配置可更新两者。";
     } else {
       title.textContent = "连接到 ChatGPT";
-      description.textContent = "在 ChatGPT 的自定义 MCP 连接中选择 Tunnel，将获得的 Tunnel ID 粘贴到下方。";
+      description.textContent = "先在 OpenAI Platform 创建 Tunnel 和 Runtime API Key。下方填写 Tunnel ID，连接时在本机安全窗口输入 Key。";
     }
     card.append(icon, title, description);
+    const credentials = document.createElement("p");
+    credentials.className = "settings-help";
+    credentials.textContent = "Runtime API Key：" + (state.runtimeKeySaved
+      ? "已在本机保存（不显示内容）。更换配置时需要重新输入。"
+      : "必填，点击连接后在本机安全窗口输入，不在网页或聊天中填写。");
+    card.appendChild(credentials);
+    const credentialLinks = document.createElement("p");
+    credentialLinks.className = "settings-help";
+    for (const [text, url] of [
+      ["创建 Tunnel / 获取 Tunnel ID", "https://platform.openai.com/settings/organization/tunnels"],
+      ["创建 Runtime API Key", "https://platform.openai.com/api-keys"]
+    ]) {
+      const link = document.createElement("a");
+      link.textContent = text;
+      link.href = url;
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      credentialLinks.append(link, document.createTextNode("　"));
+    }
+    card.appendChild(credentialLinks);
+    const permissions = document.createElement("p");
+    permissions.className = "settings-help";
+    permissions.textContent = "在 OpenAI Platform 选择对应组织：创建 Tunnel 后复制 ID；创建受限 API Key，授予 Tunnels Read + Use。最后在 ChatGPT 插件中选择同一 Tunnel。";
+    card.appendChild(permissions);
     if (!state.configured) {
       const label = document.createElement("label");
       label.className = "mcp-id-field";
@@ -740,10 +773,10 @@
     }
     mcpButton(controls, "检查连接", () => refresh());
     if (state.configured && !mcpUI.editing) {
-      mcpButton(controls, "更换 Tunnel ID", () => {
+      mcpButton(controls, "更换连接配置", () => {
         mcpUI.editing = true;
         mcpUI.advanced = true;
-        mcpUI.draftID = "";
+        mcpUI.draftID = state.tunnelID;
         mcpUI.error = "";
         renderTools(tools);
       });
@@ -800,13 +833,13 @@
       const editor = document.createElement("div");
       editor.className = "mcp-switch-editor";
       const title = document.createElement("h4");
-      title.textContent = "更换 Tunnel ID";
+      title.textContent = "更换 Tunnel ID / Runtime API Key";
       const hint = document.createElement("p");
       hint.className = "settings-help";
-      hint.textContent = "请输入新 ID。切换失败会恢复原配置，不会删除已保存的 Runtime API Key。";
+      hint.textContent = "可修改 Tunnel ID，或保留原 ID 仅更换 Key。确认后必须在本机安全窗口输入要使用的 Runtime API Key；验证失败恢复原 ID 和密钥。";
       const label = document.createElement("label");
       label.className = "mcp-id-field";
-      label.textContent = "新的 Tunnel ID";
+      label.textContent = "Tunnel ID（只换 Key 时保留原 ID）";
       const input = document.createElement("input");
       input.name = "tunnelId";
       input.type = "text";
@@ -828,7 +861,7 @@
       }
       const actions = document.createElement("div");
       actions.className = "mcp-service-actions";
-      mcpButton(actions, "确认切换", () => mcpAction("replace", tool, shell), true);
+      mcpButton(actions, "输入 Runtime API Key 并验证", () => mcpAction("replace", tool, shell), true);
       mcpButton(actions, "取消", () => {
         mcpUI.editing = false;
         mcpUI.draftID = "";
@@ -1029,6 +1062,6 @@
   root.VidOtterEnvironment = { init, activate: refresh, renderTools };
 
   if (typeof module !== "undefined" && module.exports) {
-    module.exports = { cardState, normalizedKind, visibleConfigFields, editorValue, toggleMetadata, formatModelSize, modelOptionLabel, modelActionLabel, isOutdatedMcpWorkerError, mcpStatus };
+    module.exports = { mcpSetupIsComplete, cardState, normalizedKind, visibleConfigFields, editorValue, toggleMetadata, formatModelSize, modelOptionLabel, modelActionLabel, isOutdatedMcpWorkerError, mcpStatus };
   }
 })(globalThis);

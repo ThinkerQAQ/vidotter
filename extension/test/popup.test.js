@@ -115,13 +115,13 @@ assert.match(backgroundSource, /bridgeFetch\("\/v1\/mcp\/service"/);
 // Guided flow is deliberate, idempotent and uses only authenticated bridge routes.
 assert.match(environmentSource, /state\.clientInstalled/);
 assert.match(environmentSource, /action === "replace" \? "setup" : state\.configured \? "service" : "setup"/);
-assert.match(environmentSource, /"更换 Tunnel ID"/);
-assert.match(environmentSource, /"确认切换"/);
+assert.match(environmentSource, /"更换连接配置"/);
+assert.match(environmentSource, /"输入 Runtime API Key 并验证"/);
 assert.match(environmentSource, /previousTunnelId: state\.tunnelID/);
 assert.match(environmentSource, /status\.tunnelID === mcpUI\.pendingID/);
 assert.match(environmentSource, /className = "mcp-switch-editor"/);
-assert.match(environmentSource, /mcpButton\(controls, "更换 Tunnel ID"/);
-assert.doesNotMatch(environmentSource, /mcpButton\(mainAction, "更换 Tunnel ID"/);
+assert.match(environmentSource, /mcpButton\(controls, "更换连接配置"/);
+assert.doesNotMatch(environmentSource, /mcpButton\(mainAction, "更换连接配置"/);
 assert.match(environmentSource, /editor.append\(title, hint, label\)/);
 assert.match(environmentSource, /setTimeout\(mcpPoll, 4000\)/);
 assert.match(environmentSource, /120000/);

@@ -1,103 +1,78 @@
-# Optional first-user MCP configuration; official tunnel-client is required.
+# Optional ChatGPT Tunnel setup. Credentials are entered only on this computer.
 param([string]$TunnelId, [switch]$ReplaceExisting, [string]$ExpectedTunnelId)
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
 $binary = Join-Path $root 'bin\vidotter-windows-amd64.exe'
-if (-not (Test-Path $binary)) { throw "VidOtter binary missing: $binary" }
+if (!(Test-Path $binary)) { throw 'Installed VidOtter binary is missing.' }
 $client = Get-Command tunnel-client -ErrorAction SilentlyContinue
-if (-not $client) {
-    $candidate = Join-Path $env:USERPROFILE '.local\bin\tunnel-client.exe'
-    if (Test-Path $candidate) { $client = Get-Item $candidate }
-}
-if (-not $client) { throw 'Install official openai/tunnel-client first: https://github.com/openai/tunnel-client' }
+if (!$client) { $client = Get-Item (Join-Path $env:USERPROFILE '.local\bin\tunnel-client.exe') -ErrorAction SilentlyContinue }
+if (!$client) { throw 'Install the official OpenAI Tunnel Client first.' }
 $clientPath = $client.Source
-if (-not $clientPath) { $clientPath = $client.FullName }
-if (-not $TunnelId) { $TunnelId = Read-Host 'VidOtter Tunnel ID' }
+if (!$clientPath) { $clientPath = $client.FullName }
+Write-Host 'Tunnel ID: https://platform.openai.com/settings/organization/tunnels'
+Write-Host 'Runtime API Key: https://platform.openai.com/api-keys'
+Write-Host 'Select the intended organization and create a restricted key with Tunnels Read + Use.'
+if (!$TunnelId) { $TunnelId = Read-Host 'VidOtter Tunnel ID' }
 if ($TunnelId -notmatch '^tunnel_([a-z0-9]{32}|[a-z0-9]{4}_[a-z0-9]{32})$') { throw 'Invalid Tunnel ID' }
 $private = Join-Path $env:LOCALAPPDATA 'VidOtter\MCP'
 New-Item -ItemType Directory -Force -Path $private | Out-Null
-$keyFile = Join-Path $private 'runtime-key.dpapi'
-if (-not (Test-Path $keyFile)) {
-    if ($env:CONTROL_PLANE_API_KEY) {
-        $secure = ConvertTo-SecureString -String $env:CONTROL_PLANE_API_KEY -AsPlainText -Force
-    } else {
-        $secure = Read-Host 'Restricted runtime API key (Tunnels Read + Use)' -AsSecureString
-    }
-    if (-not $secure -or $secure.Length -lt 16) { throw 'Invalid runtime key' }
-    $secure | ConvertFrom-SecureString | Set-Content -Encoding UTF8 -Path $keyFile
-}
 $profile = Join-Path $private 'vidotter.yaml'
+$keyFile = Join-Path $private 'runtime-key.dpapi'
+$launcher = Join-Path $private 'run-mcp.ps1'
 $originalId = ''
 if (Test-Path $profile) {
-    $existing = Get-Content -Raw -Path $profile
-    $idMatch = [regex]::Match($existing, '(?m)^\s*tunnel_id:\s*["'']?(tunnel_[a-z0-9_]+)')
-    if (-not $idMatch.Success) { throw 'Existing VidOtter profile has no valid Tunnel ID; not overwriting it.' }
-    $originalId = $idMatch.Groups[1].Value
-    if ($originalId -notmatch '^tunnel_([a-z0-9]{32}|[a-z0-9]{4}_[a-z0-9]{32})$') {
-        throw 'Existing Tunnel ID is invalid; not overwriting it.'
+    $match = [regex]::Match((Get-Content -Raw $profile), '(?m)^\s*tunnel_id:\s*["'']?(tunnel_[a-z0-9_]+)')
+    if (!$match.Success) { throw 'Existing Tunnel profile is invalid; refusing to overwrite it.' }
+    $originalId = $match.Groups[1].Value
+    if (!$ReplaceExisting -or $ExpectedTunnelId -ne $originalId) {
+        throw 'Changing connection credentials requires confirmation using the latest saved Tunnel ID.'
     }
+} elseif ($ReplaceExisting) { throw 'No existing connection to replace.' }
+# Never silently import another application's inherited API key.
+if ($env:VIDOTTER_MCP_TEST_MODE -eq '1' -and $env:CONTROL_PLANE_API_KEY) {
+    $secure = ConvertTo-SecureString -String $env:CONTROL_PLANE_API_KEY -AsPlainText -Force
+} else {
+    Write-Host 'Enter the Runtime API Key for this connection. The saved key is not reused automatically.'
+    $secure = Read-Host 'Runtime API Key (hidden input)' -AsSecureString
 }
-$switching = $originalId -and $originalId -ne $TunnelId
-if ($switching) {
-    if (-not $ReplaceExisting -or $ExpectedTunnelId -ne $originalId) {
-        throw 'Changing Tunnel ID requires explicit confirmation using the latest saved ID.'
-    }
-} elseif ($ReplaceExisting) {
-    throw 'There is no different saved Tunnel ID to replace.'
-}
-
-function Invoke-TunnelDoctor([string]$Path) {
-    $secure = Get-Content -Path $keyFile -TotalCount 1 | ConvertTo-SecureString
-    $bstr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure)
-    try { $env:CONTROL_PLANE_API_KEY = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($bstr) }
-    finally { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr) }
-    try {
-        & $clientPath doctor --config $Path
-        if ($LASTEXITCODE -ne 0) { throw 'Tunnel doctor failed' }
-    } finally {
-        Remove-Item Env:CONTROL_PLANE_API_KEY -ErrorAction SilentlyContinue
-    }
-}
+if (!$secure -or $secure.Length -lt 16) { throw 'Runtime API Key is required.' }
 function Stop-OwnTunnel {
-    Get-CimInstance Win32_Process -Filter "name='tunnel-client.exe'" -ErrorAction SilentlyContinue |
+    Get-CimInstance Win32_Process -Filter "Name='tunnel-client.exe'" -ErrorAction SilentlyContinue |
         Where-Object { $_.CommandLine -and $_.CommandLine.Contains($profile) } |
-        ForEach-Object { Invoke-CimMethod -InputObject $_ -MethodName Terminate | Out-Null }
+        ForEach-Object { Invoke-CimMethod -InputObject $_ -MethodName Terminate -ErrorAction SilentlyContinue | Out-Null }
 }
-function Start-OwnTunnel([string]$RunnerPath) {
-    if (Test-Path $RunnerPath) {
+function Start-OwnTunnel {
+    if (Test-Path $launcher) {
         Start-Process -FilePath (Get-Command powershell.exe).Source -ArgumentList @(
-            '-NoProfile', '-WindowStyle', 'Hidden', '-File', ('"' + $RunnerPath + '"')
+            '-NoProfile','-WindowStyle','Hidden','-File',('"'+$launcher+'"')
         ) -WindowStyle Hidden
     }
 }
-$staging = ''
-$rollback = ''
-$replaced = $false
+$staging = Join-Path $private ('pending-' + [guid]::NewGuid().ToString('N'))
+New-Item -ItemType Directory -Path $staging | Out-Null
+$hadProfile = Test-Path $profile
+$hadKey = Test-Path $keyFile
+$committing = $false
 $completed = $false
 try {
-    if ($switching) {
-        # Build and validate a separate profile while the old Tunnel is still running.
-        $staging = Join-Path $private ('pending-' + [guid]::NewGuid().ToString('N'))
-        New-Item -ItemType Directory -Force -Path $staging | Out-Null
-        $mcpCommand = '"' + $binary.Replace('\','/') + '" --mcp-stdio'
-        & $clientPath init --sample sample_mcp_stdio_local --profile-dir $staging --profile vidotter --tunnel-id $TunnelId --mcp-command $mcpCommand --health-listen-addr '127.0.0.1:0'
-        if ($LASTEXITCODE -ne 0) { throw 'Replacement Tunnel profile initialization failed' }
-        $candidate = Join-Path $staging 'vidotter.yaml'
-        if (-not (Test-Path $candidate)) { throw 'Replacement Tunnel profile was not created' }
-        Invoke-TunnelDoctor $candidate
-        # The backup stays private. Only this VidOtter profile's daemon is stopped.
-        Stop-OwnTunnel
-        $rollback = Join-Path $private ('rollback-' + [guid]::NewGuid().ToString('N') + '.yaml')
-        [System.IO.File]::Replace($candidate, $profile, $rollback)
-        $replaced = $true
-    } elseif (-not (Test-Path $profile)) {
-        $mcpCommand = '"' + $binary.Replace('\','/') + '" --mcp-stdio'
-        & $clientPath init --sample sample_mcp_stdio_local --profile-dir $private --profile vidotter --tunnel-id $TunnelId --mcp-command $mcpCommand --health-listen-addr '127.0.0.1:0'
-        if ($LASTEXITCODE -ne 0) { throw 'Tunnel profile initialization failed' }
-    }
-    Invoke-TunnelDoctor $profile
-$launcher = Join-Path $private 'run-mcp.ps1'
-# Private runner reads the DPAPI-encrypted key at runtime. The key is never in the command line.
+    if ($hadProfile) { Copy-Item $profile (Join-Path $staging 'old.yaml') }
+    if ($hadKey) { Copy-Item $keyFile (Join-Path $staging 'old.dpapi') }
+    $candidateKey = Join-Path $staging 'runtime-key.dpapi'
+    $secure | ConvertFrom-SecureString | Set-Content -Encoding UTF8 -Path $candidateKey
+    $bstr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure)
+    try { $env:CONTROL_PLANE_API_KEY = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($bstr) }
+    finally { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr); $secure.Dispose() }
+    $mcpCommand = '"' + $binary.Replace('\','/') + '" --mcp-stdio'
+    & $clientPath init --sample sample_mcp_stdio_local --profile-dir $staging --profile vidotter --tunnel-id $TunnelId --mcp-command $mcpCommand --health-listen-addr '127.0.0.1:0'
+    if ($LASTEXITCODE -ne 0) { throw 'Tunnel profile initialization failed.' }
+    $candidate = Join-Path $staging 'vidotter.yaml'
+    & $clientPath doctor --config $candidate
+    if ($LASTEXITCODE -ne 0) { throw 'Candidate Tunnel configuration check failed.' }
+    # Commit ID and key together; retain both backups until live polling succeeds.
+    Stop-OwnTunnel
+    $committing = $true
+    Copy-Item $candidate $profile -Force
+    Copy-Item $candidateKey $keyFile -Force
 $runner = @'
 param()
 $ErrorActionPreference = 'Stop'
@@ -117,39 +92,34 @@ exit $LASTEXITCODE
 '@
 $runner = $runner.Replace('__CLIENT__', $clientPath.Replace("'", "''"))
 Set-Content -Path $launcher -Value $runner -Encoding UTF8
-$already = Get-CimInstance Win32_Process -Filter "name='tunnel-client.exe'" -ErrorAction SilentlyContinue |
-    Where-Object { $_.CommandLine -and $_.CommandLine.Contains($profile) }
-if (-not $already) {
-    Start-OwnTunnel $launcher
-}
-if ($switching) {
-    # Health must confirm a control-plane poll, not merely a saved profile.
-    $healthFile = Join-Path $private 'health.url'
-    $healthy = $false
-    $maxAttempts = 35
-    if ($env:VIDOTTER_MCP_HEALTH_ATTEMPTS -match '^[1-9][0-9]?$') {
-        $maxAttempts = [int]$env:VIDOTTER_MCP_HEALTH_ATTEMPTS
-    }
-    for ($attempt = 0; $attempt -lt $maxAttempts; $attempt++) {
+
+    Remove-Item (Join-Path $private 'health.url') -ErrorAction SilentlyContinue
+    Start-OwnTunnel
+    $healthy=$false
+    $attempts=35
+    if ($env:VIDOTTER_MCP_HEALTH_ATTEMPTS -match '^[1-9][0-9]?$') { $attempts=[int]$env:VIDOTTER_MCP_HEALTH_ATTEMPTS }
+    for ($attempt=0;$attempt -lt $attempts;$attempt++) {
         Start-Sleep -Seconds 1
-        & $clientPath health --url-file $healthFile --require-control-plane-poll --json 1>$null 2>$null
-        if ($LASTEXITCODE -eq 0) { $healthy = $true; break }
+        & $clientPath health --url-file (Join-Path $private 'health.url') --require-control-plane-poll --json 1>$null 2>$null
+        if ($LASTEXITCODE -eq 0) { $healthy=$true;break }
     }
-    if (-not $healthy) { throw 'New Tunnel did not become ready; restoring previous profile.' }
-}
-$completed = $true
-Write-Host 'VidOtter Tunnel configured. In ChatGPT: Plugins -> Add custom MCP server -> Tunnel.'
+    if (!$healthy) { throw 'New connection failed its live polling check.' }
+    Set-Content -Path (Join-Path $private 'configuration-revision') -Value ([guid]::NewGuid().ToString('N')) -Encoding ASCII
+    $completed=$true
+    Write-Host 'Tunnel ID and Runtime API Key saved and verified. Continue in ChatGPT Plugins.'
 } catch {
-    if ($replaced -and (Test-Path $rollback)) {
+    if ($committing) {
         Stop-OwnTunnel
-        Copy-Item -LiteralPath $rollback -Destination $profile -Force
-        Start-OwnTunnel (Join-Path $private 'run-mcp.ps1')
-        Write-Warning 'Previous VidOtter Tunnel profile was restored.'
+        if ($hadProfile) { Copy-Item (Join-Path $staging 'old.yaml') $profile -Force }
+        else { Remove-Item $profile -ErrorAction SilentlyContinue }
+        if ($hadKey) { Copy-Item (Join-Path $staging 'old.dpapi') $keyFile -Force }
+        else { Remove-Item $keyFile -ErrorAction SilentlyContinue }
+        if ($hadProfile -and $hadKey) { Start-OwnTunnel }
+        Write-Warning 'The previous Tunnel ID and Runtime API Key were restored.'
     }
     throw
 } finally {
-    if ($staging -and (Test-Path $staging)) { Remove-Item -LiteralPath $staging -Recurse -Force }
-    if ($completed -and $rollback -and (Test-Path $rollback)) { Remove-Item -LiteralPath $rollback -Force }
+    Remove-Item Env:CONTROL_PLANE_API_KEY -ErrorAction SilentlyContinue
+    Remove-Item $staging -Recurse -Force
 }
-# A successful setup closes the configuration terminal normally.
 exit 0
