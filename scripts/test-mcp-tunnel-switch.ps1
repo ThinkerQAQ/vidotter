@@ -67,7 +67,8 @@ exit /b %ERRORLEVEL%
     function Setup([string]$id, [bool]$replace=$false, [string]$expected='') {
         $cli = @('-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-File',$setup,'-TunnelId',$id)
         if ($replace) { $cli += @('-ReplaceExisting','-ExpectedTunnelId',$expected) }
-        & powershell.exe @cli 1>$null 2>$null
+        try { & powershell.exe @cli 1>$null 2>$null }
+        catch { return 1 } # Expected failure cases write to stderr.
         return $LASTEXITCODE
     }
     if ((Setup $original) -ne 0) { throw 'Initial setup failed' }
