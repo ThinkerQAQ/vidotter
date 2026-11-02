@@ -34,6 +34,9 @@ jobs:
       - name: Verify Unix MCP setup syntax
         if: runner.os != 'Windows'
         run: bash -n scripts/setup-mcp.sh scripts/manage-mcp.sh
+      - name: Test Unix Tunnel switching without network
+        if: runner.os == 'Linux'
+        run: bash scripts/test-mcp-tunnel-switch.sh
       - name: Verify Windows MCP setup syntax
         if: runner.os == 'Windows'
         shell: pwsh
@@ -46,6 +49,10 @@ jobs:
             [System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path $script), [ref]$tokens, [ref]$errors) | Out-Null
             if ($errors.Count -gt 0) { throw ($errors | Out-String) }
           }
+      - name: Test Windows Tunnel replacement and rollback without network
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: ./scripts/test-mcp-tunnel-switch.ps1
       - name: Verify target dependency licenses
         if: runner.os == 'Linux'
         run: go -C tools/vidotterdev run . licenses
