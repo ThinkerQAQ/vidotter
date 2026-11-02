@@ -550,6 +550,11 @@ html[data-surface="side-panel"] .log-follow { grid-column: 1; }
 .mcp-advanced summary { color: #71839c; font-size: 12px; cursor: pointer; }
 .mcp-advanced .settings-help { margin-top: 14px; overflow-wrap: anywhere; }
 .mcp-service-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 16px; }
+.mcp-switch-editor { margin-top: 16px; padding: 16px; border: 1px solid var(--line); border-radius: 9px; background: #fafcff; }
+.mcp-switch-editor h4 { margin: 0; font-size: 14px; color: #334e73; }
+.mcp-switch-editor .mcp-id-field { margin: 14px 0 12px; }
+.mcp-switch-editor .mcp-error { margin: 12px 0; }
+
 .mcp-reload-needed { color: #b42330; }
 @media (max-width: 600px) {
   .mcp-steps { gap: 10px; font-size: 11px; }
