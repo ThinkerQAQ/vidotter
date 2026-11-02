@@ -39,24 +39,34 @@ func TestMCPSetupLaunchesOnlyBundledScripts(t *testing.T) {
 		}
 	}
 	validID := "tunnel_0123456789abcdef0123456789abcdef"
-	win, err := mcpSetupCommand("windows", root, validID)
+	win, err := mcpSetupCommand("windows", root, validID, false, "")
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !reflect.DeepEqual(win.Args[len(win.Args)-4:], []string{"-File", filepath.Join(scripts, "Setup-VidOtter-MCP.ps1"), "-TunnelId", validID}) {
 		t.Fatalf("unexpected Windows setup args: %#v", win.Args)
 	}
-	if strings.Contains(strings.Join(win.Args, " "), "sk-") {
+	replaced, err := mcpSetupCommand("windows", root,
+        "tunnel_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", true, validID)
+    if err != nil { t.Fatal(err) }
+    if !reflect.DeepEqual(replaced.Args[len(replaced.Args)-3:], []string{
+        "-ReplaceExisting", "-ExpectedTunnelId", validID}) {
+        t.Fatalf("missing explicit Windows replacement arguments: %#v", replaced.Args)
+    }
+    if _, err := mcpSetupCommand("windows", root, validID, true, validID); err == nil {
+        t.Fatal("switching to the same ID must be rejected")
+    }
+    if strings.Contains(strings.Join(win.Args, " "), "sk-") {
 		t.Fatal("setup must never receive credentials via its process arguments")
 	}
-	mac, err := mcpSetupCommand("darwin", root, validID)
+	mac, err := mcpSetupCommand("darwin", root, validID, false, "")
 	if err != nil {
 		t.Fatal(err)
 	}
 	if filepath.Base(mac.Args[0]) != "osascript" || !strings.Contains(mac.Args[len(mac.Args)-1], "setup-mcp.sh") {
 		t.Fatalf("unexpected macOS setup command: %#v", mac.Args)
 	}
-	if _, err := mcpSetupCommand(runtime.GOOS, filepath.Join(root, "missing"), validID); err == nil {
+	if _, err := mcpSetupCommand(runtime.GOOS, filepath.Join(root, "missing"), validID, false, ""); err == nil {
 		t.Fatal("must reject missing scripts")
 	}
 }
@@ -118,6 +128,37 @@ func TestMCPProfileRequiresValidTunnelID(t *testing.T) {
 	if valid.Config.Values["configured"] != true || valid.Config.Values["tunnelId"] != id {
 		t.Fatalf("valid profile should be detected: %#v", valid.Config.Values)
 	}
+}
+
+
+func TestMCPSetupRequiresExplicitAndFreshTunnelReplacement(t *testing.T) {
+    home := t.TempDir()
+    t.Setenv("HOME", home)
+    t.Setenv("XDG_CONFIG_HOME", filepath.Join(home, "config"))
+    t.Setenv("LOCALAPPDATA", filepath.Join(home, "local"))
+    profile := mcpProfilePath(runtime.GOOS, home, os.Getenv("LOCALAPPDATA"), os.Getenv("XDG_CONFIG_HOME"))
+    if err := os.MkdirAll(filepath.Dir(profile), 0o700); err != nil { t.Fatal(err) }
+    oldID := "tunnel_0123456789abcdef0123456789abcdef"
+    nextID := "tunnel_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    if err := os.WriteFile(profile, []byte("tunnel_id: "+oldID+"\n"), 0o600); err != nil { t.Fatal(err) }
+    server := &bridgeServer{state: bridgeState{Token: "test-secret"}}
+    cases := []string{
+        `{"tunnelId":"tunnel_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}`,
+        `{"tunnelId":"tunnel_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","replace":true}`,
+        `{"tunnelId":"tunnel_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","replace":true,"previousTunnelId":"tunnel_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"}`,
+        `{"tunnelId":"tunnel_0123456789abcdef0123456789abcdef","replace":true,"previousTunnelId":"tunnel_0123456789abcdef0123456789abcdef"}`,
+    }
+    for _, body := range cases {
+        request := httptest.NewRequest(http.MethodPost, "/v1/mcp/setup", strings.NewReader(body))
+        request.Header.Set("X-VidOtter-Token", "test-secret")
+        recorder := httptest.NewRecorder()
+        server.handleMCPSetup(recorder, request)
+        if recorder.Code != http.StatusConflict {
+            t.Fatalf("replacement must reject unconfirmed or stale IDs: status=%d body=%s", recorder.Code, recorder.Body.String())
+        }
+    }
+    if got := tunnelIDFromProfile(profile); got != oldID { t.Fatalf("old profile modified: %s", got) }
+    _ = nextID
 }
 
 func TestMCPSetupRejectsUnauthorizedRequests(t *testing.T) {
