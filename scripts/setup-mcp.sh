@@ -38,11 +38,71 @@ set -a
 source "$env_file"
 set +a
 profile="$profile_dir/vidotter.yaml"
-if [[ -f "$profile" ]] && ! grep -Fq -- "$id" "$profile"; then
-  echo "Tunnel ID differs from existing VidOtter profile. Reuse the saved ID or explicitly edit the profile." >&2
+old_id=""
+if [[ -f "$profile" ]]; then
+  old_id="$(sed -nE 's/^[[:space:]]*tunnel_id:[[:space:]]*"?((tunnel_[a-z0-9_]+))"?.*/\1/p' "$profile" | head -n1)"
+  [[ "$old_id" =~ ^tunnel_([a-z0-9]{32}|[a-z0-9]{4}_[a-z0-9]{32})$ ]] || {
+    echo "Existing VidOtter profile is invalid. It will not be overwritten." >&2
+    exit 1
+  }
+fi
+switching=false
+if [[ -n "$old_id" && "$old_id" != "$id" ]]; then
+  [[ "$(printenv VIDOTTER_REPLACE_TUNNEL 2>/dev/null || true)" == 1 &&
+     "$(printenv VIDOTTER_EXPECTED_TUNNEL_ID 2>/dev/null || true)" == "$old_id" ]] || {
+    echo "Changing Tunnel ID requires explicit confirmation using the latest saved ID." >&2
+    exit 1
+  }
+  switching=true
+elif [[ "$(printenv VIDOTTER_REPLACE_TUNNEL 2>/dev/null || true)" == 1 ]]; then
+  echo "There is no different saved Tunnel ID to replace." >&2
   exit 1
 fi
-if [[ ! -f "$profile" ]]; then
+
+staging=""
+rollback=""
+replaced=false
+completed=false
+rollback_on_failure() {
+  local status=$?
+  trap - EXIT
+  if [[ "$status" -ne 0 && "$replaced" == true && -f "$rollback" ]]; then
+    if [[ "$os" == "Linux" ]] && command -v systemctl >/dev/null; then
+      systemctl --user stop vidotter-tunnel.service >/dev/null 2>&1 || true
+    elif [[ "$os" == "Darwin" ]]; then
+      launchctl bootout "gui/$(id -u)/com.vidotter.mcp" >/dev/null 2>&1 || true
+    fi
+    cp -p "$rollback" "$profile"
+    if [[ "$os" == "Linux" ]] && command -v systemctl >/dev/null; then
+      systemctl --user start vidotter-tunnel.service >/dev/null 2>&1 || true
+    elif [[ "$os" == "Darwin" ]]; then
+      launchctl bootstrap "gui/$(id -u)" "$HOME/Library/LaunchAgents/com.vidotter.mcp.plist" >/dev/null 2>&1 || true
+    fi
+    echo "Previous VidOtter Tunnel profile restored." >&2
+  fi
+  if [[ -n "$staging" && -d "$staging" ]]; then rm -rf "$staging"; fi
+  if [[ "$completed" == true && -n "$rollback" && -f "$rollback" ]]; then rm -f "$rollback"; fi
+  return "$status"
+}
+trap rollback_on_failure EXIT
+if [[ "$switching" == true ]]; then
+  staging="$(mktemp -d "$profile_dir/.vidotter-pending.XXXXXXXX")"
+  "$client" init --sample sample_mcp_stdio_local --profile-dir "$staging" --profile vidotter \
+    --tunnel-id "$id" --mcp-command "\"$app\" --mcp-stdio" --health-listen-addr 127.0.0.1:0
+  candidate="$staging/vidotter.yaml"
+  [[ -f "$candidate" ]] || { echo "Candidate Tunnel profile missing" >&2; exit 1; }
+  chmod 600 "$candidate"
+  "$client" doctor --config "$candidate"
+  if [[ "$os" == "Linux" ]] && command -v systemctl >/dev/null; then
+    systemctl --user stop vidotter-tunnel.service >/dev/null 2>&1 || true
+  elif [[ "$os" == "Darwin" ]]; then
+    launchctl bootout "gui/$(id -u)/com.vidotter.mcp" >/dev/null 2>&1 || true
+  fi
+  rollback="$(mktemp "$profile_dir/.vidotter-rollback.XXXXXXXX")"
+  cp -p "$profile" "$rollback"
+  mv -f "$candidate" "$profile"
+  replaced=true
+elif [[ ! -f "$profile" ]]; then
   "$client" init --sample sample_mcp_stdio_local --profile-dir "$profile_dir" --profile vidotter \
     --tunnel-id "$id" --mcp-command "\"$app\" --mcp-stdio" --health-listen-addr 127.0.0.1:0
 fi
@@ -67,7 +127,7 @@ UMask=0077
 WantedBy=default.target
 EOF
   systemctl --user daemon-reload
-  systemctl --user enable --now vidotter-tunnel.service
+  systemctl --user start vidotter-tunnel.service
   echo "VidOtter MCP tunnel started as a systemd user service."
 elif [[ "$os" == "Darwin" ]]; then
   runner="$private/run.sh"
@@ -100,4 +160,16 @@ EOF
 else
   echo "No supported service manager. Start manually: $client run --config $profile"
 fi
+if [[ "$switching" == true ]]; then
+  healthy=false
+  for _ in $(seq 1 35); do
+    sleep 1
+    if "$client" health --url-file "$private/health.url" --require-control-plane-poll --json >/dev/null 2>&1; then
+      healthy=true
+      break
+    fi
+  done
+  [[ "$healthy" == true ]] || { echo "New Tunnel did not become ready; restoring old profile." >&2; exit 1; }
+fi
+completed=true
 echo "Finish in ChatGPT Plugins -> Add custom MCP server -> Tunnel."
