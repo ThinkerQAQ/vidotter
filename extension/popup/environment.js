@@ -648,7 +648,7 @@
     if (busy) {
       title.textContent = phases[mcpUI.busy] || "正在连接…";
       description.textContent = mcpUI.busy === "waiting" && mcpUI.pendingSetup
-        ? "请在本机安全窗口输入 Runtime API Key（必填），验证通过后自动保存。旧连接 Ready 不代表本次修改完成。"
+        ? "请在新打开的 VidOtter ChatGPT configuration 窗口输入 Runtime API Key（必填），验证通过后自动保存。旧连接 Ready 不代表本次修改完成。"
         : "本页会自动刷新连接状态。";
     } else if (ready) {
       title.textContent = "本机连接已就绪";

@@ -1,5 +1,5 @@
 # Optional ChatGPT Tunnel setup. Credentials are entered only on this computer.
-param([string]$TunnelId, [switch]$ReplaceExisting, [string]$ExpectedTunnelId)
+param([string]$TunnelId, [switch]$ReplaceExisting, [string]$ExpectedTunnelId, [switch]$InteractiveWindow)
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
 $binary = Join-Path $root 'bin\vidotter-windows-amd64.exe'
@@ -28,6 +28,17 @@ if (Test-Path $profile) {
         throw 'Changing connection credentials requires confirmation using the latest saved Tunnel ID.'
     }
 } elseif ($ReplaceExisting) { throw 'No existing connection to replace.' }
+# A Bridge started as a background task has hidden/NUL console handles.
+# Start-Process opens a separate interactive console with fresh input handles.
+# The first process exits immediately; secrets are entered only in the child.
+if (!$InteractiveWindow -and $env:VIDOTTER_MCP_TEST_MODE -ne '1') {
+    $arguments = @('-NoProfile','-ExecutionPolicy','Bypass','-NoExit','-File',
+        ('"' + $PSCommandPath + '"'),'-InteractiveWindow','-TunnelId',$TunnelId)
+    if ($ReplaceExisting) { $arguments += @('-ReplaceExisting','-ExpectedTunnelId',$ExpectedTunnelId) }
+    Start-Process -FilePath (Get-Command powershell.exe).Source -ArgumentList $arguments -WindowStyle Normal
+    exit 0
+}
+if ($InteractiveWindow) { $Host.UI.RawUI.WindowTitle = 'VidOtter ChatGPT configuration - Runtime API Key' }
 # Never silently import another application's inherited API key.
 if ($env:VIDOTTER_MCP_TEST_MODE -eq '1' -and $env:CONTROL_PLANE_API_KEY) {
     $secure = ConvertTo-SecureString -String $env:CONTROL_PLANE_API_KEY -AsPlainText -Force
