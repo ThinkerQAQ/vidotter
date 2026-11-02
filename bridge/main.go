@@ -146,7 +146,9 @@ func Main() {
 	if len(os.Args) >= 2 && os.Args[1] == "--bridge-service" {
 		// The OS owns one supervisor. In-app restart never spawns another supervisor.
 		for {
-			if err := runBridge(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			if err := runBridge(); err == nil {
+				continue // An explicit restart rebinds immediately, before browser auto-start.
+			} else if !errors.Is(err, http.ErrServerClosed) {
 				appendRuntimeEvent("WARN", "bridge", "service_retry")
 			}
 			time.Sleep(5 * time.Second)
