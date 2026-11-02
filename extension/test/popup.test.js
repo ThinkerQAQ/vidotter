@@ -114,7 +114,12 @@ assert.match(backgroundSource, /bridgeFetch\("\/v1\/mcp\/service"/);
 
 // Guided flow is deliberate, idempotent and uses only authenticated bridge routes.
 assert.match(environmentSource, /state\.clientInstalled/);
-assert.match(environmentSource, /state\.configured \? "service" : "setup"/);
+assert.match(environmentSource, /action === "replace" \? "setup" : state\.configured \? "service" : "setup"/);
+assert.match(environmentSource, /"更换 Tunnel ID"/);
+assert.match(environmentSource, /"确认切换"/);
+assert.match(environmentSource, /previousTunnelId: state\.tunnelID/);
+assert.match(environmentSource, /status\.tunnelID === mcpUI\.pendingID/);
+assert.match(environmentSource, /mcpUI\.editing \? mcpUI\.draftID/);
 assert.match(environmentSource, /setTimeout\(mcpPoll, 4000\)/);
 assert.match(environmentSource, /120000/);
 assert.match(environmentSource, /mcpIsVisible\(\)/);
