@@ -94,10 +94,8 @@ cp "$staging/vidotter.yaml" "$profile"
 cp "$staging/runtime.env" "$env_file"
 chmod 600 "$profile" "$env_file"
 if [[ "${VIDOTTER_MCP_SAVE_ONLY:-}" == 1 ]]; then
-  printf '%s
-' "$(basename "$staging")" > "$private/configuration-revision"
-  printf '%s
-' true > "$private/restart-required"
+  printf '%s\n' "$(basename "$staging")" > "$private/configuration-revision"
+  printf '%s\n' true > "$private/restart-required"
   completed=true
   echo 'MCP configuration saved; running service and login tasks unchanged.'
   exit 0
