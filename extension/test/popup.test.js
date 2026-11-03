@@ -110,7 +110,7 @@ assert.match(environmentSource, /root\.chrome\.runtime\.reload\(\)/);
 assert.match(environmentSource, /mcpButton\(actions, "Save"/);
 assert.match(environmentSource, /"Start Service"/);
 assert.match(environmentSource, /"Stop Service"/);
-assert.match(environmentSource, /"Refresh Status"/);
+assert.doesNotMatch(environmentSource, /"Refresh Status"/);
 assert.match(environmentSource, /saveOnly: true/);
 assert.match(environmentSource, /reuseKey/);
 assert.match(environmentSource, /target: "tunnel"/);

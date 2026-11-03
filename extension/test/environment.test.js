@@ -57,69 +57,49 @@ assert.doesNotMatch(mcpSource, /idInput\.value = mcpUI\.draftID \|\| state\.tunn
 assert.doesNotMatch(mcpSource, /keyInput\.placeholder =/);
 
 
-// A blank form must NOT unlock service controls merely because credentials
-// happen to be persisted on disk. Save explicitly confirms using them.
+// Save persists the credentials, Start is available on opening whenever both
+// persisted fields are valid. Unsaved edits disable Start, but never Stop.
 const savedTunnel = {
-  tunnelID: validTestID, revision: "rev-001", configured: true,
-  runtimeKeySaved: true, running: false, ready: false
+  tunnelID: validTestID, revision:"rev-001",
+  configured:true, runtimeKeySaved:true, running:false, ready:false
 };
-const confirmedForm = {
-  confirmed: true, confirmedID: validTestID, confirmedRevision: "rev-001",
-  draftID: "", draftKey: "", idEdited: false, busy: ""
-};
-const blankForm = { ...confirmedForm, confirmed: false };
-const inactive = environment.mcpControlState(savedTunnel, blankForm);
-assert.equal(inactive.credentialsSaved, true);
-assert.equal(inactive.canStart, false);
-assert.equal(inactive.canRefresh, false);
-assert.equal(inactive.canAutoStart, false);
-assert.equal(inactive.canStop, false);
+const form = {draftID:validTestID, draftKey:"", idEdited:false, busy:""};
+const prepared = environment.mcpControlState(savedTunnel, form);
+assert.equal(prepared.credentialsSaved, true);
+assert.equal(prepared.canStart, true); // No redundant Save after reopening.
+assert.equal(prepared.canAutoStart, true);
+assert.equal(prepared.canStop, false);
+const noConfig = {tunnelID:"", configured:false, runtimeKeySaved:false};
+assert.equal(environment.mcpControlState(noConfig, form).canStart, false);
+assert.equal(environment.mcpControlState({...savedTunnel, runtimeKeySaved:false}, form).canStart, false);
+assert.equal(environment.mcpControlState({...savedTunnel, tunnelID:"invalid-id"}, form).canStart, false);
 assert.equal(environment.mcpIsExampleID("tunnel_0123456789abcdef0123456789abcdef"), true);
-assert.equal(environment.mcpIsExampleID(validTestID), false);
-const exampleStatus = {...savedTunnel, tunnelID:"tunnel_0123456789abcdef0123456789abcdef"};
-const exampleForm = {...confirmedForm, confirmedID:exampleStatus.tunnelID};
-const blocked = environment.mcpControlState(exampleStatus, exampleForm);
-assert.equal(blocked.credentialsSaved, false);
-assert.equal(blocked.canStart, false);
-assert.equal(blocked.canAutoStart, false);
-const confirmed = environment.mcpControlState(savedTunnel, confirmedForm);
-assert.equal(confirmed.canStart, true);
-// Regression: an ID auto-filled directly into the DOM (without input event)
-// invalidates a previously confirmed form and cannot leave Start enabled.
+assert.equal(environment.mcpControlState(
+  {...savedTunnel,tunnelID:"tunnel_0123456789abcdef0123456789abcdef"}, form).canStart,false);
+for (const unsaved of [
+  {draftID:"tunnel_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", idEdited:true},
+  {draftID:"", idEdited:true},
+  {draftKey:"replacement-runtime-key"},
+  {busy:"saving"}
+]) {
+  const controls = environment.mcpControlState(savedTunnel, {...form,...unsaved});
+  assert.equal(controls.canStart,false,JSON.stringify(unsaved));
+  assert.equal(controls.canAutoStart,false,JSON.stringify(unsaved));
+}
 const autoFilled = environment.mcpVisibleFieldChanges({
   querySelector(selector) {
     return selector === 'input[name="tunnelId"]'
-      ? { value: "tunnel_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" } : null;
+      ? {value:"tunnel_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"} : null;
   }
-}, savedTunnel, { ...confirmedForm, idEdited: false });
-assert.equal(autoFilled.idEdited, true);
-assert.equal(environment.mcpControlState(savedTunnel, {...confirmedForm, ...autoFilled}).canStart, false);
-assert.equal(confirmed.canRefresh, true);
-assert.equal(confirmed.canAutoStart, true);
-assert.equal(confirmed.canStop, false);
-for (const changed of [
-  { draftID: "tunnel_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", idEdited: true },
-  { draftKey: "new-key-entered" },
-  { busy: "waiting" },
-  { confirmedRevision: "previous-revision" },
-  { confirmedID: "tunnel_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" }
-]) {
-  const result = environment.mcpControlState(savedTunnel, {...confirmedForm, ...changed});
-  assert.equal(result.canStart, false, JSON.stringify(changed));
-  assert.equal(result.canRefresh, false, JSON.stringify(changed));
-}
-const runningTunnel = environment.mcpControlState(
-  {...savedTunnel, running: true}, blankForm);
-assert.equal(runningTunnel.canStop, true);
-assert.equal(runningTunnel.canRefresh, true);
-assert.equal(runningTunnel.canStart, false);
-assert.equal(environment.mcpControlState(
-  {...savedTunnel, runtimeKeySaved: false}, confirmedForm).canStart, false);
-assert.equal(environment.mcpControlState(
-  {tunnelID:"", configured:false, runtimeKeySaved:false}, confirmedForm).canRefresh, false);
-assert.equal(environment.mcpControlState(
-  {...savedTunnel, running:true}, {...blankForm, busy:"stopping"}).canStop, false);
-
+},savedTunnel,form);
+assert.equal(autoFilled.idEdited,true);
+assert.equal(environment.mcpControlState(savedTunnel,{...form,...autoFilled}).canStart,false);
+const active = environment.mcpControlState({...savedTunnel,running:true},
+  {...form, draftKey:"pending replacement"});
+assert.equal(active.canStop,true); // Always stoppable despite dirty draft.
+assert.equal(active.canStart,false);
+assert.equal(environment.mcpControlState({...savedTunnel,running:true},
+  {...form,busy:"stopping"}).canStop,false);
 assert.equal(environment.cardState({ status: "ready", ok: true }), "ok");
 assert.equal(environment.cardState({ status: "disabled", ok: true }), "disabled");
 assert.equal(environment.cardState({ status: "missing", ok: false }), "error");
@@ -212,7 +192,12 @@ const mcpSection = environmentSource.split("function renderChatGPTMCP(body, tool
 assert.match(mcpSection, /"Save"/);
 assert.match(mcpSection, /"Start Service"/);
 assert.match(mcpSection, /"Stop Service"/);
-assert.match(mcpSection, /"Refresh Status"/);
+assert.doesNotMatch(mcpSection, /"Refresh Status"|refreshButton|mcpAction\("refresh"/);
+assert.match(mcpSection, /mcpFieldHeading\(/);
+assert.match(mcpSection, /mcpButton\(actions, "Save", .*true\)/);
+assert.match(mcpSection, /\(\) => mcpAction\(running \? "stop" : "start", tool, shell\), true\)/);
+assert.match(mcpSource, /setTimeout\(mcpPoll, 4000\)/);
+
 assert.match(mcpSection, /target: "tunnel"/);
 assert.doesNotMatch(mcpSection, /target: "bridge"|登录后后台运行 VidOtter/);
 assert.doesNotMatch(mcpSection, /重新连接|更换连接配置|保存并验证/);

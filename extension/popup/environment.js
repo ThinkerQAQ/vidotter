@@ -433,7 +433,7 @@
 
   // Credentials are submitted together; the Key stays only in transient form state
   // until the local service saves it in private OS storage.
-  const mcpUI = { draftID: "", idEdited: false, draftKey: "", confirmed: false, confirmedID: "", confirmedRevision: "", busy: "", error: "", info: "", deadline: 0, timer: null, polling: false, advanced: false, workerOutdated: false,
+  const mcpUI = { draftID: "", idEdited: false, draftKey: "", busy: "", error: "", info: "", deadline: 0, timer: null, polling: false, advanced: false, workerOutdated: false,
     editing: false, pendingID: "", pendingSetup: false, pendingRevision: "" };
   const mcpIDPattern = /^tunnel_(?:[a-z0-9]{32}|[a-z0-9]{4}_[a-z0-9]{32})$/;
   // This ID is used by our smoke-test fixtures. It is syntactically valid,
@@ -497,25 +497,21 @@
     setTimeout(scrub, 100);
     setTimeout(scrub, 900);
   }
-  // Service controls require an explicit Save/confirmation in this view.
-  // Empty inputs mean "reuse stored credentials" but NOT "ready to start".
-  // A running Tunnel can always be stopped even with an unconfirmed form.
+  // Service controls follow persisted credentials, not an extra click on Save.
+  // A running Tunnel must always remain stoppable even while editing.
   function mcpControlState(state, form = {}) {
     const running = Boolean(state.running || state.ready);
-    const changedID = Boolean(form.idEdited && String(form.draftID || "").trim() &&
-      String(form.draftID).trim() !== state.tunnelID);
+    const changedID = Boolean(form.idEdited &&
+      String(form.draftID || "").trim() !== String(state.tunnelID || "").trim());
     const hasChanges = changedID || Boolean(String(form.draftKey || "").trim());
     const credentialsSaved = Boolean(state.configured && state.runtimeKeySaved &&
       mcpIDPattern.test(String(state.tunnelID || "")) && !mcpIsExampleID(state.tunnelID));
-    const confirmedCurrent = Boolean(form.confirmed && form.confirmedID === state.tunnelID &&
-      form.confirmedRevision === (state.revision || ""));
-    const usable = credentialsSaved && confirmedCurrent && !hasChanges && !form.busy;
+    const usable = credentialsSaved && !hasChanges && !form.busy;
     return {
       running, hasChanges, credentialsSaved,
       canStart: !running && usable,
       canStop: running && !form.busy,
-      canRefresh: !form.busy && (running || usable),
-      canAutoStart: !form.busy && (running || usable)
+      canAutoStart: usable
     };
   }
 
@@ -597,9 +593,6 @@
         mcpUI.pendingID = "";
         mcpUI.draftID = "";
         mcpUI.idEdited = false;
-        mcpUI.confirmed = Boolean(status.configured && status.runtimeKeySaved);
-        mcpUI.confirmedID = mcpUI.confirmed ? status.tunnelID : "";
-        mcpUI.confirmedRevision = mcpUI.confirmed ? (status.revision || "") : "";
         mcpUI.info = "配置已保存，可启动服务。";
         changed = true;
       } else if (mcpUI.busy === "waiting" && mcpUI.pendingSetup && status.setupState === "failed") {
@@ -633,11 +626,6 @@
     const state = mcpStatus(tool);
     mcpUI.error = "";
     mcpUI.info = "";
-    if (action === "refresh") {
-      if (!mcpControlState(state, mcpUI).canRefresh) return;
-      await refresh();
-      return;
-    }
     if (action === "save") {
       const tunnelId = mcpEffectiveTunnelID(body, state.tunnelID, mcpUI.draftID, mcpUI.idEdited);
       const runtimeApiKey = mcpUI.draftKey.trim();
@@ -649,14 +637,10 @@
       }
       if (state.configured && state.runtimeKeySaved &&
           tunnelId === state.tunnelID && !runtimeApiKey) {
-        // Explicitly approve using the existing saved credentials. No backend
-        // write, service restart, or login-task modification is performed.
-        mcpUI.confirmed = true;
-        mcpUI.confirmedID = state.tunnelID;
-        mcpUI.confirmedRevision = state.revision || "";
+        // No backend write or service change is needed for identical values.
         mcpUI.draftID = "";
         mcpUI.idEdited = false;
-        mcpUI.info = "已确认复用已保存的配置，现在可以启动服务。";
+        mcpUI.info = "配置已经保存，无需重复保存。";
         renderTools(tools);
         return;
       }
@@ -671,9 +655,6 @@
         renderTools(tools);
         return;
       }
-      mcpUI.confirmed = false;
-      mcpUI.confirmedID = "";
-      mcpUI.confirmedRevision = "";
       mcpUI.busy = "saving";
       renderTools(tools);
       try {
@@ -713,7 +694,9 @@
       return;
     }
     if (action === "start" || action === "stop") {
-      const controls = mcpControlState(state, mcpUI);
+      const controls = mcpControlState(state, {
+        ...mcpUI, ...mcpVisibleFieldChanges(body, state, mcpUI)
+      });
       if (action === "start" ? !controls.canStart : !controls.canStop) return;
       mcpUI.busy = action === "start" ? "starting" : "stopping";
       renderTools(tools);
@@ -742,10 +725,30 @@
     return control;
   }
 
+  function mcpFieldHeading(label, url, helpLabel) {
+    const heading = document.createElement("span");
+    heading.className = "mcp-field-heading";
+    heading.appendChild(document.createTextNode(label));
+    const help = document.createElement("a");
+    help.className = "mcp-field-help";
+    help.href = url;
+    help.target = "_blank";
+    help.rel = "noopener noreferrer";
+    help.textContent = "?";
+    help.title = helpLabel;
+    help.setAttribute("aria-label", helpLabel);
+    heading.appendChild(help);
+    return heading;
+  }
+
   function mcpKeyField(busy, keySaved = false, onEdit = () => {}) {
     const label = document.createElement("label");
     label.className = "mcp-id-field";
-    label.textContent = "Runtime API Key";
+    label.appendChild(mcpFieldHeading(
+      "Runtime API Key",
+      "https://platform.openai.com/api-keys",
+      "创建 Runtime API Key"
+    ));
     const input = document.createElement("input");
     input.name = "runtimeApiKey";
     input.type = "password";
@@ -774,9 +777,6 @@
       mcpUI.error = "";
       input.closest(".mcp-connection-card")?.querySelector(".mcp-error")?.remove();
       // Any manual edit invalidates the session's previous Save confirmation.
-      mcpUI.confirmed = false;
-      mcpUI.confirmedID = "";
-      mcpUI.confirmedRevision = "";
       onEdit();
     });
     label.appendChild(input);
@@ -791,24 +791,14 @@
     const title = document.createElement("h3");
     title.textContent = "ChatGPT MCP";
     shell.appendChild(title);
-    const helpLinks = document.createElement("div");
-    helpLinks.className = "mcp-help-links";
-    for (const [label, url] of [
-      ["1. 创建 / 管理 Tunnel ID", "https://platform.openai.com/settings/organization/tunnels"],
-      ["2. 创建 Runtime API Key", "https://platform.openai.com/api-keys"]
-    ]) {
-      const link = document.createElement("a");
-      link.href = url;
-      link.target = "_blank";
-      link.rel = "noopener noreferrer";
-      link.textContent = label;
-      helpLinks.appendChild(link);
-    }
-    shell.appendChild(helpLinks);
     let updateControls = () => {};
     const idLabel = document.createElement("label");
     idLabel.className = "mcp-id-field";
-    idLabel.textContent = "Tunnel ID";
+    idLabel.appendChild(mcpFieldHeading(
+      "Tunnel ID",
+      "https://platform.openai.com/settings/organization/tunnels",
+      "创建或管理 Tunnel ID"
+    ));
     const idInput = document.createElement("input");
     idInput.name = "tunnelId";
     idInput.type = "text";
@@ -835,9 +825,6 @@
       mcpUI.error = "";
       idInput.closest(".mcp-connection-card")?.querySelector(".mcp-error")?.remove();
       // Even if the user clears this field again, require Save to reconfirm.
-      mcpUI.confirmed = false;
-      mcpUI.confirmedID = "";
-      mcpUI.confirmedRevision = "";
       updateControls();
     });
     idLabel.appendChild(idInput);
@@ -860,19 +847,15 @@
     const running = Boolean(state.running || state.ready);
     const service = mcpButton(actions,
       running ? "Stop Service" : "Start Service",
-      () => mcpAction(running ? "stop" : "start", tool, shell));
-    const refreshButton = mcpButton(actions, "Refresh Status",
-      () => mcpAction("refresh", tool, shell));
+      () => mcpAction(running ? "stop" : "start", tool, shell), true);
     shell.appendChild(actions);
     let autoStartCheckbox = null;
     updateControls = () => {
       const visible = mcpVisibleFieldChanges(shell, state, mcpUI);
       const controls = mcpControlState(state, { ...mcpUI, ...visible });
       service.disabled = !(running ? controls.canStop : controls.canStart);
-      refreshButton.disabled = !controls.canRefresh;
-      service.title = running ? "停止正在运行的 MCP Tunnel" :
-        controls.canStart ? "启动已确认的 MCP 配置" : "请先点击 Save 保存或确认配置";
-      refreshButton.title = controls.canRefresh ? "刷新 Tunnel 状态" : "请先保存配置或启动服务";
+      service.title = running ? "停止 MCP Tunnel" :
+        controls.canStart ? "启动已保存的 MCP 配置" : "请先保存 Tunnel ID 和 Runtime API Key";
       if (autoStartCheckbox) autoStartCheckbox.disabled = backgroundBusy || !controls.canAutoStart;
       idState.textContent = visible.draftID &&
         visible.draftID !== state.tunnelID ? "新 Tunnel ID 尚未保存" :
@@ -927,15 +910,6 @@
       shell.querySelector(".mcp-error")?.remove();
       updateControls();
     }, 350);
-    if (!running && state.configured && state.runtimeKeySaved &&
-        !mcpIsExampleID(state.tunnelID) &&
-        !(mcpUI.confirmed && mcpUI.confirmedID === state.tunnelID &&
-          mcpUI.confirmedRevision === (state.revision || ""))) {
-      const confirmHint = document.createElement("p");
-      confirmHint.className = "settings-help mcp-confirmation-hint";
-      confirmHint.textContent = "凭据已保存。请点击 Save 确认使用现有配置，之后才能启动或刷新状态。";
-      shell.appendChild(confirmHint);
-    }
     const status = document.createElement("p");
     status.className = "mcp-description";
     status.setAttribute("role", "status");
@@ -956,7 +930,9 @@
     }
     const plugin = document.createElement("p");
     plugin.className = "settings-help";
-    plugin.textContent = "ChatGPT Plugin: 尚未在本机验证（需在 ChatGPT 中完成授权）";
+    plugin.textContent = state.ready
+      ? "ChatGPT 插件：Tunnel 已就绪；授权状态请在 ChatGPT 中查看"
+      : "ChatGPT 插件：授权状态请在 ChatGPT 中查看（本地无法直接验证）";
     shell.appendChild(plugin);
     const link = document.createElement("a");
     link.href = chatGPTSettingsURL;

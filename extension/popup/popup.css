@@ -561,12 +561,19 @@ html[data-surface="side-panel"] .log-follow { grid-column: 1; }
 }
 
 /* Three fixed MCP controls, aligned with Remote Desktop MCP. */
-.mcp-help-links { display: grid; gap: 8px; margin: 12px 0 18px; }
-.mcp-help-links a { font-size: 13px; color: var(--accent); text-decoration: none; }
-.mcp-help-links a:hover { text-decoration: underline; }
 .mcp-service-actions { justify-content: flex-start; align-items: center; }
 .mcp-service-actions button { min-height: 36px; }
 
 .mcp-connection-card .mcp-id-field { margin: 16px 0 4px; }
 .mcp-credential-state { display: block; margin: 0 0 10px; font-size: 12px; font-weight: 400; color: #71839c; }
 .mcp-info { margin-top: 12px; }
+
+/* Compact field-level help replaces the two introductory links. */
+.mcp-field-heading { display: inline-flex; align-items: center; gap: 8px; }
+.mcp-field-help {
+  display: inline-flex; width: 17px; height: 17px; align-items: center; justify-content: center;
+  flex: 0 0 17px; border: 1px solid #9ba8ba; border-radius: 50%;
+  text-decoration: none; font-size: 11px; font-weight: 700; color: #52647c; background: #fff;
+}
+.mcp-field-help:hover, .mcp-field-help:focus-visible { border-color: var(--accent); color: var(--accent); }
+.mcp-service-actions button.primary:disabled { background: #d9dfe7; color: #7d8796; opacity: 1; }
