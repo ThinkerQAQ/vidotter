@@ -31,40 +31,64 @@ Install VidOtter, enable the browser extension, and download a sample video.
 
 ### 2.1. Install
 
-Use a Windows, macOS, or Linux computer with Chrome, Chromium, or Edge.
+Download the installer for your system from the [latest Release](https://github.com/ThinkerQAQ/vidotter/releases/latest). The graphical installers support Windows x64, Linux x64, and Intel macOS. Apple Silicon and Linux ARM64 users can use the archives in [2.1.3](#213-manual-archive-installation).
 
-A plain MP4 download requires no developer tools, account setup, or models.
+#### 2.1.1. Graphical Interface
 
-#### 2.1.1. Use the GUI installer
+##### Windows
 
-Open the [latest Release](https://github.com/ThinkerQAQ/vidotter/releases/latest). In Assets, choose an installer matching your operating system and CPU architecture. If none is available, use the archive method in [2.2.2](#212-install-an-archive-manually).
+Run `VidOtter-Setup-v*-windows-amd64.exe` and follow the installation wizard. After installation, use **View Setup Instructions** from the Start Menu to load the browser extension.
 
-- Windows: run the matching `.exe` installer.
-- macOS: open the matching `.dmg` and launch the installer inside.
-- Linux: download the matching `.run` installer. For a consistent command, rename the downloaded file to `VidOtter-Setup.run` in your file manager, then run these commands in the download directory:
+##### macOS (Intel)
 
-```bash
-chmod +x VidOtter-Setup.run
-./VidOtter-Setup.run
+Open `VidOtter-Setup-v*-macos-amd64.dmg` and launch the installer application inside. Follow the wizard, then use the setup instructions to load the extension. This installer is for Intel Macs; Apple Silicon can use the `macos-arm64.tar.gz` archive.
+
+##### Linux (x64)
+
+Run `VidOtter-Setup-v*-linux-amd64.run` in your desktop environment. If your system blocks execution, allow it in the file properties or run `chmod +x` on the file. Follow the wizard and load the extension from the installation directory.
+
+All three installers register the local Native Messaging host. Chrome or Edge starts the local Bridge when needed.
+
+#### 2.1.2. Command Line
+
+These commands run the **same graphical installers** without the wizard. Open a terminal in the directory where you downloaded the installer.
+
+##### Windows (PowerShell)
+
+```powershell
+$installer = (Get-ChildItem .\VidOtter-Setup-v*-windows-amd64.exe | Select-Object -First 1).FullName
+Start-Process -FilePath $installer -ArgumentList '--accept-licenses --default-answer --confirm-command install' -Wait
 ```
 
-Complete installation and note the installation directory. The installer registers the Bridge automatically and opens the extension activation instructions. Continue to [2.2](#221-browser-extension); the browser launches the Bridge on demand.
+##### macOS (Intel)
 
-If your system reports an unknown publisher, check the download source and that Release's signing/notarization information.
+```bash
+dmg=$(find . -maxdepth 1 -name 'VidOtter-Setup-v*-macos-amd64.dmg' -print -quit)
+mount=$(mktemp -d)
+hdiutil attach -nobrowse -readonly -mountpoint "$mount" "$dmg"
+app=$(find "$mount" -maxdepth 2 -type d -name '*.app' -print -quit)
+installer=$(find "$app/Contents/MacOS" -maxdepth 1 -type f -perm -111 -print -quit)
+QT_QPA_PLATFORM=offscreen "$installer" --root "$HOME/VidOtter" --accept-licenses --default-answer --confirm-command install
+hdiutil detach "$mount"
+```
 
-#### 2.1.2. Install an archive manually
+##### Linux (x64)
 
-For a manual installation, choose an archive from the same Release's Assets using these filename suffixes:
+```bash
+installer=$(find . -maxdepth 1 -name 'VidOtter-Setup-v*-linux-amd64.run' -print -quit)
+chmod +x "$installer"
+QT_QPA_PLATFORM=offscreen "$installer" --root "$HOME/VidOtter" --accept-licenses --default-answer --confirm-command install
+```
 
-- Windows x64: `windows-amd64.zip`.
-- macOS Intel: `macos-amd64.tar.gz`.
-- macOS Apple Silicon: `macos-arm64.tar.gz`.
-- Linux x64: `linux-amd64.tar.gz`.
-- Linux ARM64: `linux-arm64.tar.gz`.
+#### 2.1.3. Manual Archive Installation
 
-To identify your architecture, check System type in Windows Settings → System → About, or Chip/Processor in About This Mac. On Linux, run `uname -m`: `x86_64` means x64 and `aarch64` means ARM64.
+If you prefer manual installation, download the matching archive from the same Release:
 
-Extract the complete archive to a permanent location. The folder directly containing `bin/` and `extension/` is the installation root. Open a terminal and run the following commands, replacing the sample path with your actual path:
+- Windows x64: `vidotter-v*-windows-amd64.zip`
+- Linux x64 / ARM64: `vidotter-v*-linux-amd64.tar.gz` / `vidotter-v*-linux-arm64.tar.gz`
+- macOS Intel / Apple Silicon: `vidotter-v*-macos-amd64.tar.gz` / `vidotter-v*-macos-arm64.tar.gz`
+
+Extract it to a permanent location. The installation root contains `bin/` and `extension/`. Register the Native Messaging host from that directory:
 
 Windows PowerShell:
 
@@ -80,7 +104,7 @@ cd '/path/to/VidOtter'
 ./bin/vidotterdev install
 ```
 
-The output `Native Messaging installed:` and `Host manifest:` confirms registration. If you move the installation, register it again from the new location.
+If you move the installation, run the registration command again. On Linux, `uname -m` reports `x86_64` for x64 or `aarch64` for ARM64. On macOS, check the chip in **About This Mac**.
 
 ### 2.2. Configuration
 
@@ -142,17 +166,28 @@ For the full-screen interface, select **Open workspace** in the extension.
 
 ### 2.4. Connect to ChatGPT (Optional)
 
-VidOtter includes an MCP server. A Tunnel is needed only for web-based ChatGPT, not for ordinary downloads or local MCP clients.
+VidOtter includes a local MCP server. The Tunnel is only needed for ChatGPT on the web; downloading videos or using a local MCP client does not require it.
 
 1. Create a [Tunnel ID](https://platform.openai.com/settings/organization/tunnels) and a [Runtime API Key](https://platform.openai.com/settings/organization/api-keys).
-2. Open **VidOtter → Settings → External components → ChatGPT MCP**. Install the official Tunnel Client if required.
-3. Enter both values, click **Save**, then **Start Service**. Wait for **Tunnel Service Ready**.
-4. Open [ChatGPT Plugins](https://chatgpt.com/plugins), register a custom MCP Tunnel with the same ID, and authorize it.
-5. Select VidOtter in ChatGPT and call the read-only vidotter_status tool.
+2. Open **VidOtter → Settings → External components → ChatGPT MCP** and install the Tunnel Client if prompted.
+3. Enter both values and click **Save**, then **Start Service**. The service connects automatically when **Connect Tunnel automatically** is enabled; otherwise, click **Connect Tunnel**.
+4. Register and authorize the same Tunnel ID in [ChatGPT Plugins](https://chatgpt.com/plugins).
+5. Select VidOtter in ChatGPT and call the read-only `vidotter_status` tool.
 
-**Save** stores settings only; **Start Service / Stop Service** control the local Tunnel. **Restart Service** applies saved changes. A saved Runtime API Key is masked; leave it blank to reuse it.
+**Start local service at login** and **Connect Tunnel automatically** are independent settings. Saving does not change a running service; use **Restart Service** to apply saved connection changes. **Disconnect Tunnel** keeps the local service running, while **Stop Service** stops this run without disabling its next-login startup preference. Saved keys are masked and do not need to be entered again.
 
-A ready local Tunnel does not mean the ChatGPT plugin is authorized. Verify both separately.
+The service is managed by Go on all three platforms: Windows Task Scheduler, Linux systemd user units, and macOS LaunchAgents. The old PowerShell/Shell-based MCP service settings are not imported; enter the connection details again after upgrading to v1.7.0. Downloads and other user data are retained.
+
+For command-line status and service control, run the installed Bridge with `--mcp-service status|start|stop|restart|connect|disconnect`. For example:
+
+```powershell
+.\bin\vidotter-windows-amd64.exe --mcp-service status
+```
+
+On Linux use `./bin/vidotter-linux-amd64` (or `linux-arm64`); on macOS use `./bin/vidotter-macos-amd64` (or `macos-arm64`). The graphical settings page is the simpler way to enter credentials.
+
+A connected local Tunnel does not mean ChatGPT has authorized the plugin. Check both independently.
+
 
 ### 2.5. Subtitles and External Components
 
@@ -193,7 +228,7 @@ go -C tools/vidotterdev run . verify
 go -C tools/vidotterdev run . build
 ```
 
-`verify` runs tests for both Go modules, extension JavaScript syntax checks, and script tests. Success prints `Go and browser checks passed`. `build` compiles the current platform's Bridge into `.build/out/`; see [5.2](#32-install-a-development-version) for a development installation.
+`verify` runs tests for both Go modules, extension JavaScript syntax checks, and script tests. Success prints `Go and browser checks passed`. `build` compiles the current platform's Bridge into `.build/out/`; see [3.2](#32-install-a-development-version) for a development installation.
 
 For example, cross-compile for Windows:
 
@@ -223,7 +258,7 @@ Set-Location $vidotterDevDir
 .\bin\vidotterdev.exe install
 ```
 
-Follow [2.3](#221-browser-extension) to load this deployment's `extension/`, then complete 2.4–2.5 to download and check a file. Change back to the original source repository root before further source work or packaging.
+Follow [2.2.1](#221-browser-extension) to load this deployment's `extension/`, then complete 2.4–2.5 to download and check a file. Change back to the original source repository root before further source work or packaging.
 
 ### 3.3. Packaging and CI
 
