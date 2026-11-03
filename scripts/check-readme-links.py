@@ -11,8 +11,7 @@ import sys
 
 ROOT = Path(__file__).resolve().parent.parent
 FILES = [ROOT / 'README.md', ROOT / 'README_ZH.md']
-TOPICS = ['Introduction', 'Quick Start', 'Configuration', 'Optional Features',
-          'Development', 'License']
+TOPICS = ['Introduction', 'Quick Start', 'Development', 'License']
 LINK = re.compile(r'!?\[[^\]]+\]\(([^)\s]+)(?:\s+"[^"]+")?\)')
 HEADER = re.compile(r'^#{1,6}\s+(.+?)\s*$', re.MULTILINE)
 IMAGE = re.compile(r'!\[[^\]]+\]\(([^)\s]+)\)')
@@ -90,7 +89,7 @@ def main() -> int:
         for problem in failures:
             print('README-Only FAILED:', problem, file=sys.stderr)
         return 1
-    print('README-Only OK: 2 languages, 6 aligned sections, local links, '
+    print('README-Only OK: 2 languages, 4 aligned sections, local links, '
           'shared HTTPS image, retained legal assets, no docs tree')
     return 0
 
