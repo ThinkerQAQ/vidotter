@@ -23,16 +23,24 @@ const formWithVisibleID = {
   }
 };
 assert.equal(environment.mcpEffectiveTunnelID(formWithVisibleID,
-  "tunnel_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "invalid-stale-draft"), validTestID);
-assert.equal(environment.mcpEffectiveTunnelID(null, validTestID, ""), validTestID);
+  "tunnel_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "invalid-stale-draft", true), validTestID);
+assert.equal(environment.mcpEffectiveTunnelID(formWithVisibleID,
+  "tunnel_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "invalid-stale-draft", false),
+  "tunnel_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+assert.equal(environment.mcpEffectiveTunnelID(null, validTestID, "", false), validTestID);
 assert.equal(environment.mcpEffectiveTunnelID({querySelector() { return {value: ""}; }},
-  validTestID, validTestID), "");
+  validTestID, validTestID, true), validTestID);
 // The runtime key is not a website login field. Saving without editing it
 // must not submit a password manager's automatic credentials.
 const mcpSource = require("node:fs").readFileSync(require("node:path").join(__dirname, "../popup/environment.js"), "utf8");
 assert.match(mcpSource, /input\.autocomplete = "new-password"/);
 assert.match(mcpSource, /document\.activeElement !== input/);
-assert.match(mcpSource, /mcpEffectiveTunnelID\(body, state\.tunnelID, mcpUI\.draftID\)/);
+assert.match(mcpSource, /mcpEffectiveTunnelID\(body, state\.tunnelID, mcpUI\.draftID, mcpUI\.idEdited\)/);
+assert.match(mcpSource, /idInput\.placeholder = ""/);
+assert.match(mcpSource, /idInput\.value = mcpUI\.draftID/);
+assert.match(mcpSource, /input\.placeholder = ""/);
+assert.doesNotMatch(mcpSource, /idInput\.value = mcpUI\.draftID \|\| state\.tunnelID/);
+assert.doesNotMatch(mcpSource, /keyInput\.placeholder =/);
 
 
 assert.equal(environment.cardState({ status: "ready", ok: true }), "ok");

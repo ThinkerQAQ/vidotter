@@ -566,3 +566,7 @@ html[data-surface="side-panel"] .log-follow { grid-column: 1; }
 .mcp-help-links a:hover { text-decoration: underline; }
 .mcp-service-actions { justify-content: flex-start; align-items: center; }
 .mcp-service-actions button { min-height: 36px; }
+
+.mcp-connection-card .mcp-id-field { margin: 16px 0 4px; }
+.mcp-credential-state { display: block; margin: 0 0 10px; font-size: 12px; font-weight: 400; color: #71839c; }
+.mcp-info { margin-top: 12px; }

@@ -433,14 +433,15 @@
 
   // Credentials are submitted together; the Key stays only in transient form state
   // until the local service saves it in private OS storage.
-  const mcpUI = { draftID: "", draftKey: "", busy: "", error: "", deadline: 0, timer: null, polling: false, advanced: false, workerOutdated: false,
+  const mcpUI = { draftID: "", idEdited: false, draftKey: "", busy: "", error: "", info: "", deadline: 0, timer: null, polling: false, advanced: false, workerOutdated: false,
     editing: false, pendingID: "", pendingSetup: false, pendingRevision: "" };
   const mcpIDPattern = /^tunnel_(?:[a-z0-9]{32}|[a-z0-9]{4}_[a-z0-9]{32})$/;
-  // A browser/password manager can fill the rendered input without firing an
-  // input event. The displayed form field, not an older draft, is authoritative.
-  function mcpEffectiveTunnelID(form, savedID, draftID) {
+  // Both fields start blank. Only explicit user input may replace a saved ID:
+  // password managers can populate visible inputs without the user's intent.
+  function mcpEffectiveTunnelID(form, savedID, draftID, edited = true) {
     const field = form?.querySelector?.('input[name="tunnelId"]');
-    return String(field ? field.value : (draftID || savedID || "")).trim();
+    const entered = String(field ? field.value : (draftID || "")).trim();
+    return edited && entered ? entered : String(savedID || "").trim();
   }
   const chatGPTSettingsURL = "https://chatgpt.com/settings/plugins-settings";
 
@@ -518,13 +519,15 @@
         mcpUI.busy = "";
         mcpUI.error = "";
         mcpUI.pendingID = "";
+        mcpUI.draftID = "";
+        mcpUI.idEdited = false;
+        mcpUI.info = "配置已保存。";
         changed = true;
       } else if (mcpUI.busy === "waiting" && mcpUI.pendingSetup && status.setupState === "failed") {
         mcpUI.busy = "";
         mcpUI.pendingID = "";
         mcpUI.error = "连接验证失败，原配置已保留。请检查 Tunnel ID、Key 和 Tunnels Read + Use 权限后重试。";
         mcpUI.editing = status.configured;
-        mcpUI.draftID = status.tunnelID;
         changed = true;
       } else if (mcpUI.busy === "waiting" && Date.now() > mcpUI.deadline) {
         mcpUI.busy = "";
@@ -550,14 +553,21 @@
     if (mcpUI.busy) return;
     const state = mcpStatus(tool);
     mcpUI.error = "";
+    mcpUI.info = "";
     if (action === "refresh") {
       await refresh();
       return;
     }
     if (action === "save") {
-      const tunnelId = mcpEffectiveTunnelID(body, state.tunnelID, mcpUI.draftID);
+      const tunnelId = mcpEffectiveTunnelID(body, state.tunnelID, mcpUI.draftID, mcpUI.idEdited);
       const runtimeApiKey = mcpUI.draftKey.trim();
       const reuseKey = !runtimeApiKey && state.runtimeKeySaved;
+      if (state.configured && state.runtimeKeySaved &&
+          tunnelId === state.tunnelID && !runtimeApiKey) {
+        mcpUI.info = "配置未变化，无需保存。";
+        renderTools(tools);
+        return;
+      }
       if (!mcpIDPattern.test(tunnelId)) {
         mcpUI.error = "请输入有效的 Tunnel ID。";
         renderTools(tools);
@@ -649,7 +659,7 @@
     input.setAttribute("data-1p-ignore", "true");
     input.spellcheck = false;
     input.maxLength = 512;
-    input.placeholder = "输入 Runtime API Key";
+    input.placeholder = "";
     input.value = mcpUI.draftKey;
     input.disabled = busy;
     input.addEventListener("input", () => {
@@ -696,18 +706,31 @@
     idInput.autocomplete = "off";
     idInput.spellcheck = false;
     idInput.maxLength = 80;
-    idInput.placeholder = "tunnel_…";
-    idInput.value = mcpUI.draftID || state.tunnelID;
+    idInput.placeholder = "";
+    idInput.value = mcpUI.draftID;
     idInput.disabled = busy;
-    idInput.addEventListener("input", () => { mcpUI.draftID = idInput.value.trim(); });
+    idInput.addEventListener("input", () => {
+      // Ignore silent form autofill; a focused edit is required to replace
+      // the saved ID.
+      if (document.activeElement !== idInput) {
+        idInput.value = mcpUI.draftID;
+        return;
+      }
+      mcpUI.draftID = idInput.value;
+      mcpUI.idEdited = true;
+    });
     idLabel.appendChild(idInput);
     shell.appendChild(idLabel);
+    const idState = document.createElement("small");
+    idState.className = "settings-help mcp-credential-state";
+    idState.textContent = state.configured ? "已保存；留空则复用" : "尚未保存";
+    shell.appendChild(idState);
     const key = mcpKeyField(busy);
-    const keyInput = key.querySelector("input");
-    if (!mcpUI.draftKey && state.runtimeKeySaved) {
-      keyInput.placeholder = "••••••••（已保存；留空则复用）";
-    }
     shell.appendChild(key);
+    const keyState = document.createElement("small");
+    keyState.className = "settings-help mcp-credential-state";
+    keyState.textContent = state.runtimeKeySaved ? "已保存；留空则复用" : "尚未保存";
+    shell.appendChild(keyState);
     const actions = document.createElement("div");
     actions.className = "mcp-service-actions";
     mcpButton(actions, "Save", () => mcpAction("save", tool, shell), true);
@@ -769,6 +792,13 @@
     link.rel = "noopener noreferrer";
     link.textContent = "Open ChatGPT Plugins";
     shell.appendChild(link);
+    if (mcpUI.info) {
+      const message = document.createElement("p");
+      message.className = "settings-help mcp-info";
+      message.setAttribute("role", "status");
+      message.textContent = mcpUI.info;
+      shell.appendChild(message);
+    }
     if (mcpUI.error) {
       const message = document.createElement("p");
       message.className = "mcp-error";
