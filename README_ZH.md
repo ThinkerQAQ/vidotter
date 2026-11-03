@@ -31,40 +31,64 @@ VidOtter 就是为了解决这个问题。它通过浏览器扩展检测 MP4、H
 
 ### 2.1. 安装
 
-需要一台 Windows、macOS 或 Linux 电脑，以及 Chrome、Chromium 或 Edge 浏览器。
+从[最新 Release](https://github.com/ThinkerQAQ/vidotter/releases/latest)下载对应系统的安装包。图形安装器支持 Windows x64、Linux x64 和 Intel macOS；Apple Silicon 和 Linux ARM64 可使用 [2.1.3](#213-手动安装压缩包) 的压缩包。
 
-普通 MP4 下载无需开发工具、账号或模型配置。
+#### 2.1.1. 图形界面
 
-#### 2.1.1. 使用图形安装器
+##### Windows
 
-打开[最新 Release](https://github.com/ThinkerQAQ/vidotter/releases/latest)，在 Assets 中选择与操作系统和 CPU 架构匹配的安装器。没有对应安装器时，使用 [2.2.2](#212-使用压缩包手动安装) 的压缩包方式。
+运行 `VidOtter-Setup-v*-windows-amd64.exe`，按安装向导完成安装。然后从开始菜单打开 **View Setup Instructions**，按照说明加载浏览器扩展。
 
-- Windows：运行对应的 `.exe` 安装器。
-- macOS：打开对应的 `.dmg`，运行其中的安装器。
-- Linux：下载对应的 `.run` 安装器。为方便执行，可先在文件管理器中将下载的文件重命名为 `VidOtter-Setup.run`，再在下载目录执行：
+##### macOS（Intel）
 
-```bash
-chmod +x VidOtter-Setup.run
-./VidOtter-Setup.run
+打开 `VidOtter-Setup-v*-macos-amd64.dmg`，运行其中的安装程序。安装完成后，按提示加载浏览器扩展。Apple Silicon 用户请使用 `macos-arm64.tar.gz` 压缩包。
+
+##### Linux（x64）
+
+在桌面环境中运行 `VidOtter-Setup-v*-linux-amd64.run`。如果系统不允许执行，可以在文件属性中开启执行权限，或者先执行 `chmod +x`。完成安装后，从安装目录加载浏览器扩展。
+
+三个平台的安装器都会注册本地 Native Messaging Host，Chrome 或 Edge 在需要时自动启动 Bridge。
+
+#### 2.1.2. 命令行
+
+以下命令使用**同一份图形安装器**，但不显示安装向导。在安装包的下载目录打开终端。
+
+##### Windows（PowerShell）
+
+```powershell
+$installer = (Get-ChildItem .\VidOtter-Setup-v*-windows-amd64.exe | Select-Object -First 1).FullName
+Start-Process -FilePath $installer -ArgumentList '--accept-licenses --default-answer --confirm-command install' -Wait
 ```
 
-按提示完成安装并记下安装目录。安装器会自动注册 Bridge，并打开扩展激活说明；完成后直接进入 [2.3](#221-浏览器扩展)。Bridge 由浏览器按需启动。
+##### macOS（Intel）
 
-若系统提示未知发行者，先核对下载来源和该 Release 的签名、公证说明。
+```bash
+dmg=$(find . -maxdepth 1 -name 'VidOtter-Setup-v*-macos-amd64.dmg' -print -quit)
+mount=$(mktemp -d)
+hdiutil attach -nobrowse -readonly -mountpoint "$mount" "$dmg"
+app=$(find "$mount" -maxdepth 2 -type d -name '*.app' -print -quit)
+installer=$(find "$app/Contents/MacOS" -maxdepth 1 -type f -perm -111 -print -quit)
+QT_QPA_PLATFORM=offscreen "$installer" --root "$HOME/VidOtter" --accept-licenses --default-answer --confirm-command install
+hdiutil detach "$mount"
+```
 
-#### 2.1.2. 使用压缩包手动安装
+##### Linux（x64）
 
-手动安装时，在同一 Release 的 Assets 中按以下文件名后缀选择压缩包：
+```bash
+installer=$(find . -maxdepth 1 -name 'VidOtter-Setup-v*-linux-amd64.run' -print -quit)
+chmod +x "$installer"
+QT_QPA_PLATFORM=offscreen "$installer" --root "$HOME/VidOtter" --accept-licenses --default-answer --confirm-command install
+```
 
-- Windows x64：`windows-amd64.zip`。
-- macOS Intel：`macos-amd64.tar.gz`。
-- macOS Apple Silicon：`macos-arm64.tar.gz`。
-- Linux x64：`linux-amd64.tar.gz`。
-- Linux ARM64：`linux-arm64.tar.gz`。
+#### 2.1.3. 手动安装压缩包
 
-如果不确定架构，Windows 查看“设置 → 系统 → 系统信息”的系统类型；macOS 查看“关于本机”的芯片或处理器；Linux 执行 `uname -m`，`x86_64` 对应 x64，`aarch64` 对应 ARM64。
+需要手动安装时，从同一 Release 下载对应压缩包：
 
-完整解压到固定位置，将直接包含 `bin/` 和 `extension/` 的文件夹作为安装根目录。打开终端，将下面的示例路径替换为实际路径后执行：
+- Windows x64：`vidotter-v*-windows-amd64.zip`
+- Linux x64 / ARM64：`vidotter-v*-linux-amd64.tar.gz` / `vidotter-v*-linux-arm64.tar.gz`
+- macOS Intel / Apple Silicon：`vidotter-v*-macos-amd64.tar.gz` / `vidotter-v*-macos-arm64.tar.gz`
+
+将压缩包完整解压到固定目录。安装根目录应直接包含 `bin/` 和 `extension/`。进入该目录，注册 Native Messaging Host：
 
 Windows PowerShell：
 
@@ -80,7 +104,7 @@ cd '/path/to/VidOtter'
 ./bin/vidotterdev install
 ```
 
-看到 `Native Messaging installed:` 和 `Host manifest:` 表示注册完成。以后移动安装目录，需要在新位置重新注册。
+移动安装目录后，需要重新注册。Linux 可通过 `uname -m` 查看架构：`x86_64` 是 x64，`aarch64` 是 ARM64；macOS 可在“关于本机”查看芯片类型。
 
 ### 2.2. 配置
 
@@ -142,17 +166,28 @@ Linux/macOS 使用 `./bin/vidotterdev install --extension-id YOUR_32_CHARACTER_I
 
 ### 2.4. 连接 ChatGPT（可选）
 
-VidOtter 的桌面程序已内置 MCP Server。只有通过网页版 ChatGPT 连接时才需要 Tunnel，普通下载和本地 MCP 客户端不需要。
+VidOtter 内置本地 MCP Server。只有连接网页版 ChatGPT 时才需要 Tunnel；普通视频下载和本地 MCP 客户端不需要。
 
-1. 在 [OpenAI Platform](https://platform.openai.com/settings/organization/tunnels) 创建 Tunnel ID，并在 [API Keys](https://platform.openai.com/settings/organization/api-keys) 创建 Runtime API Key。
-2. 打开 **VidOtter → 设置 → 外部组件 → ChatGPT MCP**，如未安装官方 Tunnel Client，先进行安装。
-3. 填写 Tunnel ID 和 Runtime API Key，点击 **Save**，再点击 **Start Service**，等待显示 **Tunnel 服务 Ready**。
-4. 打开 [ChatGPT Plugins](https://chatgpt.com/plugins)，使用相同的 Tunnel ID 创建自定义 MCP 插件并授权。
-5. 在 ChatGPT 选择 VidOtter 插件，调用只读工具 vidotter_status 验证连接。
+1. 在 [OpenAI Platform](https://platform.openai.com/settings/organization/tunnels) 创建 Tunnel ID，再在 [API Keys](https://platform.openai.com/settings/organization/api-keys) 创建 Runtime API Key。
+2. 打开 **VidOtter → 设置 → 外部组件 → ChatGPT MCP**，按页面提示安装 Tunnel Client。
+3. 填写两项连接信息并点击 **Save**，再点击 **Start Service**。如果关闭了 **Connect Tunnel automatically**，则需要手动点击 **Connect Tunnel**。
+4. 在 [ChatGPT Plugins](https://chatgpt.com/plugins) 使用同一 Tunnel ID 注册并授权插件。
+5. 在 ChatGPT 中选择 VidOtter，调用只读工具 `vidotter_status` 检查连接。
 
-**Save** 只保存配置，不启动服务；**Start Service / Stop Service** 管理本地 Tunnel；运行时修改配置后，使用 **Restart Service** 应用。已保存的 Runtime API Key 以星号遮挡，留空即可复用。
+**Start local service at login** 和 **Connect Tunnel automatically** 是两个独立设置。保存配置不会改变正在运行的服务；修改连接后使用 **Restart Service** 生效。**Disconnect Tunnel** 只断开 Tunnel，保留本地服务；**Stop Service** 停止本次运行，不会关闭下次登录自启动。已保存的密钥会遮挡显示，无需重复填写。
 
-本地 Tunnel 就绪不代表 ChatGPT 插件已授权，两部分需要分别确认。
+Windows 使用任务计划程序，Linux 使用 systemd 用户服务，macOS 使用 LaunchAgent，三者均由 Go 管理。v1.7.0 不导入旧版 PowerShell/Shell 管理的 MCP 连接配置，需要重新填写连接信息；已有下载文件和其他用户数据保留。
+
+命令行也可以查看和控制服务，使用安装目录中的 Bridge 执行 `--mcp-service status|start|stop|restart|connect|disconnect`。例如 Windows：
+
+```powershell
+.\bin\vidotter-windows-amd64.exe --mcp-service status
+```
+
+Linux 使用 `./bin/vidotter-linux-amd64`（或 `linux-arm64`）；macOS 使用 `./bin/vidotter-macos-amd64`（或 `macos-arm64`）。首次填写密钥建议使用图形设置页。
+
+本地 Tunnel 已连接并不等于 ChatGPT 插件已经授权，两者需要分别确认。
+
 
 ### 2.5. 字幕与外部组件
 
@@ -172,7 +207,7 @@ MP4/HLS 使用内置下载器。解析其他受支持的网页时，在设置页
 
 ### 2.6. 故障排查
 
-- **扩展连接不上本地服务：** 按 [2.3](#221-浏览器扩展) 核对扩展 ID 并修复注册。仍失败时，查看 `Data/logs/`，检查端口 `127.0.0.1:17891` 是否被占用。
+- **扩展连接不上本地服务：** 按 [2.2.1](#221-浏览器扩展) 核对扩展 ID 并修复注册。仍失败时，查看 `Data/logs/`，检查端口 `127.0.0.1:17891` 是否被占用。
 - **发现不到视频：** 回到原标签页播放或拖动进度条，让页面重新请求媒体。部分网站没有可下载的 MP4/HLS，或使用 DRM。
 - **任务报 403 或地址过期：** 回到原页面重新播放，获取新的媒体请求，再按任务提示恢复或重新下载。
 - **HLS 合并失败：** 检查 FFmpeg 是否可用。字幕问题先切回“不下载字幕”，确认普通下载是否正常。
@@ -193,7 +228,7 @@ go -C tools/vidotterdev run . verify
 go -C tools/vidotterdev run . build
 ```
 
-`verify` 执行两个 Go 模块的测试、扩展 JS 语法检查与脚本测试，成功后输出 `Go and browser checks passed`。`build` 将当前系统的 Bridge 编译到 `.build/out/`，开发安装见 [5.2](#32-安装开发版本)。
+`verify` 执行两个 Go 模块的测试、扩展 JS 语法检查与脚本测试，成功后输出 `Go and browser checks passed`。`build` 将当前系统的 Bridge 编译到 `.build/out/`，开发安装见 [3.2](#32-安装开发版本)。
 
 跨平台编译示例：
 
@@ -223,7 +258,7 @@ Set-Location $vidotterDevDir
 .\bin\vidotterdev.exe install
 ```
 
-按 [2.3](#221-浏览器扩展) 加载这个部署目录的 `extension/`，再按 2.4–2.5 下载并检查文件。继续修改或打包源码前，先切回原来的源码仓库根目录。
+按 [2.2.1](#221-浏览器扩展) 加载这个部署目录的 `extension/`，再按 2.4–2.5 下载并检查文件。继续修改或打包源码前，先切回原来的源码仓库根目录。
 
 ### 3.3. 打包与 CI
 
