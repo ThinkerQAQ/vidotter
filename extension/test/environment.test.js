@@ -15,7 +15,7 @@ assert.equal(environment.mcpStatus({}).configured, false);
 
 // The on-screen Tunnel ID must win over a stale draft, e.g. after a browser
 // autofill or status re-render that did not emit an input event.
-const validTestID = "tunnel_0123456789abcdef0123456789abcdef";
+const validTestID = "tunnel_9f0e1d2c3b4a59687766554433221100";
 const formWithVisibleID = {
   querySelector(selector) {
     assert.equal(selector, 'input[name="tunnelId"]');
@@ -64,6 +64,14 @@ assert.equal(inactive.canStart, false);
 assert.equal(inactive.canRefresh, false);
 assert.equal(inactive.canAutoStart, false);
 assert.equal(inactive.canStop, false);
+assert.equal(environment.mcpIsExampleID("tunnel_0123456789abcdef0123456789abcdef"), true);
+assert.equal(environment.mcpIsExampleID(validTestID), false);
+const exampleStatus = {...savedTunnel, tunnelID:"tunnel_0123456789abcdef0123456789abcdef"};
+const exampleForm = {...confirmedForm, confirmedID:exampleStatus.tunnelID};
+const blocked = environment.mcpControlState(exampleStatus, exampleForm);
+assert.equal(blocked.credentialsSaved, false);
+assert.equal(blocked.canStart, false);
+assert.equal(blocked.canAutoStart, false);
 const confirmed = environment.mcpControlState(savedTunnel, confirmedForm);
 assert.equal(confirmed.canStart, true);
 // Regression: an ID auto-filled directly into the DOM (without input event)

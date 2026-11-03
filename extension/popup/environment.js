@@ -436,6 +436,10 @@
   const mcpUI = { draftID: "", idEdited: false, draftKey: "", confirmed: false, confirmedID: "", confirmedRevision: "", busy: "", error: "", info: "", deadline: 0, timer: null, polling: false, advanced: false, workerOutdated: false,
     editing: false, pendingID: "", pendingSetup: false, pendingRevision: "" };
   const mcpIDPattern = /^tunnel_(?:[a-z0-9]{32}|[a-z0-9]{4}_[a-z0-9]{32})$/;
+  // This ID is used by our smoke-test fixtures. It is syntactically valid,
+  // but must not masquerade as an actual connected user Tunnel.
+  const mcpExampleID = "tunnel_0123456789abcdef0123456789abcdef";
+  const mcpIsExampleID = id => String(id || "").trim() === mcpExampleID;
   // The rendered field is authoritative at Save time. Password managers can
   // assign .value without emitting "input", leaving draftID and idEdited stale.
   // Blank means "reuse saved ID", even after the user clears an edited field.
@@ -493,7 +497,7 @@
       String(form.draftID).trim() !== state.tunnelID);
     const hasChanges = changedID || Boolean(String(form.draftKey || "").trim());
     const credentialsSaved = Boolean(state.configured && state.runtimeKeySaved &&
-      mcpIDPattern.test(String(state.tunnelID || "")));
+      mcpIDPattern.test(String(state.tunnelID || "")) && !mcpIsExampleID(state.tunnelID));
     const confirmedCurrent = Boolean(form.confirmed && form.confirmedID === state.tunnelID &&
       form.confirmedRevision === (state.revision || ""));
     const usable = credentialsSaved && confirmedCurrent && !hasChanges && !form.busy;
@@ -629,6 +633,11 @@
       const tunnelId = mcpEffectiveTunnelID(body, state.tunnelID, mcpUI.draftID, mcpUI.idEdited);
       const runtimeApiKey = mcpUI.draftKey.trim();
       const reuseKey = !runtimeApiKey && state.runtimeKeySaved;
+      if (mcpIsExampleID(tunnelId)) {
+        mcpUI.error = "当前保存的是测试用 Tunnel ID，请填写真实 Tunnel ID 后再保存。";
+        renderTools(tools);
+        return;
+      }
       if (state.configured && state.runtimeKeySaved &&
           tunnelId === state.tunnelID && !runtimeApiKey) {
         // Explicitly approve using the existing saved credentials. No backend
@@ -822,7 +831,9 @@
     shell.appendChild(idLabel);
     const idState = document.createElement("small");
     idState.className = "settings-help mcp-credential-state";
-    idState.textContent = state.configured ? "已保存；留空则复用" : "尚未保存";
+    idState.textContent = mcpIsExampleID(state.tunnelID)
+      ? "检测到测试示例配置：请填写真实 Tunnel ID"
+      : state.configured ? "已保存；留空则复用" : "尚未保存";
     shell.appendChild(idState);
     const key = mcpKeyField(busy, () => updateControls());
     shell.appendChild(key);
@@ -850,6 +861,12 @@
         controls.canStart ? "启动已确认的 MCP 配置" : "请先点击 Save 保存或确认配置";
       refreshButton.title = controls.canRefresh ? "刷新 Tunnel 状态" : "请先保存配置或启动服务";
       if (autoStartCheckbox) autoStartCheckbox.disabled = backgroundBusy || !controls.canAutoStart;
+      idState.textContent = visible.draftID &&
+        visible.draftID !== state.tunnelID ? "新 Tunnel ID 尚未保存" :
+        mcpIsExampleID(state.tunnelID) ? "检测到测试示例配置：请填写真实 Tunnel ID" :
+        state.configured ? "已保存；留空则复用" : "尚未保存";
+      keyState.textContent = mcpUI.draftKey ? "新 Runtime API Key 尚未保存" :
+        state.runtimeKeySaved ? "已保存；留空则复用" : "尚未保存";
       const notice = shell.querySelector(".mcp-info");
       if (notice && controls.hasChanges) notice.remove();
     };
@@ -878,7 +895,27 @@
       shell.appendChild(toggleLabel);
     }
     updateControls();
+    // Browser password managers and some automation tools can update .value
+    // without dispatching an input event. Keep hints and service controls
+    // consistent with the displayed fields. Stop once this form is replaced.
+    let lastIDValue = idInput.value;
+    let lastKeyValue = key.querySelector("input").value;
+    const reconcile = setInterval(() => {
+      if (!shell.isConnected) {
+        clearInterval(reconcile);
+        return;
+      }
+      const currentID = idInput.value;
+      const currentKey = key.querySelector("input").value;
+      if (currentID === lastIDValue && currentKey === lastKeyValue) return;
+      lastIDValue = currentID;
+      lastKeyValue = currentKey;
+      mcpUI.error = "";
+      shell.querySelector(".mcp-error")?.remove();
+      updateControls();
+    }, 350);
     if (!running && state.configured && state.runtimeKeySaved &&
+        !mcpIsExampleID(state.tunnelID) &&
         !(mcpUI.confirmed && mcpUI.confirmedID === state.tunnelID &&
           mcpUI.confirmedRevision === (state.revision || ""))) {
       const confirmHint = document.createElement("p");
@@ -895,6 +932,7 @@
       mcpUI.busy === "stopping" ? "正在停止 Tunnel…" :
       state.ready ? "Local Tunnel: Connected" :
       running ? "Local Tunnel: Starting / Not ready" :
+      mcpIsExampleID(state.tunnelID) ? "Local Tunnel: Test configuration; enter your Tunnel ID" :
       state.configured ? "Local Tunnel: Configured, stopped" : "Local Tunnel: Not configured";
     shell.appendChild(status);
     if (state.restartRequired && running) {
@@ -944,7 +982,10 @@
     const dot = document.createElement("span");
     dot.className = "dot " + cardState(health);
     const summary = document.createElement("span");
-    summary.textContent = health.summary || health.status || "等待检测";
+    summary.textContent = tool.name === "chatgpt-mcp" &&
+      mcpIsExampleID(mcpStatus(tool).tunnelID)
+      ? "Tunnel 保存的是测试示例 · 需要重新配置"
+      : health.summary || health.status || "未知";
     status.append(dot, summary);
     if (health.version) {
       const version = document.createElement("small");
@@ -969,7 +1010,10 @@
         description.textContent = tool.description;
         body.appendChild(description);
       }
-      const detail = [health.detail, health.path].filter(Boolean).join(" · ");
+      const detail = tool.name === "chatgpt-mcp" &&
+        mcpIsExampleID(mcpStatus(tool).tunnelID)
+        ? "当前保存的是测试示例 ID；请填写真实 Tunnel ID 和对应的 Runtime API Key。"
+        : [health.detail, health.path].filter(Boolean).join(" · ");
       if (detail) {
         const line = document.createElement("p");
         line.className = "tool-detail";
@@ -1110,6 +1154,6 @@
   root.VidOtterEnvironment = { init, activate: refresh, renderTools };
 
   if (typeof module !== "undefined" && module.exports) {
-    module.exports = { mcpSetupIsComplete, mcpEffectiveTunnelID, mcpVisibleFieldChanges, mcpControlState, cardState, normalizedKind, visibleConfigFields, editorValue, toggleMetadata, formatModelSize, modelOptionLabel, modelActionLabel, isOutdatedMcpWorkerError, mcpStatus };
+    module.exports = { mcpSetupIsComplete, mcpEffectiveTunnelID, mcpVisibleFieldChanges, mcpControlState, mcpIsExampleID, cardState, normalizedKind, visibleConfigFields, editorValue, toggleMetadata, formatModelSize, modelOptionLabel, modelActionLabel, isOutdatedMcpWorkerError, mcpStatus };
   }
 })(globalThis);
