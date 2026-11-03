@@ -17,9 +17,7 @@ test -f "$target/extension/manifest.json"
 if [[ "${GITHUB_EVENT_NAME:-}" == 'pull_request' ]]; then
   python3 scripts/smoke-pr-extension-bundle.py "$target/extension"
 fi
-test -f "$target/scripts/manage-mcp.sh"
-test -f "$target/scripts/setup-mcp.sh"
-bash -n "$target/scripts/manage-mcp.sh" "$target/scripts/setup-mcp.sh"
+"$target/bin/vidotter-macos-amd64" --mcp-service status
 python3 scripts/smoke-mcp-stdio.py "$target/bin/vidotter-macos-amd64"
 manifest="$HOME/Library/Application Support/Google/Chrome/NativeMessagingHosts/com.vidotter.bridge.json"
 test -f "$manifest"

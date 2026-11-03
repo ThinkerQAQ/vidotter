@@ -746,19 +746,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   // MV3 background may be older than refreshed popup after an in-place update.
   if (message.action === "bridge.mcp.capabilities") {
-    sendResponse({ ok: true, protocol: 5, actions: ["install-client", "setup", "service", "replace-tunnel", "inline-credentials", "save-only", "reuse-saved-key"] });
+    sendResponse({ ok: true, protocol: 6, actions: ["install-client", "setup", "service", "replace-tunnel", "inline-credentials", "save-only", "reuse-saved-key", "go-lifecycle", "connection-controls"] });
     return;
   }
 
   if (message.action === "bridge.tool.action") {
     const tool = String(message.tool || "");
     const action = String(message.toolAction || "");
-    if (tool === "background" && ["status", "enable", "disable"].includes(action)) {
-      bridgeFetch("/v1/background", {
-        method: "POST", body: JSON.stringify({action, target: message.target || "bridge"})
-      }).then(result => sendResponse(result), error => sendResponse({ok: false, error: error.message || String(error)}));
-      return true;
-    }
     if (tool === "bridge" && action === "restart") {
       restartBridge()
         .then(session => sendResponse({ ok: true, pid: session.pid }), error => sendResponse({ ok: false, error: error.message || String(error) }));
@@ -772,7 +766,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     }
     if (tool === "chatgpt-mcp" && action === "service") {
       const serviceAction = String(message.serviceAction || "");
-      if (!["start", "stop", "restart"].includes(serviceAction)) {
+      if (!["start", "stop", "restart", "connect", "disconnect"].includes(serviceAction)) {
         sendResponse({ ok: false, error: "不支持的 Tunnel 服务操作" });
         return;
       }
@@ -790,7 +784,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           runtimeApiKey: String(message.runtimeApiKey || ""),
           replace: message.replace === true,
           previousTunnelId: message.replace === true ? String(message.previousTunnelId || "") : "",
-          saveOnly: message.saveOnly === true, reuseKey: message.reuseKey === true })
+          saveOnly: message.saveOnly === true, reuseKey: message.reuseKey === true,
+          ...(typeof message.autostartEnabled === "boolean" ? {autostartEnabled: message.autostartEnabled} : {}),
+          ...(typeof message.tunnelAutoConnect === "boolean" ? {tunnelAutoConnect: message.tunnelAutoConnect} : {}) })
       })
         .then(result => sendResponse(result), error =>
           sendResponse({ ok: false, error: error.message || String(error) }));

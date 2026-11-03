@@ -5,6 +5,23 @@
 // and user download-language preferences stay independent of UI locale.
 (function (root) {
   const dictionary = {
+    "本地服务登录后自启动": "Start local service at login",
+    "下次登录系统时启动。保存不会启动或停止当前服务。": "Applies at your next login. Save does not start or stop the service.",
+    "Tunnel 自动连接": "Connect Tunnel automatically",
+    "本地服务启动后自动连接 Tunnel。修改后重启当前服务生效。": "Connect when the local service starts. Restart a running service to apply changes.",
+    "连接 Tunnel": "Connect Tunnel", "断开 Tunnel": "Disconnect Tunnel",
+    "服务运行中 · Tunnel 未连接": "Service running · Tunnel disconnected",
+    "正在连接 Tunnel": "Connecting Tunnel", "正在断开 Tunnel": "Disconnecting Tunnel",
+    "组件状态": "Component status", "浏览器组件": "Browser component", "页面操作权限": "Page interaction permissions",
+    "让 ChatGPT 连接 VidOtter。": "Connect ChatGPT to VidOtter.",
+    "保存连接配置后启动服务。服务运行时，重启可应用已保存的修改。": "Save your connection settings, then start the service. Restart applies saved changes to a running service.",
+    "打开 ChatGPT 插件设置 ↗": "Open ChatGPT plugin settings ↗",
+    "无法读取系统自启动设置，请检查系统权限或登录会话。": "Unable to read system startup settings. Check your permissions and login session.",
+    "安装 Remote Browser MCP 后，允许 AI 在自己创建的后台标签页查看网页。": "Install Remote Browser MCP to let AI inspect webpages in its own background tabs.",
+    "如果 ChatGPT 已连接独立的 Remote Browser MCP，可直接复用该连接，无需在这里重复启用。": "If ChatGPT already has a separate Remote Browser MCP connection, use it directly without enabling another client here.",
+    "默认只查看网页。需要自动点击时，请在上方单独开启并确认。": "Pages are read-only by default. Enable clicking separately above when needed.",
+    "已有标签页保持受保护。组件通过 VidOtter 现有连接提供服务，无需另建 Tunnel。": "Existing tabs stay protected. The component uses VidOtter's connection without another Tunnel.",
+
     "VidOtter 助手": "VidOtter Assistant", "媒体下载助手": "Media downloader",
     "环境检测中": "Checking environment", "当前页面资源": "Resources on this page",
     "资源嗅探": "Detect", "下载任务": "Downloads", "工具与配置": "Tools & Settings",

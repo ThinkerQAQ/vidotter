@@ -317,7 +317,7 @@ func (browserAutomationTool) Snapshot(_ context.Context, config bridgeConfig) to
 	}
 	return toolSnapshot{
 		Name: "browser-automation", DisplayName: "Browser Automation", Kind: "dependency",
-		Description: "可选依赖：独立 Remote Browser MCP v0.3.0，不复制源码、不启动第二 Tunnel。",
+		Description: "让 AI 在独立后台标签页查看网页，按需安装 Remote Browser MCP。",
 		Platforms:   []string{"windows", "linux", "darwin"}, Delivery: "on-demand", Required: false,
 		Capabilities: []string{"browser.open-background", "browser.snapshot", "browser.close-owned", "browser.click-opt-in"},
 		SortOrder:    90, Actions: actions,

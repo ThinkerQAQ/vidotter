@@ -194,18 +194,22 @@ func assertInstallOwnership(root string) error {
 }
 
 func manageBackgroundLifecycle(root, action string) error {
-	script := filepath.Join(root, "scripts", "manage-background.sh")
-	var cmd *exec.Cmd
-	if runtime.GOOS == "windows" {
-		script = filepath.Join(root, "scripts", "Manage-VidOtter-Background.ps1")
-		cmd = exec.Command("powershell.exe", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass",
-			"-File", script, "-Action", action)
-	} else {
-		cmd = exec.Command("bash", script, action)
+	if action != "restore" && action != "uninstall" {
+		return errors.New("invalid native lifecycle action")
 	}
+	platform := runtime.GOOS
+	if platform == "darwin" {
+		platform = "macos"
+	}
+	suffix := ""
+	if runtime.GOOS == "windows" {
+		suffix = ".exe"
+	}
+	executable := filepath.Join(root, "bin", "vidotter-"+platform+"-"+runtime.GOARCH+suffix)
+	cmd := exec.Command(executable, "--mcp-lifecycle", action)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("VidOtter background %s failed: %w: %s", action, err, strings.TrimSpace(string(output)))
+		return fmt.Errorf("VidOtter native lifecycle failed: %w: %s", err, strings.TrimSpace(string(output)))
 	}
 	return nil
 }

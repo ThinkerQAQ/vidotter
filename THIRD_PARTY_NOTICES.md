@@ -78,3 +78,15 @@ Corresponding unmodified upstream installer source and the GPL exception:
 The installer-generation scripts are open source under this repository.
 The installer runtime is **not** code-signed or Apple-notarized in the first
 public 1.6.3 release; users may see an operating-system reputation prompt.
+
+
+## Go MCP service management
+
+The native lifecycle, startup registration, private-file and service-adapter code in
+`bridge/internal/tunnel/` is adapted from ThinkerQAQ/remote-browser-mcp, commit
+`789d085` (v0.5.0; PRs #17 and #18), under Apache-2.0. VidOtter replaces the
+Node supervisor with a Go worker, uses its existing MCP server and retains
+Windows DPAPI protection for credentials.
+
+The Go runtime also uses github.com/kardianos/service v1.2.3 (zlib license).
+The release license collector includes the dependency's upstream license.

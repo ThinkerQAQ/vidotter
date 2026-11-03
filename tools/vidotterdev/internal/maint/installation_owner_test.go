@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 )
 
@@ -82,22 +81,5 @@ func TestBrowserManifestOwnerAndNonOwner(t *testing.T) {
 	os.WriteFile(file, data, 0600)
 	if _, err := installedRootsFromNativeManifests(home, "linux"); err == nil {
 		t.Fatal("unexpected existing host accepted")
-	}
-}
-
-func TestUninstallLifecycleScriptsNeverPurgePrivateData(t *testing.T) {
-	for _, rel := range []string{
-		"../../../../scripts/Manage-VidOtter-Background.ps1",
-		"../../../../scripts/manage-background.sh",
-	} {
-		script, err := os.ReadFile(rel)
-		if err != nil {
-			t.Fatal(err)
-		}
-		for _, term := range []string{"uninstall", "restore", "preferences"} {
-			if !strings.Contains(string(script), term) {
-				t.Errorf("%s missing %s lifecycle handling", rel, term)
-			}
-		}
 	}
 }

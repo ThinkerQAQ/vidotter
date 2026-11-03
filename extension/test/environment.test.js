@@ -9,7 +9,7 @@ assert.equal(environment.isOutdatedMcpWorkerError(new Error("不支持的 Tool �
 assert.equal(environment.isOutdatedMcpWorkerError(new Error("unsupported tool action")), true);
 assert.equal(environment.isOutdatedMcpWorkerError(new Error("Tunnel download HTTP 404")), false);
 assert.deepEqual(environment.mcpStatus({config:{values:{configured:true,clientInstalled:true,tunnelId:"tunnel_test",ready:false}},health:{ok:false}}),
-  { tunnelID:"tunnel_test", configured:true, clientInstalled:true, ready:false, revision:"", runtimeKeySaved:false, setupState:"", restartRequired:false, running:false });
+  { tunnelID:"tunnel_test", configured:true, clientInstalled:true, ready:false, revision:"", runtimeKeySaved:false, setupState:"", restartRequired:false, running:false, autostartEnabled:null, tunnelAutoConnect:true, tunnelConnecting:false, serviceError:"" });
 assert.equal(environment.mcpStatus({config:{values:{}},health:{ok:true}}).ready, true);
 assert.equal(environment.mcpStatus({}).configured, false);
 
@@ -103,7 +103,7 @@ for (const unsaved of [
 ]) {
   const controls = environment.mcpControlState(savedTunnel, {...form,...unsaved});
   assert.equal(controls.canStart,false,JSON.stringify(unsaved));
-  assert.equal(controls.canAutoStart,false,JSON.stringify(unsaved));
+  assert.equal(controls.canAutoStart,!unsaved.busy,JSON.stringify(unsaved));
 }
 const autoFilled = environment.mcpVisibleFieldChanges({
   querySelector(selector) {
@@ -199,13 +199,6 @@ assert.match(environmentSource, /tool\.config\.scope === "extension"/);
 
 console.log("extension environment tests passed");
 
-// An already-ready old connection is not evidence that key rotation completed.
-const oldConnection = {ready:true, tunnelID:"tunnel_test", revision:"before"};
-assert.equal(environment.mcpSetupIsComplete(oldConnection, "tunnel_test", "before"), false);
-assert.equal(environment.mcpSetupIsComplete({...oldConnection, revision:"after"}, "tunnel_test", "before"), true);
-assert.equal(environment.mcpSetupIsComplete({...oldConnection, ready:false, revision:"after"}, "tunnel_test", "before"), false);
-assert.equal(environment.mcpSetupIsComplete({...oldConnection, tunnelID:"different", revision:"after"}, "tunnel_test", "before"), false);
-
 // ChatGPT MCP controls are single-purpose; do not expose Bridge login startup.
 const mcpSection = environmentSource.split("function renderChatGPTMCP(body, tool) {")[1].split("function renderDetail(list, tool, editing) {")[0];
 assert.match(mcpSection, /"Save"/);
@@ -231,6 +224,19 @@ assert.match(mcpSection, /mcpButton\(actions, "Save", .*true\)/);
 assert.match(mcpSection, /\(\) => mcpAction\(running \? "stop" : "start", tool, shell\), true\)/);
 assert.match(mcpSource, /setTimeout\(mcpPoll, 4000\)/);
 
-assert.match(mcpSection, /target: "tunnel"/);
+assert.match(mcpSection, /Tunnel 自动连接/);
+assert.match(mcpSection, /draftStartup/);
 assert.doesNotMatch(mcpSection, /target: "bridge"|登录后后台运行 VidOtter/);
 assert.doesNotMatch(mcpSection, /重新连接|更换连接配置|保存并验证/);
+
+// Independent service and connection lifecycle: drafts never prevent Stop or Disconnect.
+const standby = {...savedTunnel,running:true,tunnelConnecting:false,autostartEnabled:false,tunnelAutoConnect:false};
+assert.equal(environment.mcpControlState(standby,form).canConnect,true);
+assert.equal(environment.mcpControlState(standby,form).canDisconnect,false);
+assert.equal(environment.mcpControlState({...standby,restartRequired:true},form).canConnect,false);
+const preferenceDraft = {...form,draftAutoConnect:true};
+assert.equal(environment.mcpControlState(standby,preferenceDraft).canRestart,false);
+assert.equal(environment.mcpControlState(standby,preferenceDraft).canStop,true);
+assert.equal(environment.mcpControlState({...standby,tunnelConnecting:true},preferenceDraft).canDisconnect,true);
+assert.equal(environment.mcpControlState(savedTunnel,{...form,available:false}).canStart,false);
+assert.deepEqual(environment.mcpHeaderStatus(standby),{label:"服务运行中 · Tunnel 未连接",kind:"pending"});
