@@ -13,6 +13,28 @@ assert.deepEqual(environment.mcpStatus({config:{values:{configured:true,clientIn
 assert.equal(environment.mcpStatus({config:{values:{}},health:{ok:true}}).ready, true);
 assert.equal(environment.mcpStatus({}).configured, false);
 
+// The on-screen Tunnel ID must win over a stale draft, e.g. after a browser
+// autofill or status re-render that did not emit an input event.
+const validTestID = "tunnel_0123456789abcdef0123456789abcdef";
+const formWithVisibleID = {
+  querySelector(selector) {
+    assert.equal(selector, 'input[name="tunnelId"]');
+    return {value: "  " + validTestID + "  "};
+  }
+};
+assert.equal(environment.mcpEffectiveTunnelID(formWithVisibleID,
+  "tunnel_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "invalid-stale-draft"), validTestID);
+assert.equal(environment.mcpEffectiveTunnelID(null, validTestID, ""), validTestID);
+assert.equal(environment.mcpEffectiveTunnelID({querySelector() { return {value: ""}; }},
+  validTestID, validTestID), "");
+// The runtime key is not a website login field. Saving without editing it
+// must not submit a password manager's automatic credentials.
+const mcpSource = require("node:fs").readFileSync(require("node:path").join(__dirname, "../popup/environment.js"), "utf8");
+assert.match(mcpSource, /input\.autocomplete = "new-password"/);
+assert.match(mcpSource, /document\.activeElement !== input/);
+assert.match(mcpSource, /mcpEffectiveTunnelID\(body, state\.tunnelID, mcpUI\.draftID\)/);
+
+
 assert.equal(environment.cardState({ status: "ready", ok: true }), "ok");
 assert.equal(environment.cardState({ status: "disabled", ok: true }), "disabled");
 assert.equal(environment.cardState({ status: "missing", ok: false }), "error");

@@ -436,6 +436,12 @@
   const mcpUI = { draftID: "", draftKey: "", busy: "", error: "", deadline: 0, timer: null, polling: false, advanced: false, workerOutdated: false,
     editing: false, pendingID: "", pendingSetup: false, pendingRevision: "" };
   const mcpIDPattern = /^tunnel_(?:[a-z0-9]{32}|[a-z0-9]{4}_[a-z0-9]{32})$/;
+  // A browser/password manager can fill the rendered input without firing an
+  // input event. The displayed form field, not an older draft, is authoritative.
+  function mcpEffectiveTunnelID(form, savedID, draftID) {
+    const field = form?.querySelector?.('input[name="tunnelId"]');
+    return String(field ? field.value : (draftID || savedID || "")).trim();
+  }
   const chatGPTSettingsURL = "https://chatgpt.com/settings/plugins-settings";
 
   function isOutdatedMcpWorkerError(error) {
@@ -549,7 +555,7 @@
       return;
     }
     if (action === "save") {
-      const tunnelId = (mcpUI.draftID || state.tunnelID).trim();
+      const tunnelId = mcpEffectiveTunnelID(body, state.tunnelID, mcpUI.draftID);
       const runtimeApiKey = mcpUI.draftKey.trim();
       const reuseKey = !runtimeApiKey && state.runtimeKeySaved;
       if (!mcpIDPattern.test(tunnelId)) {
@@ -636,13 +642,25 @@
     const input = document.createElement("input");
     input.name = "runtimeApiKey";
     input.type = "password";
-    input.autocomplete = "off";
+    // This is a runtime API key, not a website login password. Discourage
+    // browser password managers from injecting an unrelated saved password.
+    input.autocomplete = "new-password";
+    input.setAttribute("data-lpignore", "true");
+    input.setAttribute("data-1p-ignore", "true");
     input.spellcheck = false;
     input.maxLength = 512;
     input.placeholder = "输入 Runtime API Key";
     input.value = mcpUI.draftKey;
     input.disabled = busy;
-    input.addEventListener("input", () => { mcpUI.draftKey = input.value; });
+    input.addEventListener("input", () => {
+      // Browser autofill can dispatch an input event for an unrelated saved
+      // website password. Do not treat an unfocused autofill as key rotation.
+      if (document.activeElement !== input) {
+        input.value = mcpUI.draftKey;
+        return;
+      }
+      mcpUI.draftKey = input.value;
+    });
     label.appendChild(input);
     return label;
   }
@@ -941,6 +959,6 @@
   root.VidOtterEnvironment = { init, activate: refresh, renderTools };
 
   if (typeof module !== "undefined" && module.exports) {
-    module.exports = { mcpSetupIsComplete, cardState, normalizedKind, visibleConfigFields, editorValue, toggleMetadata, formatModelSize, modelOptionLabel, modelActionLabel, isOutdatedMcpWorkerError, mcpStatus };
+    module.exports = { mcpSetupIsComplete, mcpEffectiveTunnelID, cardState, normalizedKind, visibleConfigFields, editorValue, toggleMetadata, formatModelSize, modelOptionLabel, modelActionLabel, isOutdatedMcpWorkerError, mcpStatus };
   }
 })(globalThis);
