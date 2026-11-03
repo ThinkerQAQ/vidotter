@@ -436,12 +436,53 @@
   const mcpUI = { draftID: "", idEdited: false, draftKey: "", confirmed: false, confirmedID: "", confirmedRevision: "", busy: "", error: "", info: "", deadline: 0, timer: null, polling: false, advanced: false, workerOutdated: false,
     editing: false, pendingID: "", pendingSetup: false, pendingRevision: "" };
   const mcpIDPattern = /^tunnel_(?:[a-z0-9]{32}|[a-z0-9]{4}_[a-z0-9]{32})$/;
-  // Both fields start blank. Only explicit user input may replace a saved ID:
-  // password managers can populate visible inputs without the user's intent.
+  // The rendered field is authoritative at Save time. Password managers can
+  // assign .value without emitting "input", leaving draftID and idEdited stale.
+  // Blank means "reuse saved ID", even after the user clears an edited field.
   function mcpEffectiveTunnelID(form, savedID, draftID, edited = true) {
     const field = form?.querySelector?.('input[name="tunnelId"]');
-    const entered = String(field ? field.value : (draftID || "")).trim();
-    return edited && entered ? entered : String(savedID || "").trim();
+    const entered = String(field ? field.value : (edited ? draftID : "") || "").trim();
+    return entered || String(savedID || "").trim();
+  }
+
+  function mcpVisibleFieldChanges(form, state, ui) {
+    const visibleID = form?.querySelector?.('input[name="tunnelId"]')?.value?.trim() || "";
+    return {
+      draftID: visibleID,
+      idEdited: Boolean(ui.idEdited || (visibleID && visibleID !== state.tunnelID)),
+      draftKey: ui.draftKey
+    };
+  }
+
+  function mcpDiscourageAutofill(input, intendedValue = () => "") {
+    // A password manager may set .value without an input event. Keep the
+    // actual field consistent with intentional edits, not browser credentials.
+    input.readOnly = true;
+    input.autocomplete = "off";
+    input.setAttribute("data-lpignore", "true");
+    input.setAttribute("data-1p-ignore", "true");
+    input.setAttribute("data-bwignore", "true");
+    const scrub = () => {
+      if (!input.isConnected) return;
+      const expected = String(intendedValue() || "");
+      if (input.value !== expected && (document.activeElement !== input ||
+          input.matches?.(":-webkit-autofill"))) {
+        input.value = expected;
+      }
+    };
+    input.addEventListener("focus", () => {
+      // Restore the intended blank field before browser suggestions are shown.
+      const expected = String(intendedValue() || "");
+      if (input.value !== expected) input.value = expected;
+      const error = input.closest(".mcp-connection-card")?.querySelector(".mcp-error");
+      if (error) { mcpUI.error = ""; error.remove(); }
+    });
+    const unlock = () => { input.readOnly = false; };
+    input.addEventListener("pointerdown", unlock);
+    input.addEventListener("keydown", unlock);
+    input.addEventListener("paste", unlock);
+    setTimeout(scrub, 100);
+    setTimeout(scrub, 900);
   }
   // Service controls require an explicit Save/confirmation in this view.
   // Empty inputs mean "reuse stored credentials" but NOT "ready to start".
@@ -692,9 +733,7 @@
     input.type = "password";
     // This is a runtime API key, not a website login password. Discourage
     // browser password managers from injecting an unrelated saved password.
-    input.autocomplete = "new-password";
-    input.setAttribute("data-lpignore", "true");
-    input.setAttribute("data-1p-ignore", "true");
+    mcpDiscourageAutofill(input, () => mcpUI.draftKey);
     input.spellcheck = false;
     input.maxLength = 512;
     input.placeholder = "";
@@ -707,7 +746,13 @@
         input.value = mcpUI.draftKey;
         return;
       }
+      if (input.matches?.(":-webkit-autofill")) {
+        input.value = mcpUI.draftKey;
+        return;
+      }
       mcpUI.draftKey = input.value;
+      mcpUI.error = "";
+      input.closest(".mcp-connection-card")?.querySelector(".mcp-error")?.remove();
       // Any manual edit invalidates the session's previous Save confirmation.
       mcpUI.confirmed = false;
       mcpUI.confirmedID = "";
@@ -747,21 +792,26 @@
     const idInput = document.createElement("input");
     idInput.name = "tunnelId";
     idInput.type = "text";
-    idInput.autocomplete = "off";
+    mcpDiscourageAutofill(idInput, () => mcpUI.draftID);
     idInput.spellcheck = false;
     idInput.maxLength = 80;
     idInput.placeholder = "";
     idInput.value = mcpUI.draftID;
     idInput.disabled = busy;
     idInput.addEventListener("input", () => {
-      // Ignore silent form autofill; a focused edit is required to replace
-      // the saved ID.
       if (document.activeElement !== idInput) {
+        // A password manager generated an unsolicited input event.
+        idInput.value = mcpUI.draftID;
+        return;
+      }
+      if (idInput.matches?.(":-webkit-autofill")) {
         idInput.value = mcpUI.draftID;
         return;
       }
       mcpUI.draftID = idInput.value;
       mcpUI.idEdited = true;
+      mcpUI.error = "";
+      idInput.closest(".mcp-connection-card")?.querySelector(".mcp-error")?.remove();
       // Even if the user clears this field again, require Save to reconfirm.
       mcpUI.confirmed = false;
       mcpUI.confirmedID = "";
@@ -792,7 +842,8 @@
     shell.appendChild(actions);
     let autoStartCheckbox = null;
     updateControls = () => {
-      const controls = mcpControlState(state, mcpUI);
+      const visible = mcpVisibleFieldChanges(shell, state, mcpUI);
+      const controls = mcpControlState(state, { ...mcpUI, ...visible });
       service.disabled = !(running ? controls.canStop : controls.canStart);
       refreshButton.disabled = !controls.canRefresh;
       service.title = running ? "停止正在运行的 MCP Tunnel" :
@@ -1059,6 +1110,6 @@
   root.VidOtterEnvironment = { init, activate: refresh, renderTools };
 
   if (typeof module !== "undefined" && module.exports) {
-    module.exports = { mcpSetupIsComplete, mcpEffectiveTunnelID, mcpControlState, cardState, normalizedKind, visibleConfigFields, editorValue, toggleMetadata, formatModelSize, modelOptionLabel, modelActionLabel, isOutdatedMcpWorkerError, mcpStatus };
+    module.exports = { mcpSetupIsComplete, mcpEffectiveTunnelID, mcpVisibleFieldChanges, mcpControlState, cardState, normalizedKind, visibleConfigFields, editorValue, toggleMetadata, formatModelSize, modelOptionLabel, modelActionLabel, isOutdatedMcpWorkerError, mcpStatus };
   }
 })(globalThis);
