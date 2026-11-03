@@ -32,3 +32,7 @@ func newWorkerCommand(token string) (*exec.Cmd, error) {
 	command.SysProcAttr = &syscall.SysProcAttr{CreationFlags: createNewProcessGroup | createNoWindow, HideWindow: true}
 	return command, nil
 }
+
+func hideMCPSetupWindow(command *exec.Cmd) {
+	command.SysProcAttr = &syscall.SysProcAttr{CreationFlags: createNoWindow, HideWindow: true}
+}

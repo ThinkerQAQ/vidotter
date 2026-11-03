@@ -124,9 +124,13 @@ def main():
         shutil.rmtree(stage / "docs", ignore_errors=True)
         for readme in ("README.md", "README_ZH.md", "LICENSE", "NOTICE", "THIRD_PARTY_NOTICES.md"):
             shutil.copy2(Path(readme), stage / readme)
-        shutil.copytree("assets", stage / "assets", dirs_exist_ok=True)
+        # Optional in newer README-Only source trees; retain verified release
+        # assets instead of failing a preview build or losing installer icons.
+        if Path("assets").is_dir():
+            shutil.copytree("assets", stage / "assets", dirs_exist_ok=True)
         for helper in ("Setup-VidOtter-MCP.ps1", "setup-mcp.sh",
-                       "Manage-VidOtter-MCP.ps1", "manage-mcp.sh"):
+                       "Manage-VidOtter-MCP.ps1", "manage-mcp.sh",
+                       "Manage-VidOtter-Background.ps1", "Run-VidOtter-Bridge.ps1", "manage-background.sh"):
             shutil.copy2(Path("scripts") / helper, stage / "scripts" / helper)
         print(f"PR preview: current source overlaid on verified {a.tag} dependency bundle")
 

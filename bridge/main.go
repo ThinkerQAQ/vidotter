@@ -143,6 +143,18 @@ func logURLSummary(raw string) string {
 
 // Main runs the desktop command-line application.
 func Main() {
+	if len(os.Args) >= 2 && os.Args[1] == "--bridge-service" {
+		// The OS owns one supervisor. In-app restart never spawns another supervisor.
+		for {
+			if err := runBridge(); err == nil {
+				continue // An explicit restart rebinds immediately, before browser auto-start.
+			} else if !errors.Is(err, http.ErrServerClosed) {
+				appendRuntimeEvent("WARN", "bridge", "service_retry")
+			}
+			time.Sleep(5 * time.Second)
+		}
+	}
+
 	if len(os.Args) >= 2 && os.Args[1] == "--mcp-stdio" {
 		if err := runVidOtterMCP(); err != nil {
 			fmt.Fprintln(os.Stderr, "VidOtter MCP:", err)
@@ -507,7 +519,7 @@ func parseOptions() (options, error) {
 	flag.StringVar(&o.playlistMode, "playlist", "ask", "页面播放列表模式：ask、single 或 all")
 	flag.StringVar(&qualityArg, "quality", "", "best 或目标高度，例如 720；省略时交互选择")
 	flag.IntVar(&o.limit, "limit", 0, "仅下载前 N 个分片，用于测试")
-	flag.IntVar(&o.concurrent, "concurrent", 12, "Go 内置下载器的最大并发数")
+	flag.IntVar(&o.concurrent, "concurrent", 32, "Go 内置下载器的最大并发数")
 	flag.BoolVar(&o.keepWork, "keep-work", false, "成功后保留工作目录")
 	flag.BoolVar(&o.resolvePage, "resolve-page", false, "使用 yt-dlp 解析来源页面")
 	flag.Parse()

@@ -15,6 +15,8 @@ import (
 
 type target struct{ OS, Name, Arch string }
 
+// Public releases intentionally contain only desktop targets. Keep Android
+// source and its manual build commands, but do not publish APK artifacts.
 func targets() []target {
 	return []target{{"windows", "windows", "amd64"}, {"linux", "linux", "amd64"}, {"linux", "linux", "arm64"}, {"darwin", "macos", "amd64"}, {"darwin", "macos", "arm64"}}
 }
@@ -72,7 +74,12 @@ func Package(root, requested string, allowMissing bool, source string) error {
 		}); err != nil {
 			return err
 		}
-		if err := copyTree(filepath.Join(root, "assets"), filepath.Join(stage, "assets"), nil); err != nil {
+		assets := filepath.Join(root, "assets")
+		if info, err := os.Stat(assets); err == nil && info.IsDir() {
+			if err := copyTree(assets, filepath.Join(stage, "assets"), nil); err != nil {
+				return err
+			}
+		} else if err != nil && !os.IsNotExist(err) {
 			return err
 		}
 		if err := copyTree(filepath.Join(root, "scripts"), filepath.Join(stage, "scripts"), nil); err != nil {

@@ -522,19 +522,115 @@ html[data-surface="side-panel"] .log-follow { grid-column: 1; }
 .settings-about-version { color: #344054; font-size: 13px; font-weight: 650; font-variant-numeric: tabular-nums; }
 
 
-/* ChatGPT MCP connection is configured inline, not through an external popup. */
-.mcp-setup-form { display: grid; gap: 12px; margin-top: 16px; }
-.mcp-setup-form .tool-field { display: grid; gap: 7px; font-weight: 600; color: #344054; }
-.mcp-setup-form input { width: 100%; min-width: 0; padding: 10px 12px; border: 1px solid #d0d5dd; border-radius: 7px; color: #182230; background: #fff; }
-.mcp-setup-form .settings-help { margin: 0; line-height: 1.65; }
-.mcp-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
-.mcp-doc-link { display: inline-flex; align-items: center; min-height: 34px; padding: 7px 11px; border: 1px solid #d0d5dd; border-radius: 8px; color: #475467; background: #fff; text-decoration: none; }
-.mcp-doc-link:hover { background: #f9fafb; text-decoration: underline; }
-.mcp-setup-message { display: block; min-height: 1.5em; color: #667085; overflow-wrap: anywhere; }
+/* The guided MCP connection matches the step-by-step Reverfolio workflow.
+   The management controls are secondary and never open a Tunnel by default. */
+.mcp-guide { max-width: 720px; margin: 16px auto 0; }
+.mcp-steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); list-style: none; gap: 12px; margin: 20px 0 0; padding: 0; }
+.mcp-steps li { min-width: 0; }
+.mcp-steps .mcp-step-link { display: flex; align-items: center; justify-content: center; min-height: 48px; padding: 10px 12px; border: 1px solid var(--accent); border-radius: 7px; background: var(--accent); color: #fff; text-decoration: none; text-align: center; font-size: 12px; font-weight: 600; line-height: 1.5; box-sizing: border-box; }
+.mcp-steps .mcp-step-link:hover { background: var(--accent-hover); border-color: var(--accent-hover); color: #fff; }
+.mcp-steps .mcp-step-link:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.mcp-steps .settings-help { margin: 9px 0 0; line-height: 1.7; }
+.mcp-connection-card { padding: 24px; border: 1px solid #dae1eb; border-radius: 13px; background: #fbfcff; }
+.mcp-connection-card.is-ready { border-color: #cde8d9; background: #f5fcf8; }
+.mcp-state-symbol { display: grid; place-items: center; width: 39px; height: 39px; border-radius: 12px; color: #315e9d; background: #e8f0ff; font-size: 22px; margin-bottom: 14px; }
+.is-ready .mcp-state-symbol { color: #168063; background: #e0f3e7; }
+.mcp-connection-card h3 { margin: 0 0 10px; color: #233a56; font-size: 18px; }
+.mcp-description { max-width: 590px; margin: 0 0 18px; color: #64748b; font-size: 13px; line-height: 1.7; }
+.mcp-id-field { display: grid; gap: 9px; margin: 20px 0; font-size: 13px; font-weight: 600; color: #405779; }
+.mcp-id-field input { width: 100%; min-width: 0; padding: 11px 12px; border: 1px solid #cfdbe9; border-radius: 8px; background: white; color: #253e5f; font-size: 13px; font-weight: 400; }
+.mcp-main-action { margin-top: 18px; }
+.mcp-main-action button, .mcp-main-action .primary-link { min-height: 36px; padding: 9px 16px; }
+.mcp-main-action .primary-link { display: inline-flex; align-items: center; border-color: var(--accent); color: #fff; background: var(--accent); text-decoration: none; }
+.mcp-main-action .primary-link:hover { color: #fff; background: var(--accent-hover); text-decoration: none; }
+.mcp-error { padding: 11px; border-radius: 7px; color: #9b3737; background: #fff1ef; font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; }
+.mcp-advanced { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--line); }
+.mcp-advanced summary { color: #71839c; font-size: 12px; cursor: pointer; }
+.mcp-advanced .settings-help { margin-top: 14px; overflow-wrap: anywhere; }
+.mcp-service-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 16px; }
+.mcp-switch-editor { margin-top: 16px; padding: 16px; border: 1px solid var(--line); border-radius: 9px; background: #fafcff; }
+.mcp-switch-editor h4 { margin: 0; font-size: 14px; color: #334e73; }
+.mcp-switch-editor .mcp-id-field { margin: 14px 0 12px; }
+.mcp-switch-editor .mcp-error { margin: 12px 0; }
 
+.mcp-reload-needed { color: #b42330; }
+@media (max-width: 600px) {
+  .mcp-steps { grid-template-columns: 1fr; gap: 14px; }
+  .mcp-connection-card { padding: 17px; }
+  .mcp-main-action button, .mcp-main-action .primary-link { width: 100%; justify-content: center; }
+}
 
-.mcp-next-steps { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding-top: 10px; border-top: 1px solid var(--line-soft); }
-.mcp-next-steps .settings-help { flex-basis: 100%; }
+/* Three fixed MCP controls, aligned with Remote Desktop MCP. */
+.mcp-service-actions { justify-content: flex-start; align-items: center; }
+.mcp-service-actions button { min-height: 36px; }
 
+.mcp-connection-card .mcp-id-field { margin: 16px 0 4px; }
+.mcp-credential-state { display: block; margin: 0 0 10px; font-size: 12px; font-weight: 400; color: #71839c; }
+.mcp-info { margin-top: 12px; }
 
-.mcp-service-actions { display: flex; gap: 8px; flex-wrap: wrap; padding-top: 12px; }
+/* Compact field-level help replaces the two introductory links. */
+.mcp-field-heading { display: inline-flex; align-items: center; gap: 8px; }
+.mcp-field-help {
+  display: inline-flex; width: 17px; height: 17px; align-items: center; justify-content: center;
+  flex: 0 0 17px; border: 1px solid #9ba8ba; border-radius: 50%;
+  text-decoration: none; font-size: 11px; font-weight: 700; color: #52647c; background: #fff;
+}
+.mcp-field-help:hover, .mcp-field-help:focus-visible { border-color: var(--accent); color: var(--accent); }
+.mcp-service-actions button.primary:disabled { background: #d9dfe7; color: #7d8796; opacity: 1; }
+
+/* Two-step MCP setup: local Tunnel lifecycle, then ChatGPT plugin. */
+.mcp-overview-header .mcp-header-name { font-size: 13px; font-weight: 650; color: #263750; }
+.mcp-overview-header .mcp-header-status {
+  margin-left: auto; padding: 6px 10px; border: 1px solid #dbe3ed; border-radius: 999px;
+  background: #f8fafc; font-weight: 600; color: #35465b;
+}
+.mcp-workflow { display: grid; gap: 16px; max-width: 760px; margin: 3px auto 0; }
+.mcp-workflow-panel { padding: 22px; border: 1px solid #dae1eb; border-radius: 12px; background: #fbfcff; }
+.mcp-workflow-panel h3 { font-size: 16px; margin: 0 0 8px; color: #233a56; }
+.mcp-workflow-intro { margin: 0 0 15px; font-size: 12px; line-height: 1.7; }
+.mcp-chatgpt-plugin { background: #fff; }
+.mcp-chatgpt-plugin .mcp-workflow-intro { margin-bottom: 12px; }
+.mcp-chatgpt-link { display: inline-flex; padding: 9px 0; font-size: 13px; text-decoration: underline; }
+.mcp-workflow .mcp-service-actions { margin: 16px 0 4px; }
+.mcp-workflow .mcp-info, .mcp-workflow .mcp-error { margin-top: 12px; }
+@media (max-width: 600px) {
+  .mcp-workflow-panel { padding: 16px; }
+  .mcp-overview-header .mcp-header-name { font-size: 12px; }
+  .mcp-overview-header .mcp-header-status { font-size: 11px; }
+}
+
+/* PR17 connection form: numbered section headings and safe new-key reveal. */
+.mcp-section-heading { display: flex; align-items: flex-start; gap: 13px; margin: 0 0 20px; }
+.mcp-section-heading > div { min-width: 0; flex: 1; }
+.mcp-step-badge {
+  display: grid; place-items: center; flex: 0 0 34px;
+  width: 34px; height: 34px; border: 1px solid #e5eaf2;
+  border-radius: 10px; color: #576a85; background: #f0f3f8;
+  font-size: 11px; font-weight: 700; letter-spacing: .04em;
+}
+.mcp-workflow-panel .mcp-section-heading h3 { margin: 1px 0 5px; line-height: 1.3; }
+.mcp-workflow-panel .mcp-section-heading .mcp-workflow-intro { margin: 0; }
+.mcp-workflow .mcp-local-service > .mcp-id-field,
+.mcp-workflow .mcp-local-service > .mcp-credential-state,
+.mcp-workflow .mcp-local-service > .mcp-service-actions,
+.mcp-workflow .mcp-local-service > label.settings-help {
+  margin-left: 47px;
+}
+.mcp-key-input { position: relative; width: 100%; }
+.mcp-key-input input { padding-right: 50px; }
+.mcp-key-reveal {
+  position: absolute; right: 5px; top: 5px;
+  display: grid; place-items: center; width: 36px; height: 36px;
+  border: 0; border-radius: 6px; background: transparent; color: #677891;
+  cursor: pointer;
+}
+.mcp-key-reveal:not(:disabled):hover { background: #f0f3f8; }
+.mcp-key-reveal:disabled { cursor: default; color: #b2bccb; }
+.mcp-header-status .dot:not(.ok):not(.error) { background: #d09a30; }
+@media (max-width: 600px) {
+  .mcp-workflow .mcp-local-service > .mcp-id-field,
+  .mcp-workflow .mcp-local-service > .mcp-credential-state,
+  .mcp-workflow .mcp-local-service > .mcp-service-actions,
+  .mcp-workflow .mcp-local-service > label.settings-help { margin-left: 0; }
+  .mcp-step-badge { flex-basis: 30px; width: 30px; height: 30px; }
+}

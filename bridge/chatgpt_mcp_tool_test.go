@@ -2,6 +2,7 @@ package vidotter
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -39,25 +40,73 @@ func TestMCPSetupLaunchesOnlyBundledScripts(t *testing.T) {
 		}
 	}
 	validID := "tunnel_0123456789abcdef0123456789abcdef"
-	win, err := mcpSetupCommand("windows", root, validID)
+	win, err := mcpSetupCommand("windows", root, validID, false, "")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(win.Args[len(win.Args)-4:], []string{"-File", filepath.Join(scripts, "Setup-VidOtter-MCP.ps1"), "-TunnelId", validID}) {
+	if !reflect.DeepEqual(win.Args[len(win.Args)-5:], []string{"-File", filepath.Join(scripts, "Setup-VidOtter-MCP.ps1"), "-TunnelId", validID, "-KeyFromStdin"}) {
 		t.Fatalf("unexpected Windows setup args: %#v", win.Args)
+	}
+	replaced, err := mcpSetupCommand("windows", root,
+		"tunnel_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", true, validID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(replaced.Args[len(replaced.Args)-3:], []string{
+		"-ReplaceExisting", "-ExpectedTunnelId", validID}) {
+		t.Fatalf("missing explicit Windows replacement arguments: %#v", replaced.Args)
+	}
+	if _, err := mcpSetupCommand("windows", root, validID, true, validID); err != nil {
+		t.Fatal("same ID must support key-only rotation")
 	}
 	if strings.Contains(strings.Join(win.Args, " "), "sk-") {
 		t.Fatal("setup must never receive credentials via its process arguments")
 	}
-	mac, err := mcpSetupCommand("darwin", root, validID)
+	mac, err := mcpSetupCommand("darwin", root, validID, false, "")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if filepath.Base(mac.Args[0]) != "osascript" || !strings.Contains(mac.Args[len(mac.Args)-1], "setup-mcp.sh") {
+	if filepath.Base(mac.Args[0]) != "bash" || !strings.Contains(mac.Args[len(mac.Args)-1], "setup-mcp.sh") {
 		t.Fatalf("unexpected macOS setup command: %#v", mac.Args)
 	}
-	if _, err := mcpSetupCommand(runtime.GOOS, filepath.Join(root, "missing"), validID); err == nil {
+	if _, err := mcpSetupCommand(runtime.GOOS, filepath.Join(root, "missing"), validID, false, ""); err == nil {
 		t.Fatal("must reject missing scripts")
+	}
+}
+
+func TestMCPSaveOnlyCommandIsolation(t *testing.T) {
+	root := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(root, "scripts"), 0700); err != nil {
+		t.Fatal(err)
+	}
+	for _, script := range []string{"Setup-VidOtter-MCP.ps1", "setup-mcp.sh"} {
+		if err := os.WriteFile(filepath.Join(root, "scripts", script), []byte("# test"), 0600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	id := "tunnel_0123456789abcdef0123456789abcdef"
+	win, err := mcpSaveCommand("windows", root, id, true, id, true, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	args := strings.Join(win.Args, " ")
+	for _, flag := range []string{"-SaveOnly", "-ReuseSavedKey", "-ReplaceExisting", "-KeyFromStdin"} {
+		if !strings.Contains(args, flag) {
+			t.Errorf("missing option %s: %s", flag, args)
+		}
+	}
+	if strings.Contains(args, "FAKE_RUNTIME_KEY") {
+		t.Fatal("secret must never be a command argument")
+	}
+	unix, err := mcpSaveCommand("linux", root, id, true, id, true, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	env := strings.Join(unix.Env, "\n")
+	for _, variable := range []string{"VIDOTTER_MCP_SAVE_ONLY=1", "VIDOTTER_MCP_REUSE_KEY=1", "VIDOTTER_REPLACE_TUNNEL=1"} {
+		if !strings.Contains(env, variable) {
+			t.Errorf("missing environment option %s", variable)
+		}
 	}
 }
 
@@ -95,6 +144,67 @@ func TestChatGPTMCPRegistryIsOptionalAndNoSecretData(t *testing.T) {
 	}
 }
 
+func TestMCPProfileRequiresValidTunnelID(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("XDG_CONFIG_HOME", filepath.Join(home, "config"))
+	profile := mcpProfilePath(runtime.GOOS, home, os.Getenv("LOCALAPPDATA"), os.Getenv("XDG_CONFIG_HOME"))
+	if err := os.MkdirAll(filepath.Dir(profile), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(profile, []byte("tunnel_id: invalid\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	invalid := chatGPTMCPTool{}.Snapshot(context.Background(), defaultBridgeConfig())
+	if invalid.Config.Values["configured"] != false || invalid.Config.Values["tunnelId"] != "" {
+		t.Fatalf("invalid profile must not count as configured: %#v", invalid.Config.Values)
+	}
+	id := "tunnel_0123456789abcdef0123456789abcdef"
+	if err := os.WriteFile(profile, []byte("tunnel_id: "+id+"\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	valid := chatGPTMCPTool{}.Snapshot(context.Background(), defaultBridgeConfig())
+	if valid.Config.Values["configured"] != true || valid.Config.Values["tunnelId"] != id {
+		t.Fatalf("valid profile should be detected: %#v", valid.Config.Values)
+	}
+}
+
+func TestMCPSetupRequiresExplicitAndFreshTunnelReplacement(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("XDG_CONFIG_HOME", filepath.Join(home, "config"))
+	t.Setenv("LOCALAPPDATA", filepath.Join(home, "local"))
+	profile := mcpProfilePath(runtime.GOOS, home, os.Getenv("LOCALAPPDATA"), os.Getenv("XDG_CONFIG_HOME"))
+	if err := os.MkdirAll(filepath.Dir(profile), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	oldID := "tunnel_0123456789abcdef0123456789abcdef"
+	nextID := "tunnel_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+	if err := os.WriteFile(profile, []byte("tunnel_id: "+oldID+"\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	server := &bridgeServer{state: bridgeState{Token: "test-secret"}}
+	cases := []string{
+		`{"tunnelId":"tunnel_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}`,
+		`{"tunnelId":"tunnel_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","replace":true}`,
+		`{"tunnelId":"tunnel_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","replace":true,"previousTunnelId":"tunnel_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"}`,
+		`{"tunnelId":"tunnel_0123456789abcdef0123456789abcdef"}`,
+	}
+	for _, body := range cases {
+		request := httptest.NewRequest(http.MethodPost, "/v1/mcp/setup", strings.NewReader(body))
+		request.Header.Set("X-VidOtter-Token", "test-secret")
+		recorder := httptest.NewRecorder()
+		server.handleMCPSetup(recorder, request)
+		if recorder.Code != http.StatusConflict {
+			t.Fatalf("replacement must reject unconfirmed or stale IDs: status=%d body=%s", recorder.Code, recorder.Body.String())
+		}
+	}
+	if got := tunnelIDFromProfile(profile); got != oldID {
+		t.Fatalf("old profile modified: %s", got)
+	}
+	_ = nextID
+}
+
 func TestMCPSetupRejectsUnauthorizedRequests(t *testing.T) {
 	server := &bridgeServer{state: bridgeState{Token: "test-secret"}}
 	for _, method := range []string{http.MethodPost, http.MethodGet} {
@@ -110,6 +220,7 @@ func TestMCPSetupRejectsUnauthorizedRequests(t *testing.T) {
 		`{"tunnelId":"tunnel_"}`,
 		`{"tunnelId":"tunnel_0123456789abcdef0123456789abcdef;evil"}`,
 		`{"tunnelId":"tunnel_0123456789abcdef0123456789abcdef","apiKey":"sk-never"}`,
+		`{"tunnelId":"tunnel_0123456789abcdef0123456789abcdef"}{"tunnelId":"tunnel_0123456789abcdef0123456789abcdef"}`,
 	}
 	for _, body := range cases {
 		request := httptest.NewRequest(http.MethodPost, "/v1/mcp/setup", strings.NewReader(body))
@@ -121,6 +232,46 @@ func TestMCPSetupRejectsUnauthorizedRequests(t *testing.T) {
 		}
 		if strings.Contains(recorder.Body.String(), "sk-never") {
 			t.Fatal("secret must never appear in response")
+		}
+	}
+}
+
+func TestMCPSetupCommandAllowsKeyOnlyRotation(t *testing.T) {
+	root := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(root, "scripts"), 0700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "scripts", "Setup-VidOtter-MCP.ps1"), []byte("# test"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	id := "tunnel_0123456789abcdef0123456789abcdef"
+	if _, err := mcpSetupCommand("windows", root, id, true, id); err != nil {
+		t.Fatalf("key-only rotation rejected: %v", err)
+	}
+}
+
+func TestMCPSetupValidatesPasswordWithoutEchoingIt(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("LOCALAPPDATA", home)
+	t.Setenv("XDG_CONFIG_HOME", home)
+	t.Setenv("PATH", home)
+	s := &bridgeServer{state: bridgeState{Token: "test-token"}}
+	for _, key := range []string{"", "short", "FAKE_VALID_KEY\nINJECTED", strings.Repeat("X", 513), "FAKE_VALID_KEY_FOR_FORM_123"} {
+		data, _ := json.Marshal(map[string]any{"tunnelId": "tunnel_0123456789abcdef0123456789abcdef", "runtimeApiKey": key})
+		r := httptest.NewRequest(http.MethodPost, "/v1/mcp/setup", strings.NewReader(string(data)))
+		r.Header.Set("X-VidOtter-Token", "test-token")
+		w := httptest.NewRecorder()
+		s.handleMCPSetup(w, r)
+		expected := http.StatusBadRequest
+		if key == "FAKE_VALID_KEY_FOR_FORM_123" {
+			expected = http.StatusConflict
+		} // Valid password reached the missing-client check.
+		if w.Code != expected {
+			t.Fatalf("unexpected credential validation status: %d", w.Code)
+		}
+		if key != "" && strings.Contains(w.Body.String(), key) {
+			t.Fatal("credential leaked into response")
 		}
 	}
 }

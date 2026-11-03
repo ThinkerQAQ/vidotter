@@ -30,6 +30,9 @@ func Licenses(root string) error {
 		if err := run(filepath.Join(root, "bridge"), env, tool, "save", "./cmd/vidotter", "--ignore=vidotter", "--save_path="+output); err != nil {
 			return fmt.Errorf("collect %s/%s licenses: %w", target.OS, target.Arch, err)
 		}
+		if err := ensureDir(output); err != nil {
+			return err
+		}
 		report, err := os.Create(filepath.Join(output, "DEPENDENCIES.csv"))
 		if err != nil {
 			return err

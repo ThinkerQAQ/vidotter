@@ -53,11 +53,16 @@ func TestConfigTOMLGroupedRoundTrip(t *testing.T) {
 	}
 }
 
-func TestExistingTOMLDefaultsToShowingLogTab(t *testing.T) {
+func TestExistingTOMLDefaultsToHidingLogTab(t *testing.T) {
 	var f fileConfig
 	f.Interface.Language = "zh-CN"
+	if configFromFile(f).ShowLogs {
+		t.Fatal("existing TOML without show_logs must default to false")
+	}
+	shown := true
+	f.Interface.ShowLogs = &shown
 	if !configFromFile(f).ShowLogs {
-		t.Fatal("existing TOML without show_logs must default to true")
+		t.Fatal("explicitly enabled logs must stay enabled")
 	}
 	hidden := false
 	f.Interface.ShowLogs = &hidden

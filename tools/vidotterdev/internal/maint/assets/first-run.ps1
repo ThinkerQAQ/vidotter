@@ -12,30 +12,8 @@ if ($Mode -eq 'extension') {
     if (!(Test-Path $guide)) {
         throw "VidOtter offline extension guide is missing: $guide"
     }
-    # The offline guide always opens. No internet or browser store is required.
-    # Show the precise folder to select, so users do not need to locate it.
-    Start-Process -FilePath explorer.exe -ArgumentList ('"' + $folder + '"')
-    $edgePaths = @(
-        (Join-Path ${env:ProgramFiles(x86)} 'Microsoft\Edge\Application\msedge.exe'),
-        (Join-Path $env:ProgramFiles 'Microsoft\Edge\Application\msedge.exe')
-    )
-    $edge = $edgePaths | Where-Object { $_ -and (Test-Path $_) } | Select-Object -First 1
-    if ($edge) {
-        Start-Process -FilePath $edge -ArgumentList 'edge://extensions/'
-    } else {
-        $chromePaths = @(
-            (Join-Path $env:ProgramFiles 'Google\Chrome\Application\chrome.exe'),
-            (Join-Path ${env:ProgramFiles(x86)} 'Google\Chrome\Application\chrome.exe')
-        )
-        $chrome = $chromePaths | Where-Object { $_ -and (Test-Path $_) } | Select-Object -First 1
-        if ($chrome) {
-            Start-Process -FilePath $chrome -ArgumentList 'chrome://extensions/'
-        } else {
-            Write-Warning "Edge or Chrome was not found. Open either browser and navigate to its extensions page."
-        }
-    }
+    # Open only the requested local README; do not open Explorer or browser settings.
     Start-Process -FilePath $guide
-    Write-Host "Required browser activation: enable Developer mode, choose Load unpacked, select $folder"
     exit 0
 }
 
@@ -53,5 +31,5 @@ if ($client -or (Test-Path $localClient)) {
 } else {
     Write-Host 'The MCP server is already installed. Cloud ChatGPT requires tunnel-client and your own Tunnel credentials.'
     Start-Process 'https://github.com/openai/tunnel-client'
-    Start-Process 'https://github.com/ThinkerQAQ/vidotter/blob/main/docs/zh-CN/how-to/mcp.md'
+    Start-Process 'https://github.com/ThinkerQAQ/vidotter/blob/main/README_ZH.md'
 }

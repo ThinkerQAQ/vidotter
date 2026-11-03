@@ -663,7 +663,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   if (message.action === "ui.logs.get") {
     bridgeFetch("/v1/preferences")
-      .then(result => sendResponse({ ok: true, showLogs: result.preferences.showLogs !== false }),
+      .then(result => sendResponse({ ok: true, showLogs: result.preferences.showLogs === true }),
         error => sendResponse({ ok: false, error: String(error) }));
     return true;
   }
@@ -746,13 +746,19 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   // MV3 background may be older than refreshed popup after an in-place update.
   if (message.action === "bridge.mcp.capabilities") {
-    sendResponse({ ok: true, protocol: 2, actions: ["install-client", "setup", "service"] });
+    sendResponse({ ok: true, protocol: 5, actions: ["install-client", "setup", "service", "replace-tunnel", "inline-credentials", "save-only", "reuse-saved-key"] });
     return;
   }
 
   if (message.action === "bridge.tool.action") {
     const tool = String(message.tool || "");
     const action = String(message.toolAction || "");
+    if (tool === "background" && ["status", "enable", "disable"].includes(action)) {
+      bridgeFetch("/v1/background", {
+        method: "POST", body: JSON.stringify({action, target: message.target || "bridge"})
+      }).then(result => sendResponse(result), error => sendResponse({ok: false, error: error.message || String(error)}));
+      return true;
+    }
     if (tool === "bridge" && action === "restart") {
       restartBridge()
         .then(session => sendResponse({ ok: true, pid: session.pid }), error => sendResponse({ ok: false, error: error.message || String(error) }));
@@ -780,7 +786,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (tool === "chatgpt-mcp" && action === "setup") {
       bridgeFetch("/v1/mcp/setup", {
         method: "POST",
-        body: JSON.stringify({ tunnelId: String(message.tunnelId || "") })
+        body: JSON.stringify({ tunnelId: String(message.tunnelId || ""),
+          runtimeApiKey: String(message.runtimeApiKey || ""),
+          replace: message.replace === true,
+          previousTunnelId: message.replace === true ? String(message.previousTunnelId || "") : "",
+          saveOnly: message.saveOnly === true, reuseKey: message.reuseKey === true })
       })
         .then(result => sendResponse(result), error =>
           sendResponse({ ok: false, error: error.message || String(error) }));

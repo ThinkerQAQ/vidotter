@@ -88,7 +88,24 @@ func Installer(stage, targetOS, targetArch, binarycreator, output, updateURL str
 	if err := prepareInstallerWithUpdateURL(dir, stage, ver, targetOS, updateURL); err != nil {
 		return err
 	}
-	args := []string{"-p", filepath.Join(dir, "packages"), "-c", filepath.Join(dir, "config", "config.xml"), output}
+	// The Qt installer itself was already converted to GUI subsystem.
+	// Bundle matching icon-branded WinExe configuration/management launchers
+	// so Start Menu and setup completion never flash PowerShell windows.
+	if targetOS == "windows" {
+		payload := filepath.Join(dir, "packages", "com.thinkerqaq.vidotter", "data")
+		if err := buildWindowsInstallerLaunchers(stage, payload, dir); err != nil {
+			return fmt.Errorf("build Windows native entrypoints: %w", err)
+		}
+	}
+	templateArgs := []string{}
+	if targetOS == "windows" {
+		template := filepath.Join(dir, "installerbase-gui.exe")
+		if err := prepareWindowsGUITemplate(filepath.Join(filepath.Dir(executable), "installerbase.exe"), template); err != nil {
+			return fmt.Errorf("prepare Windows GUI installer template: %w", err)
+		}
+		templateArgs = []string{"-t", template}
+	}
+	args := append(templateArgs, []string{"-p", filepath.Join(dir, "packages"), "-c", filepath.Join(dir, "config", "config.xml"), output}...)
 	if updateURL == "" {
 		args = append([]string{"--offline-only"}, args...)
 	}
@@ -97,6 +114,11 @@ func Installer(stage, targetOS, targetArch, binarycreator, output, updateURL str
 	command.Stdout, command.Stderr = os.Stdout, os.Stderr
 	if err := command.Run(); err != nil {
 		return fmt.Errorf("binarycreator failed: %w", err)
+	}
+	if targetOS == "windows" {
+		if err := requireWindowsGUI(output); err != nil {
+			return err
+		}
 	}
 	fmt.Println("Installer:", output)
 	return nil
@@ -226,9 +248,15 @@ func prepareInstallerWithUpdateURL(destination, stage, ver, targetOS, updateURL 
 		shortcutOperations += `
     component.addOperation("Mkdir", "@UserStartMenuProgramsPath@/VidOtter");
     component.addOperation("CreateShortcut",
-        installer.environmentVariable("SystemRoot") + "/System32/WindowsPowerShell/v1.0/powershell.exe",
-        "@UserStartMenuProgramsPath@/VidOtter/Install Browser Extension.lnk",
-        "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File \"@TargetDir@/scripts/VidOtter-FirstRun.ps1\" -Mode extension");
+        "@TargetDir@/bin/VidOtter-Configure.exe",
+        "@UserStartMenuProgramsPath@/VidOtter/Configure VidOtter.lnk");
+    component.addOperation("CreateShortcut",
+        "@TargetDir@/bin/VidOtter-Configure.exe",
+        "@UserStartMenuProgramsPath@/VidOtter/View Setup Instructions.lnk",
+        "--guide");
+    component.addOperation("CreateShortcut",
+        "@TargetDir@/VidOtter-Manager.exe",
+        "@UserStartMenuProgramsPath@/VidOtter/Manage VidOtter.lnk");
     // Show a standard uninstall shortcut that launches Qt Maintenance Tool.
     // Removal is confirmed in the GUI; do not silently purge Data.
     component.addOperation("CreateShortcut",

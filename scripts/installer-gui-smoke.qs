@@ -32,8 +32,9 @@ Controller.prototype.FinishedPageCallback = function() {
     } else {
         console.log("VIDOTTER_GUI_MANDATORY_GUIDE_MISSING");
     }
-    var optional = gui.findChild(gui.currentPageWidget(), "openExtensionCheckBox");
-    if (optional) console.log("VIDOTTER_GUI_BAD_OPTIONAL_EXTENSION");
+    var optional = gui.findChild(gui.currentPageWidget(), "openGuideCheckBox");
+    if (optional && !optional.checked) console.log("VIDOTTER_GUI_OPT_IN_GUIDE_PRESENT");
+    else console.log("VIDOTTER_GUI_BAD_GUIDE_DEFAULT");
     var mcp = gui.findChild(gui.currentPageWidget(), "configureMcpCheckBox");
     if (mcp) console.log("VIDOTTER_GUI_BAD_MCP_OPTION");
     gui.clickButton(buttons.FinishButton, 350);

@@ -74,6 +74,9 @@ func removeReg(key string) error {
 }
 
 func Install(root, extensionID string) error {
+	if err := assertInstallOwnership(root); err != nil {
+		return err
+	}
 	binary, err := exeForRoot(root)
 	if err != nil {
 		return err
@@ -140,6 +143,11 @@ func Install(root, extensionID string) error {
 	default:
 		return fmt.Errorf("unsupported installer platform: %s", runtime.GOOS)
 	}
+	// Restore the user's previous login-start choices after an in-place update.
+	// Fresh installations have no preference file and do not enable anything.
+	if err := manageBackgroundLifecycle(root, "restore"); err != nil {
+		return err
+	}
 	fmt.Println("Native Messaging installed:", binary)
 	fmt.Println("Host manifest:", manifest)
 	return nil
@@ -159,6 +167,15 @@ func nativeDirs(home string) []string {
 	}
 }
 func Uninstall(root string) error {
+	// Never unregister another directory's singleton browser host or tasks.
+	if err := assertInstallOwnership(root); err != nil {
+		return err
+	}
+	// Stop and unregister this installation's login tasks before Qt removes
+	// their launch scripts. Keep user settings, downloads and MCP credentials.
+	if err := manageBackgroundLifecycle(root, "uninstall"); err != nil {
+		return err
+	}
 	switch runtime.GOOS {
 	case "windows":
 		if err := removeReg(`HKCU\Software\Classes\vidotter`); err != nil {
@@ -227,10 +244,8 @@ func Deploy(root, target, targetOS, targetArch string) error {
 	if err := run(filepath.Join(root, "tools", "vidotterdev"), []string{"CGO_ENABLED=0", "GOOS=" + targetOS, "GOARCH=" + targetArch}, "go", "build", "-trimpath", "-o", filepath.Join(destination, "bin", "vidotterdev"+ext), "."); err != nil {
 		return err
 	}
-	for _, dir := range []string{"extension", "assets"} {
-		if err := copyTree(filepath.Join(root, dir), filepath.Join(destination, dir), nil); err != nil {
-			return err
-		}
+	if err := copyDeploymentResources(root, destination); err != nil {
+		return err
 	}
 	for _, file := range []string{"README.md", "README_ZH.md", "LICENSE", "NOTICE", "THIRD_PARTY_NOTICES.md"} {
 		if err := copyFile(filepath.Join(root, file), filepath.Join(destination, file)); err != nil {
@@ -241,5 +256,23 @@ func Deploy(root, target, targetOS, targetArch string) error {
 		return err
 	}
 	fmt.Println("Deployed program files; existing Data/ was not modified:", destination)
+	return nil
+}
+
+// A development deployment must ship the same MCP scripts as the tested
+// source. Older source checkouts have no top-level assets/ directory; existing
+// installed assets must be preserved rather than making deployment fail.
+func copyDeploymentResources(root, destination string) error {
+	for _, dir := range []string{"extension", "scripts"} {
+		if err := copyTree(filepath.Join(root, dir), filepath.Join(destination, dir), nil); err != nil {
+			return fmt.Errorf("copy %s: %w", dir, err)
+		}
+	}
+	assets := filepath.Join(root, "assets")
+	if info, err := os.Stat(assets); err == nil && info.IsDir() {
+		return copyTree(assets, filepath.Join(destination, "assets"), nil)
+	} else if err != nil && !os.IsNotExist(err) {
+		return err
+	}
 	return nil
 }

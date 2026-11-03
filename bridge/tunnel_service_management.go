@@ -87,5 +87,17 @@ func (s *bridgeServer) handleMCPServiceManage(w http.ResponseWriter, r *http.Req
 		writeJSON(w, http.StatusConflict, map[string]any{"ok": false, "error": "Unable to " + body.Action + " VidOtter Tunnel service; check local service manager"})
 		return
 	}
+	if body.Action == "start" || body.Action == "restart" {
+		// A successful service-control request is not proof that the Tunnel
+		// process actually started. Keep the pending-config warning otherwise.
+		for i := 0; i < 3; i++ {
+			if tunnelProcessRunning(profile) {
+				marker := filepath.Join(filepath.Dir(tunnelHealthURLFile(runtime.GOOS, home, os.Getenv("LOCALAPPDATA"), os.Getenv("XDG_CONFIG_HOME"))), "restart-required")
+				_ = os.Remove(marker)
+				break
+			}
+			time.Sleep(350 * time.Millisecond)
+		}
+	}
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "message": "Tunnel service action submitted; verify connection readiness separately"})
 }

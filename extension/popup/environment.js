@@ -3,6 +3,8 @@
 
   const api = root.VidOtterPopup;
   let tools = [];
+  let background = null;
+  let backgroundBusy = false;
   const navigation = [];
 
   function setIndicator(state, text) {
@@ -46,7 +48,7 @@
     if (kind === "runtime" || kind === "infra") return "runtime";
     if (kind === "capability" || kind === "core" || kind === "platform") return "capability";
     if (kind === "dependency") return "dependency";
-    if (kind === "integration") return "integration";
+    if (kind === "integration") return "dependency";
     return "other";
   }
 
@@ -320,8 +322,7 @@
     appearance: { title: "界面与交互", description: "语言、导航方式与工作台偏好", icon: "appearance" },
     runtime: { title: "连接与运行时", description: "浏览器连接、Bridge 与网络", icon: "runtime" },
     capability: { title: "下载能力", description: "媒体嗅探、下载与处理", icon: "capability" },
-    dependency: { title: "外部组件", description: "FFmpeg、yt-dlp、识别和翻译", icon: "dependency" },
-    integration: { title: "AI 集成", description: "连接 ChatGPT 的可选本地服务", icon: "runtime" },
+    dependency: { title: "外部组件", description: "ChatGPT、FFmpeg、yt-dlp、识别和翻译", icon: "dependency" },
     other: { title: "其他组件", description: "其他可选模块", icon: "settings" }
   };
 
@@ -430,18 +431,121 @@
     body.appendChild(actionRow);
   }
 
-  let pendingMcpTunnelID = "";
+  // Credentials are submitted together; the Key stays only in transient form state
+  // until the local service saves it in private OS storage.
+  const mcpUI = { draftID: "", idEdited: false, draftKey: "", busy: "", error: "", info: "", deadline: 0, timer: null, polling: false, advanced: false, workerOutdated: false,
+    editing: false, pendingID: "", pendingSetup: false, pendingRevision: "" };
+  const mcpIDPattern = /^tunnel_(?:[a-z0-9]{32}|[a-z0-9]{4}_[a-z0-9]{32})$/;
+  // This ID is used by our smoke-test fixtures. It is syntactically valid,
+  // but must not masquerade as an actual connected user Tunnel.
+  const mcpExampleID = "tunnel_0123456789abcdef0123456789abcdef";
+  const mcpIsExampleID = id => String(id || "").trim() === mcpExampleID;
+  // The rendered field is authoritative at Save time. Password managers can
+  // assign .value without emitting "input", leaving draftID and idEdited stale.
+  // Blank means "reuse saved ID", even after the user clears an edited field.
+  function mcpDisplayedTunnelID(state, ui) {
+    return ui.idEdited ? ui.draftID : (state.tunnelID || "");
+  }
+
+  function mcpSavedKeyMask(saved, draftKey) {
+    // This is a visual indicator, not the real key or its length.
+    return saved && !draftKey ? "****************" : "";
+  }
+
+  function mcpEffectiveTunnelID(form, savedID, draftID, edited = true) {
+    const field = form?.querySelector?.('input[name="tunnelId"]');
+    const entered = String(field ? field.value : (edited ? draftID : "") || "").trim();
+    return entered || String(savedID || "").trim();
+  }
+
+  function mcpVisibleFieldChanges(form, state, ui) {
+    const visibleID = form?.querySelector?.('input[name="tunnelId"]')?.value?.trim() || "";
+    return {
+      draftID: visibleID,
+      idEdited: Boolean(ui.idEdited || (visibleID && visibleID !== state.tunnelID)),
+      draftKey: ui.draftKey
+    };
+  }
+
+  function mcpDiscourageAutofill(input, intendedValue = () => "") {
+    // A password manager may set .value without an input event. Keep the
+    // actual field consistent with intentional edits, not browser credentials.
+    input.readOnly = true;
+    input.autocomplete = "off";
+    input.setAttribute("data-lpignore", "true");
+    input.setAttribute("data-1p-ignore", "true");
+    input.setAttribute("data-bwignore", "true");
+    const scrub = () => {
+      if (!input.isConnected) return;
+      const expected = String(intendedValue() || "");
+      if (input.value !== expected && (document.activeElement !== input ||
+          input.matches?.(":-webkit-autofill"))) {
+        input.value = expected;
+      }
+    };
+    input.addEventListener("focus", () => {
+      // Restore the intended field value before browser suggestions are shown.
+      const expected = String(intendedValue() || "");
+      if (input.value !== expected) input.value = expected;
+      const error = input.closest(".mcp-connection-card")?.querySelector(".mcp-error");
+      if (error) { mcpUI.error = ""; error.remove(); }
+    });
+    const unlock = () => { input.readOnly = false; };
+    input.addEventListener("pointerdown", unlock);
+    input.addEventListener("keydown", unlock);
+    input.addEventListener("paste", unlock);
+    setTimeout(scrub, 100);
+    setTimeout(scrub, 900);
+  }
+  // Service controls follow persisted credentials, not an extra click on Save.
+  // A running Tunnel must always remain stoppable even while editing.
+  function mcpControlState(state, form = {}) {
+    const running = Boolean(state.running || state.ready);
+    const changedID = Boolean(form.idEdited &&
+      String(form.draftID || "").trim() !== String(state.tunnelID || "").trim());
+    const hasChanges = changedID || Boolean(String(form.draftKey || "").trim());
+    const credentialsSaved = Boolean(state.configured && state.runtimeKeySaved &&
+      mcpIDPattern.test(String(state.tunnelID || "")) && !mcpIsExampleID(state.tunnelID));
+    const usable = credentialsSaved && !hasChanges && !form.busy;
+    return {
+      running, hasChanges, credentialsSaved,
+      canStart: !running && usable,
+      canStop: running && !form.busy,
+      canRestart: running && usable,
+      canAutoStart: usable
+    };
+  }
+
+  // Top-right status is the single display of local Tunnel state. A ready
+  // Tunnel does not imply authorization on the ChatGPT plugin side.
+  function mcpHeaderStatus(state, busy = "") {
+    if (busy === "saving" || busy === "waiting") return { label: "正在保存配置", kind: "pending" };
+    if (busy === "starting") return { label: "正在启动 Tunnel", kind: "pending" };
+    if (busy === "stopping") return { label: "正在停止 Tunnel", kind: "pending" };
+    if (busy === "restarting") return { label: "正在重启 Tunnel", kind: "pending" };
+    if (state.running && state.restartRequired) {
+      return { label: "配置已保存 · 待重启", kind: "pending" };
+    }
+    if (state.ready) return { label: "Tunnel 服务 Ready", kind: "ready" };
+    if (state.running) return {
+      label: state.restartRequired ? "Tunnel 运行中 · 配置待重启" : "Tunnel 运行中 · 尚未就绪",
+      kind: "pending"
+    };
+    if (mcpIsExampleID(state.tunnelID)) return { label: "Tunnel 测试配置待更换", kind: "pending" };
+    if (state.configured && !state.runtimeKeySaved) return { label: "缺少 Runtime API Key", kind: "pending" };
+    if (state.configured) return { label: "Tunnel 已配置 · 未启动", kind: "pending" };
+    return { label: "Tunnel 尚未配置", kind: "pending" };
+  }
+
+  const chatGPTSettingsURL = "https://chatgpt.com/settings/plugins-settings";
 
   function isOutdatedMcpWorkerError(error) {
     return /不支持的 Tool 操作|不支持的 Tool|unsupported tool (?:action|operation)|unsupported action/i
       .test(String(error && error.message || error || ""));
   }
 
-  // In-place unpacked extension updates can leave a previously launched MV3
-  // service worker running, while the popup already reads the new UI files.
-  // Never hide this mismatch as a Tunnel-client installation failure.
   function showMcpWorkerReload(form, message) {
-    message.textContent = "VidOtter 扩展后台仍是旧版。请重新加载扩展，再执行客户端安装。";
+    message.textContent = "VidOtter 扩展后台仍是旧版。请重新加载扩展，再执行 MCP 连接。";
     message.classList.add("mcp-reload-needed");
     if (form.querySelector("[data-mcp-worker-reload]")) return;
     if (api.host === "extension" && root.chrome?.runtime?.reload) {
@@ -455,189 +559,495 @@
     } else {
       const instruction = document.createElement("p");
       instruction.dataset.mcpWorkerReload = "1";
-      instruction.textContent = "在 edge://extensions 或 chrome://extensions 找到 VidOtter，点击重新加载，再刷新本页面。";
+      instruction.textContent = "在 edge://extensions 或 chrome://extensions 中重新加载 VidOtter，然后刷新本页面。";
       form.appendChild(instruction);
     }
   }
 
-  function renderChatGPTMCP(body, tool, health) {
-    // Inline setup: the browser collects only a non-secret Tunnel identifier.
-    // The restricted API key is entered only into the local OS terminal.
-    const form = document.createElement("form");
-    form.className = "mcp-setup-form";
-    const label = document.createElement("label");
-    label.className = "tool-field wide";
-    label.textContent = "Tunnel ID";
-    const tunnelInput = document.createElement("input");
-    tunnelInput.name = "tunnelId";
-    tunnelInput.type = "text";
-    tunnelInput.autocomplete = "off";
-    tunnelInput.spellcheck = false;
-    tunnelInput.placeholder = "tunnel_0123456789abcdef0123456789abcdef";
-    tunnelInput.setAttribute("aria-label", "Tunnel ID");
-    tunnelInput.required = true;
-    const savedTunnelID = tool.config?.values?.tunnelId || "";
-    tunnelInput.value = pendingMcpTunnelID || savedTunnelID;
-    tunnelInput.addEventListener("input", () => { pendingMcpTunnelID = tunnelInput.value.trim(); });
-    label.appendChild(tunnelInput);
+  function mcpIsVisible() {
+    const frame = navigation[navigation.length - 1];
+    const panel = document.querySelector('[data-panel="environment"]');
+    return frame?.type === "tool" && frame.id === "chatgpt-mcp" &&
+      (!panel || panel.classList.contains("active")) && !document.hidden;
+  }
 
-    const hint = document.createElement("p");
-    hint.className = "settings-help";
-    hint.textContent = "输入 OpenAI Platform 创建的 Tunnel ID。首次连接还需要 Runtime API Key（Tunnels Read + Use），密钥只在本机终端输入。";
-    const controls = document.createElement("div");
-    controls.className = "tool-actions mcp-actions";
-    const button = document.createElement("button");
-    button.type = "submit";
-    button.className = "primary";
-    button.textContent = "配置并启动 Tunnel";
-    const docs = document.createElement("a");
-    docs.className = "secondary mcp-doc-link";
-    docs.href = "https://github.com/ThinkerQAQ/vidotter/blob/main/docs/zh-CN/how-to/mcp.md";
-    docs.target = "_blank";
-    docs.rel = "noopener noreferrer";
-    docs.textContent = "查看 VidOtter 配置文档";
-    const message = document.createElement("small");
-    message.className = "mcp-setup-message";
-    message.setAttribute("role", "status");
-    const clientMissing = health.status === "missing";
-    if (clientMissing) {
-      const installClient = document.createElement("button");
-      installClient.type = "button";
-      installClient.className = "secondary";
-      installClient.dataset.mcpInstallClient = "1";
-      installClient.textContent = "安装官方 Tunnel Client";
-      installClient.addEventListener("click", async () => {
-        if (!root.confirm("下载并安装 OpenAI 官方 Tunnel Client？\n\nVidOtter 将从 openai/tunnel-client 正式 GitHub Release 下载对应的系统版本，核验 SHA-256，安装到当前用户目录。\n不会自动创建 Tunnel 或开启远程服务。")) return;
-        installClient.disabled = true;
-        installClient.textContent = "正在校验并安装…";
-        message.textContent = "从 OpenAI 官方 Release 下载客户端并校验 SHA-256…";
-        try {
-          await api.send("bridge.tool.action", { tool: "chatgpt-mcp", toolAction: "install-client" });
-          await refresh();
-          api.setMessage("environmentMessage", "官方 Tunnel Client 已安装。现在可以填写 Tunnel ID 配置连接。", "ok");
-        } catch (error) {
-          if (isOutdatedMcpWorkerError(error)) {
-            showMcpWorkerReload(form, message);
-          } else {
-            message.textContent = error.message || String(error);
-          }
-          api.setMessage("environmentMessage", message.textContent, "error");
-          installClient.disabled = Boolean(form.querySelector("[data-mcp-worker-reload]"));
-          installClient.textContent = "安装官方 Tunnel Client";
-        }
-      });
-      controls.prepend(installClient);
-      button.disabled = true;
-      button.title = "请先安装官方 Tunnel Client";
-    }
-    controls.append(button, docs);
-    form.append(label, hint, controls, message);
-    // Preflight is intentionally independent of the local Bridge version:
-    // the old worker does not know the new tool action even when the Bridge does.
-    if (api.host === "extension") {
-      const installClient = controls.querySelector("[data-mcp-install-client]");
-      if (installClient) installClient.disabled = true;
-      void api.send("bridge.mcp.capabilities").then(capabilities => {
-        if (!Number.isInteger(capabilities.protocol) || capabilities.protocol < 2 ||
-            !Array.isArray(capabilities.actions) ||
-            !["install-client", "setup", "service"].every(action => capabilities.actions.includes(action))) {
-          throw new Error("unsupported tool action: old extension worker");
-        }
-        if (installClient) installClient.disabled = false;
-      }).catch(() => {
-        if (installClient) installClient.disabled = true;
-        button.disabled = true;
-        showMcpWorkerReload(form, message);
-      });
-    }
-    if (savedTunnelID || pendingMcpTunnelID) {
-      const nextSteps = document.createElement("div");
-      nextSteps.className = "mcp-next-steps";
-      const copy = document.createElement("button");
-      copy.type = "button";
-      copy.className = "secondary";
-      copy.textContent = "复制 Tunnel ID";
-      copy.addEventListener("click", async () => {
-        const id = tunnelInput.value.trim();
-        if (!/^tunnel_(?:[a-z0-9]{32}|[a-z0-9]{4}_[a-z0-9]{32})$/.test(id)) {
-          message.textContent = "请先填写正确的 Tunnel ID。";
-          return;
-        }
-        try {
-          await navigator.clipboard.writeText(id);
-          message.textContent = "Tunnel ID 已复制。";
-        } catch {
-          message.textContent = "无法访问剪贴板，请手动复制上面的 Tunnel ID。";
-        }
-      });
-      const chatGPT = document.createElement("a");
-      chatGPT.className = "secondary mcp-doc-link";
-      chatGPT.href = "https://chatgpt.com/#settings/Connectors";
-      chatGPT.target = "_blank";
-      chatGPT.rel = "noopener noreferrer";
-      chatGPT.textContent = "前往 ChatGPT 创建插件";
-      const help = document.createElement("p");
-      help.className = "settings-help";
-      help.textContent = "ChatGPT：Plugins → + → Add custom MCP server → Connection: Tunnel → 粘贴 Tunnel ID → 确认权限。无需上传 ZIP。";
-      nextSteps.append(copy, chatGPT, help);
-      form.appendChild(nextSteps);
-    }
-    if (savedTunnelID && !clientMissing) {
-      const serviceRow = document.createElement("div");
-      serviceRow.className = "tool-actions mcp-service-actions";
-      for (const serviceAction of ["start", "stop", "restart"]) {
-        const control = document.createElement("button");
-        control.type = "button";
-        control.className = "secondary";
-        control.textContent = { start: "启动服务", stop: "停止服务", restart: "重启服务" }[serviceAction];
-        control.addEventListener("click", async () => {
-          if (serviceAction !== "start" && !root.confirm(
-            "确认" + control.textContent + "？\n这将影响当前 ChatGPT 的远程工具调用，但不会删除已保存的 Tunnel 配置。"
-          )) return;
-          control.disabled = true;
-          try {
-            await api.send("bridge.tool.action", {
-              tool: "chatgpt-mcp", toolAction: "service", serviceAction
-            });
-            await refresh();
-            api.setMessage("environmentMessage", "已发送 Tunnel 服务命令，正在检查本机服务状态。", "ok");
-          } catch (error) {
-            message.textContent = error.message || String(error);
-            api.setMessage("environmentMessage", message.textContent, "error");
-            control.disabled = false;
-          }
-        });
-        serviceRow.appendChild(control);
+  function scheduleMcpPoll() {
+    clearTimeout(mcpUI.timer);
+    mcpUI.timer = null;
+    if (mcpIsVisible()) mcpUI.timer = setTimeout(mcpPoll, 4000);
+  }
+
+  function mcpStatus(tool) {
+    const values = tool?.config?.values || {};
+    const status = tool?.health || {};
+    return {
+      tunnelID: values.tunnelId || "",
+      configured: Boolean(values.configured),
+      clientInstalled: Boolean(values.clientInstalled),
+      ready: Boolean(values.ready || status.ok),
+      revision: values.revision || "", runtimeKeySaved: Boolean(values.runtimeKeySaved), setupState: values.setupState || "",
+      restartRequired: Boolean(values.restartRequired), running: Boolean(values.running)
+    };
+  }
+
+  function mcpSetupIsComplete(status, tunnelID, previousRevision) {
+    return status.ready && status.tunnelID === tunnelID &&
+      Boolean(status.revision) && status.revision !== previousRevision;
+  }
+
+  async function mcpPoll() {
+    if (!mcpIsVisible() || mcpUI.polling) return;
+    mcpUI.polling = true;
+    try {
+      const response = await api.send("bridge.tools");
+      const next = Array.isArray(response.tools) ? response.tools : [];
+      const previous = tools.find(item => item.name === "chatgpt-mcp");
+      const current = next.find(item => item.name === "chatgpt-mcp");
+      const status = mcpStatus(current);
+      // Avoid replacing the Tunnel ID input every four seconds while typing.
+      let changed = JSON.stringify([mcpStatus(previous), previous?.health?.status]) !==
+        JSON.stringify([status, current?.health?.status]);
+      if (mcpUI.busy === "waiting" &&
+          (!mcpUI.pendingID || status.tunnelID === mcpUI.pendingID) &&
+          (!mcpUI.pendingSetup || (status.configured && status.revision && status.revision !== mcpUI.pendingRevision))) {
+        mcpUI.busy = "";
+        mcpUI.error = "";
+        mcpUI.pendingID = "";
+        mcpUI.draftID = "";
+        mcpUI.idEdited = false;
+        mcpUI.info = "配置已保存，可启动服务。";
+        changed = true;
+      } else if (mcpUI.busy === "waiting" && mcpUI.pendingSetup && status.setupState === "failed") {
+        mcpUI.busy = "";
+        mcpUI.pendingID = "";
+        mcpUI.error = "连接验证失败，原配置已保留。请检查 Tunnel ID、Key 和 Tunnels Read + Use 权限后重试。";
+        mcpUI.editing = status.configured;
+        changed = true;
+      } else if (mcpUI.busy === "waiting" && Date.now() > mcpUI.deadline) {
+        mcpUI.busy = "";
+        mcpUI.error = mcpUI.pendingID && status.tunnelID !== mcpUI.pendingID
+          ? "新 Tunnel 未能就绪，当前仍保留原连接。请检查 Tunnel ID 和 Key 后重试。"
+          : "连接尚未就绪。请检查 Tunnel ID 和 Key 后重试。";
+        mcpUI.pendingID = "";
+        changed = true;
       }
-      form.appendChild(serviceRow);
+      if (changed) renderTools(next);
+      else scheduleMcpPoll();
+    } catch (error) {
+      mcpUI.error = "无法读取 MCP 连接状态：" + (error.message || String(error));
+      renderTools(tools);
+      // Keep the next retry automatic even when the Bridge temporarily fails.
+      scheduleMcpPoll();
+    } finally {
+      mcpUI.polling = false;
     }
-    form.addEventListener("submit", async event => {
-      event.preventDefault();
-      const tunnelId = tunnelInput.value.trim();
-      if (!/^tunnel_(?:[a-z0-9]{32}|[a-z0-9]{4}_[a-z0-9]{32})$/.test(tunnelId)) {
-        message.textContent = "Tunnel ID 格式不正确，请检查后再试。";
+  }
+
+  async function mcpAction(action, tool, body) {
+    if (mcpUI.busy) return;
+    const state = mcpStatus(tool);
+    mcpUI.error = "";
+    mcpUI.info = "";
+    if (action === "save") {
+      const tunnelId = mcpEffectiveTunnelID(body, state.tunnelID, mcpUI.draftID, mcpUI.idEdited);
+      const runtimeApiKey = mcpUI.draftKey.trim();
+      const reuseKey = !runtimeApiKey && state.runtimeKeySaved;
+      if (mcpIsExampleID(tunnelId)) {
+        mcpUI.error = "当前保存的是测试用 Tunnel ID，请填写真实 Tunnel ID 后再保存。";
+        renderTools(tools);
         return;
       }
-      const accepted = root.confirm(
-        "确认配置此 Tunnel？\n\n" +
-        "VidOtter 将打开本地配置终端并尝试安装用户级自启动服务。" +
-        "Runtime API Key 只在终端中输入，不会保存到浏览器扩展。"
-      );
-      if (!accepted) return;
-      button.disabled = true;
-      message.textContent = "正在打开本地配置终端…";
+      if (state.configured && state.runtimeKeySaved &&
+          tunnelId === state.tunnelID && !runtimeApiKey) {
+        // No backend write or service change is needed for identical values.
+        mcpUI.draftID = "";
+        mcpUI.idEdited = false;
+        mcpUI.info = "配置已经保存，无需重复保存。";
+        renderTools(tools);
+        return;
+      }
+      if (!mcpIDPattern.test(tunnelId)) {
+        mcpUI.error = "请输入有效的 Tunnel ID。";
+        renderTools(tools);
+        return;
+      }
+      if (!reuseKey && (runtimeApiKey.length < 16 || runtimeApiKey.length > 512 ||
+          /[\r\n\x00]/.test(runtimeApiKey))) {
+        mcpUI.error = "请输入 Runtime API Key，或保留已保存的密钥。";
+        renderTools(tools);
+        return;
+      }
+      mcpUI.busy = "saving";
+      renderTools(tools);
       try {
-        await api.send("bridge.tool.action", { tool: "chatgpt-mcp", toolAction: "setup", tunnelId });
-        message.textContent = "已启动本机配置终端。请完成 Runtime API Key 授权；配置完成后刷新检查状态。";
-        api.setMessage("environmentMessage", message.textContent, "ok");
+        const capability = await api.send("bridge.mcp.capabilities");
+        if (capability.protocol < 5 || !["save-only", "reuse-saved-key", "inline-credentials"]
+          .every(id => capability.actions?.includes(id))) {
+          throw new Error("unsupported tool action: old extension worker");
+        }
+        if (!state.clientInstalled) {
+          if (root.confirm && !root.confirm("安装 OpenAI 官方 Tunnel Client？将校验发布包；不会启动远程服务。")) {
+            mcpUI.busy = "";
+            renderTools(tools);
+            return;
+          }
+          await api.send("bridge.tool.action", {
+            tool: "chatgpt-mcp", toolAction: "install-client"
+          });
+        }
+        await api.send("bridge.tool.action", {
+          tool: "chatgpt-mcp", toolAction: "setup",
+          tunnelId, runtimeApiKey, reuseKey, saveOnly: true,
+          replace: state.configured, previousTunnelId: state.configured ? state.tunnelID : ""
+        });
+        mcpUI.draftKey = "";
+        mcpUI.busy = "waiting";
+        mcpUI.pendingSetup = true;
+        mcpUI.pendingID = tunnelId;
+        mcpUI.pendingRevision = state.revision;
+        mcpUI.deadline = Date.now() + 120000;
+        await refresh();
       } catch (error) {
-        message.textContent = error.message || String(error);
-        api.setMessage("environmentMessage", message.textContent, "error");
-      } finally {
-        button.disabled = false;
+        mcpUI.busy = "";
+        mcpUI.error = error.message || String(error);
+        if (isOutdatedMcpWorkerError(error)) mcpUI.workerOutdated = true;
+        renderTools(tools);
+      }
+      return;
+    }
+    if (action === "start" || action === "stop" || action === "restart") {
+      const controls = mcpControlState(state, {
+        ...mcpUI, ...mcpVisibleFieldChanges(body, state, mcpUI)
+      });
+      const permitted = action === "start" ? controls.canStart :
+        action === "stop" ? controls.canStop : controls.canRestart;
+      if (!permitted) return;
+      mcpUI.busy = action === "start" ? "starting" :
+        action === "stop" ? "stopping" : "restarting";
+      renderTools(tools);
+      try {
+        await api.send("bridge.tool.action", {
+          tool: "chatgpt-mcp", toolAction: "service", serviceAction: action
+        });
+        mcpUI.busy = "";
+        await refresh();
+      } catch (error) {
+        mcpUI.busy = "";
+        mcpUI.error = error.message || String(error);
+        renderTools(tools);
+      }
+    }
+  }
+
+  function mcpButton(parent, label, action, primary = false) {
+    const control = document.createElement("button");
+    control.type = "button";
+    control.className = primary ? "primary" : "secondary";
+    control.textContent = label;
+    control.disabled = Boolean(mcpUI.busy);
+    control.addEventListener("click", action);
+    parent.appendChild(control);
+    return control;
+  }
+
+  function mcpFieldHeading(label, url, helpLabel) {
+    const heading = document.createElement("span");
+    heading.className = "mcp-field-heading";
+    heading.appendChild(document.createTextNode(label));
+    const help = document.createElement("a");
+    help.className = "mcp-field-help";
+    help.href = url;
+    help.target = "_blank";
+    help.rel = "noopener noreferrer";
+    help.textContent = "?";
+    help.title = helpLabel;
+    help.setAttribute("aria-label", helpLabel);
+    heading.appendChild(help);
+    return heading;
+  }
+
+  function mcpStepHeading(number, label, explanation) {
+    const heading = document.createElement("div");
+    heading.className = "mcp-section-heading";
+    const badge = document.createElement("span");
+    badge.className = "mcp-step-badge";
+    badge.textContent = number;
+    badge.setAttribute("aria-hidden", "true");
+    const details = document.createElement("div");
+    const title = document.createElement("h3");
+    title.textContent = label;
+    const intro = document.createElement("p");
+    intro.className = "settings-help mcp-workflow-intro";
+    intro.textContent = explanation;
+    details.append(title, intro);
+    heading.append(badge, details);
+    return heading;
+  }
+
+  function mcpKeyField(busy, keySaved = false, onEdit = () => {}) {
+    const label = document.createElement("label");
+    label.className = "mcp-id-field";
+    label.appendChild(mcpFieldHeading(
+      "Runtime API Key",
+      "https://platform.openai.com/settings/organization/api-keys",
+      "创建 Runtime API Key"
+    ));
+    const input = document.createElement("input");
+    input.name = "runtimeApiKey";
+    input.type = "password";
+    // This is a runtime API key, not a website login password. Discourage
+    // browser password managers from injecting an unrelated saved password.
+    mcpDiscourageAutofill(input, () => mcpUI.draftKey);
+    input.spellcheck = false;
+    input.maxLength = 512;
+    // The real saved key never leaves the Bridge. Show a masked visual
+    // indicator only; the input value remains empty and Save reuses the key.
+    input.placeholder = mcpSavedKeyMask(keySaved, mcpUI.draftKey);
+    input.value = mcpUI.draftKey;
+    input.disabled = busy;
+    input.addEventListener("input", () => {
+      // Browser autofill can dispatch an input event for an unrelated saved
+      // website password. Do not treat an unfocused autofill as key rotation.
+      if (document.activeElement !== input) {
+        input.value = mcpUI.draftKey;
+        return;
+      }
+      if (input.matches?.(":-webkit-autofill")) {
+        input.value = mcpUI.draftKey;
+        return;
+      }
+      mcpUI.draftKey = input.value;
+      mcpUI.error = "";
+      input.closest(".mcp-connection-card")?.querySelector(".mcp-error")?.remove();
+      // Any manual edit invalidates the session's previous Save confirmation.
+      onEdit();
+    });
+    const wrap = document.createElement("div");
+    wrap.className = "mcp-key-input";
+    const reveal = document.createElement("button");
+    reveal.type = "button";
+    reveal.className = "mcp-key-reveal";
+    reveal.disabled = busy || !input.value;
+    reveal.setAttribute("aria-label", "显示新输入的 Runtime API Key");
+    reveal.setAttribute("aria-pressed", "false");
+    reveal.title = "只显示本次新输入的密钥；已保存密钥不会返回页面";
+    const eye = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    eye.setAttribute("viewBox", "0 0 24 24");
+    eye.setAttribute("width", "19");
+    eye.setAttribute("height", "19");
+    eye.setAttribute("fill", "none");
+    eye.setAttribute("stroke", "currentColor");
+    eye.setAttribute("stroke-width", "1.6");
+    eye.setAttribute("aria-hidden", "true");
+    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    path.setAttribute("d", "M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z");
+    const pupil = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+    pupil.setAttribute("cx", "12");
+    pupil.setAttribute("cy", "12");
+    pupil.setAttribute("r", "3");
+    eye.append(path, pupil);
+    reveal.appendChild(eye);
+    reveal.addEventListener("click", () => {
+      if (!input.value || busy) return;
+      input.type = input.type === "password" ? "text" : "password";
+      reveal.setAttribute("aria-pressed", String(input.type === "text"));
+      reveal.setAttribute("aria-label", input.type === "text"
+        ? "隐藏新输入的 Runtime API Key" : "显示新输入的 Runtime API Key");
+    });
+    input.addEventListener("input", () => {
+      reveal.disabled = busy || !mcpUI.draftKey;
+      if (!mcpUI.draftKey) {
+        input.type = "password";
+        reveal.setAttribute("aria-pressed", "false");
+        reveal.setAttribute("aria-label", "显示新输入的 Runtime API Key");
       }
     });
-    body.appendChild(form);
+    wrap.append(input, reveal);
+    label.appendChild(wrap);
+    return label;
+  }
+
+  function renderChatGPTMCP(body, tool) {
+    const state = mcpStatus(tool);
+    const busy = Boolean(mcpUI.busy);
+    const shell = document.createElement("div");
+    shell.className = "mcp-guide mcp-workflow";
+    const localPanel = document.createElement("section");
+    localPanel.className = "mcp-connection-card mcp-workflow-panel mcp-local-service";
+    localPanel.appendChild(mcpStepHeading(
+      "01", "本地 Tunnel 服务",
+      "配置保存在本机。Save 只保存配置；修改配置后可用 Restart Service 应用。"
+    ));
+    let updateControls = () => {};
+    const idLabel = document.createElement("label");
+    idLabel.className = "mcp-id-field";
+    idLabel.appendChild(mcpFieldHeading(
+      "Tunnel ID",
+      "https://platform.openai.com/settings/organization/tunnels",
+      "创建或管理 Tunnel ID"
+    ));
+    const idInput = document.createElement("input");
+    idInput.name = "tunnelId";
+    idInput.type = "text";
+    mcpDiscourageAutofill(idInput, () => mcpDisplayedTunnelID(state, mcpUI));
+    idInput.spellcheck = false;
+    idInput.maxLength = 80;
+    idInput.placeholder = "";
+    // Tunnel IDs are not secrets. Display the persisted value after Save or
+    // reopening the page; preserve draft text only while actively editing.
+    idInput.value = mcpDisplayedTunnelID(state, mcpUI);
+    idInput.disabled = busy;
+    idInput.addEventListener("input", () => {
+      if (document.activeElement !== idInput) {
+        // A password manager generated an unsolicited input event.
+        idInput.value = mcpUI.draftID;
+        return;
+      }
+      if (idInput.matches?.(":-webkit-autofill")) {
+        idInput.value = mcpUI.draftID;
+        return;
+      }
+      mcpUI.draftID = idInput.value;
+      mcpUI.idEdited = true;
+      mcpUI.error = "";
+      idInput.closest(".mcp-connection-card")?.querySelector(".mcp-error")?.remove();
+      // Even if the user clears this field again, require Save to reconfirm.
+      updateControls();
+    });
+    idLabel.appendChild(idInput);
+    localPanel.appendChild(idLabel);
+    const idState = document.createElement("small");
+    idState.className = "settings-help mcp-credential-state";
+    idState.textContent = mcpIsExampleID(state.tunnelID)
+      ? "检测到测试示例配置：请填写真实 Tunnel ID"
+      : state.configured ? "已保存" : "尚未保存";
+    localPanel.appendChild(idState);
+    const key = mcpKeyField(busy, state.runtimeKeySaved, () => updateControls());
+    localPanel.appendChild(key);
+    const keyState = document.createElement("small");
+    keyState.className = "settings-help mcp-credential-state";
+    keyState.textContent = state.runtimeKeySaved ? "已保存；留空则复用" : "尚未保存";
+    localPanel.appendChild(keyState);
+    const actions = document.createElement("div");
+    actions.className = "mcp-service-actions";
+    mcpButton(actions, "Save", () => mcpAction("save", tool, shell), true);
+    const running = Boolean(state.running || state.ready);
+    const service = mcpButton(actions,
+      running ? "Stop Service" : "Start Service",
+      () => mcpAction(running ? "stop" : "start", tool, shell), true);
+    const restart = mcpButton(actions, "Restart Service",
+      () => mcpAction("restart", tool, shell), true);
+    localPanel.appendChild(actions);
+    let autoStartCheckbox = null;
+    updateControls = () => {
+      const visible = mcpVisibleFieldChanges(shell, state, mcpUI);
+      const controls = mcpControlState(state, { ...mcpUI, ...visible });
+      service.disabled = !(running ? controls.canStop : controls.canStart);
+      restart.disabled = !controls.canRestart;
+      restart.title = controls.canRestart ? "重新启动 Tunnel 并应用保存的配置" :
+        "服务启动并保存配置后可重启";
+      service.title = running ? "停止 MCP Tunnel" :
+        controls.canStart ? "启动已保存的 MCP 配置" : "请先保存 Tunnel ID 和 Runtime API Key";
+      if (autoStartCheckbox) autoStartCheckbox.disabled = backgroundBusy || !controls.canAutoStart;
+      idState.textContent = visible.draftID &&
+        visible.draftID !== state.tunnelID ? "新 Tunnel ID 尚未保存" :
+        mcpIsExampleID(state.tunnelID) ? "检测到测试示例配置：请填写真实 Tunnel ID" :
+        state.configured ? "已保存" : "尚未保存";
+      keyState.textContent = mcpUI.draftKey ? "新 Runtime API Key 尚未保存" :
+        state.runtimeKeySaved ? "已保存；留空则复用" : "尚未保存";
+      const notice = shell.querySelector(".mcp-info");
+      if (notice && controls.hasChanges) notice.remove();
+    };
+    if (background) {
+      const toggleLabel = document.createElement("label");
+      toggleLabel.className = "settings-help";
+      const checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      checkbox.checked = Boolean(background.tunnelEnabled);
+      autoStartCheckbox = checkbox;
+      checkbox.addEventListener("change", async () => {
+        backgroundBusy = true;
+        try {
+          background = await api.send("bridge.tool.action", {
+            tool: "background", toolAction: checkbox.checked ? "enable" : "disable", target: "tunnel"
+          });
+          await refresh();
+        } catch (error) {
+          mcpUI.error = error.message || String(error);
+        } finally {
+          backgroundBusy = false;
+          renderTools(tools);
+        }
+      });
+      toggleLabel.append(checkbox, document.createTextNode(" 登录后自动启动 MCP Tunnel"));
+      localPanel.appendChild(toggleLabel);
+    }
+    updateControls();
+    // Browser password managers and some automation tools can update .value
+    // without dispatching an input event. Keep hints and service controls
+    // consistent with the displayed fields. Stop once this form is replaced.
+    let lastIDValue = idInput.value;
+    let lastKeyValue = key.querySelector("input").value;
+    const reconcile = setInterval(() => {
+      if (!shell.isConnected) {
+        clearInterval(reconcile);
+        return;
+      }
+      const currentID = idInput.value;
+      const currentKey = key.querySelector("input").value;
+      if (currentID === lastIDValue && currentKey === lastKeyValue) return;
+      lastIDValue = currentID;
+      lastKeyValue = currentKey;
+      mcpUI.error = "";
+      shell.querySelector(".mcp-error")?.remove();
+      updateControls();
+    }, 350);
+    if (state.restartRequired && running) {
+      const pending = document.createElement("p");
+      pending.className = "settings-help";
+      pending.textContent = "配置已保存，当前服务仍使用旧配置，请点击 Restart Service 应用。";
+      localPanel.appendChild(pending);
+    }
+    const pluginPanel = document.createElement("section");
+    pluginPanel.className = "mcp-workflow-panel mcp-chatgpt-plugin";
+    const pluginNotice = state.running && state.restartRequired
+      ? "配置已经保存，请先点击 Restart Service 应用，再去 ChatGPT 验证插件。"
+      : state.ready
+        ? "本地 Tunnel 已就绪。请在 ChatGPT 中创建或管理插件，授权结果以 ChatGPT 页面为准。"
+        : "请先启动本地 Tunnel 并等待就绪，再到 ChatGPT 中创建或管理插件。";
+    pluginPanel.appendChild(mcpStepHeading(
+      "02", "ChatGPT 插件", pluginNotice
+    ));
+    const link = document.createElement("a");
+    link.className = "mcp-chatgpt-link";
+    link.href = chatGPTSettingsURL;
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    link.textContent = "打开 ChatGPT 插件设置";
+    pluginPanel.appendChild(link);
+    if (mcpUI.info) {
+      const message = document.createElement("p");
+      message.className = "settings-help mcp-info";
+      message.setAttribute("role", "status");
+      message.textContent = mcpUI.info;
+      localPanel.appendChild(message);
+    }
+    if (mcpUI.error) {
+      const message = document.createElement("p");
+      message.className = "mcp-error";
+      message.setAttribute("role", "alert");
+      message.textContent = mcpUI.error;
+      localPanel.appendChild(message);
+    }
+    if (mcpUI.workerOutdated) {
+      const reloadHint = document.createElement("p");
+      reloadHint.className = "mcp-reload-needed";
+      localPanel.appendChild(reloadHint);
+      showMcpWorkerReload(localPanel, reloadHint);
+    }
+    shell.append(localPanel, pluginPanel);
+    body.appendChild(shell);
+    scheduleMcpPoll();
   }
 
   function renderDetail(list, tool, editing) {
@@ -647,12 +1057,24 @@
     card.dataset.toolName = tool.name || "";
     const header = document.createElement("div");
     header.className = "settings-tool-header";
+    const isMCP = tool.name === "chatgpt-mcp";
+    if (isMCP) {
+      header.classList.add("mcp-overview-header");
+      const heading = document.createElement("strong");
+      heading.className = "mcp-header-name";
+      heading.textContent = "连接状态";
+      header.appendChild(heading);
+    }
     const status = document.createElement("div");
-    status.className = "settings-tool-status";
+    status.className = "settings-tool-status" + (isMCP ? " mcp-header-status" : "");
+    const displayed = isMCP ? mcpHeaderStatus(mcpStatus(tool), mcpUI.busy) : null;
     const dot = document.createElement("span");
-    dot.className = "dot " + cardState(health);
+    dot.className = "dot " + (displayed
+      ? displayed.kind === "ready" ? "ok" : displayed.kind === "error" ? "error" : ""
+      : cardState(health));
     const summary = document.createElement("span");
-    summary.textContent = health.summary || health.status || "等待检测";
+    summary.textContent = displayed ? displayed.label :
+      health.summary || health.status || "未知";
     status.append(dot, summary);
     if (health.version) {
       const version = document.createElement("small");
@@ -671,21 +1093,24 @@
       renderConfigEditor(body, tool);
       renderEditControls(body, tool, card, true);
     } else {
-      if (tool.description) {
+      if (tool.name !== "chatgpt-mcp" && tool.description) {
         const description = document.createElement("p");
         description.className = "settings-help";
         description.textContent = tool.description;
         body.appendChild(description);
       }
-      const detail = [health.detail, health.path].filter(Boolean).join(" · ");
-      if (detail) {
+      const detail = tool.name === "chatgpt-mcp" &&
+        mcpIsExampleID(mcpStatus(tool).tunnelID)
+        ? "当前保存的是测试示例 ID；请填写真实 Tunnel ID 和对应的 Runtime API Key。"
+        : [health.detail, health.path].filter(Boolean).join(" · ");
+      if (tool.name !== "chatgpt-mcp" && detail) {
         const line = document.createElement("p");
         line.className = "tool-detail";
         line.textContent = detail;
         body.appendChild(line);
       }
       if (tool.name === "chatgpt-mcp") {
-        renderChatGPTMCP(body, tool, health);
+        renderChatGPTMCP(body, tool);
       } else {
         renderConfigView(body, tool);
         renderModelManager(body, tool);
@@ -731,7 +1156,7 @@
         icon: "appearance", action: () => enter("category", "appearance")
       }));
       addSection(list, "系统与组件");
-      for (const kind of ["runtime", "capability", "integration", "dependency", "other"]) {
+      for (const kind of ["runtime", "capability", "dependency", "other"]) {
         const count = tools.filter(tool => normalizedKind(tool) === kind).length;
         if (!count) continue;
         list.appendChild(settingsRow({
@@ -795,6 +1220,8 @@
     api.setMessage("environmentMessage", "");
     try {
       const result = await api.send("bridge.tools");
+      try { background = await api.send("bridge.tool.action", {tool: "background", toolAction: "status", target: "bridge"}); }
+      catch (_) { background = null; }
       renderTools(result.tools);
       const requiredTools = tools.filter(tool => tool.required);
       const requiredReady = requiredTools.length > 0 && requiredTools.every(tool => tool.health && tool.health.ok);
@@ -816,6 +1243,6 @@
   root.VidOtterEnvironment = { init, activate: refresh, renderTools };
 
   if (typeof module !== "undefined" && module.exports) {
-    module.exports = { cardState, normalizedKind, visibleConfigFields, editorValue, toggleMetadata, formatModelSize, modelOptionLabel, modelActionLabel, isOutdatedMcpWorkerError };
+    module.exports = { mcpSetupIsComplete, mcpDisplayedTunnelID, mcpSavedKeyMask, mcpEffectiveTunnelID, mcpVisibleFieldChanges, mcpControlState, mcpHeaderStatus, mcpIsExampleID, cardState, normalizedKind, visibleConfigFields, editorValue, toggleMetadata, formatModelSize, modelOptionLabel, modelActionLabel, isOutdatedMcpWorkerError, mcpStatus };
   }
 })(globalThis);
