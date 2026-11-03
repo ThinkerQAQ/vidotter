@@ -257,13 +257,12 @@ func TestPrepareInstallerFirstRunOnboarding(t *testing.T) {
 	}
 }
 
-func TestDeployResourcesIncludesMCPScriptsWithoutDeletingAssetsOrData(t *testing.T) {
+func TestDeployResourcesPreservesAssetsAndData(t *testing.T) {
 	root := t.TempDir()
 	dest := t.TempDir()
 	for path, text := range map[string]string{
-		"extension/popup/environment.js":  "new UI",
-		"scripts/Setup-VidOtter-MCP.ps1":  "new Tunnel setup",
-		"scripts/Manage-VidOtter-MCP.ps1": "new Tunnel management",
+		"extension/popup/environment.js": "new UI",
+		"scripts/smoke-mcp-stdio.py":     "MCP smoke test",
 	} {
 		file := filepath.Join(root, filepath.FromSlash(path))
 		if err := os.MkdirAll(filepath.Dir(file), 0o755); err != nil {
@@ -290,12 +289,12 @@ func TestDeployResourcesIncludesMCPScriptsWithoutDeletingAssetsOrData(t *testing
 		t.Fatal(err)
 	}
 	for path, expected := range map[string]string{
-		"extension/popup/environment.js":  "new UI",
-		"scripts/Setup-VidOtter-MCP.ps1":  "new Tunnel setup",
-		"scripts/Manage-VidOtter-MCP.ps1": "new Tunnel management",
-		"Data/config.toml":                "private configuration",
-		"Data/jobs.json":                  "private jobs",
-		"assets/legacy-icon.svg":          "preserved installed asset",
+		"extension/popup/environment.js": "new UI",
+		"scripts/smoke-mcp-stdio.py":     "MCP smoke test",
+
+		"Data/config.toml":       "private configuration",
+		"Data/jobs.json":         "private jobs",
+		"assets/legacy-icon.svg": "preserved installed asset",
 	} {
 		got, err := os.ReadFile(filepath.Join(dest, filepath.FromSlash(path)))
 		if err != nil || string(got) != expected {

@@ -17,9 +17,9 @@ import (
 
 func TestBrowserAssetAndNoMobileDependency(t *testing.T) {
 	for _, test := range []struct{ os, asset string }{
-		{"windows", "remote-browser-mcp-v0.3.0-windows.zip"},
-		{"linux", "remote-browser-mcp-v0.3.0-linux.tar.gz"},
-		{"darwin", "remote-browser-mcp-v0.3.0-macos.tar.gz"},
+		{"windows", "remote-browser-mcp-v0.5.0-windows.zip"},
+		{"linux", "remote-browser-mcp-v0.5.0-linux.tar.gz"},
+		{"darwin", "remote-browser-mcp-v0.5.0-macos.tar.gz"},
 	} {
 		got, err := browserReleaseAsset(test.os)
 		if err != nil || got != test.asset {
@@ -54,7 +54,7 @@ func testBrowserArchive(t *testing.T, entries map[string]string) []byte {
 	return raw.Bytes()
 }
 func TestBrowserArchiveSafeExtraction(t *testing.T) {
-	base := "remote-browser-mcp-v0.3.0/"
+	base := "remote-browser-mcp-v0.5.0/"
 	good := testBrowserArchive(t, map[string]string{
 		base + "package.json":      "{}",
 		base + "LICENSE":           "Apache 2.0",
@@ -68,9 +68,9 @@ func TestBrowserArchiveSafeExtraction(t *testing.T) {
 		t.Fatalf("incorrect output: %q %v", body, err)
 	}
 	for _, bad := range []string{
-		"remote-browser-mcp-v0.3.0/../../outside",
-		"../remote-browser-mcp-v0.3.0/package.json",
-		"/remote-browser-mcp-v0.3.0/package.json",
+		"remote-browser-mcp-v0.5.0/../../outside",
+		"../remote-browser-mcp-v0.5.0/package.json",
+		"/remote-browser-mcp-v0.5.0/package.json",
 	} {
 		b := testBrowserArchive(t, map[string]string{bad: "danger"})
 		if err := extractBrowserArchive(b, "sample.tar.gz", t.TempDir()); err == nil {
@@ -79,7 +79,7 @@ func TestBrowserArchiveSafeExtraction(t *testing.T) {
 	}
 }
 func TestBrowserReleaseChecksum(t *testing.T) {
-	const asset = "remote-browser-mcp-v0.3.0-linux.tar.gz"
+	const asset = "remote-browser-mcp-v0.5.0-linux.tar.gz"
 	contents := []byte("verified archive")
 	sum := sha256.Sum256(contents)
 	valid := true

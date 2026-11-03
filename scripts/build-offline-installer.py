@@ -55,7 +55,7 @@ def secure_extract(archive, outdir, expected_root):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--tag", default="v1.6.3")
+    parser.add_argument("--tag", default="v1.7.0")
     parser.add_argument("--tools-root", type=Path, required=True)
     parser.add_argument("--working-dir", type=Path, required=True)
     parser.add_argument("--output-dir", type=Path, required=True)
@@ -67,7 +67,7 @@ def main():
 
     go_os, name, qt_host, arch = platform_info()
     if not a.tag.startswith("v") or not all(s.isdigit() for s in a.tag[1:].split(".")):
-        raise ValueError("Expected a release tag such as v1.6.3")
+        raise ValueError("Expected a release tag such as v1.7.0")
     base = f"vidotter-{a.tag}-{name}-{arch}"
     filename = base + (".zip" if go_os == "windows" else ".tar.gz")
     release_dir = a.working_dir.resolve() / "release"
@@ -128,10 +128,6 @@ def main():
         # assets instead of failing a preview build or losing installer icons.
         if Path("assets").is_dir():
             shutil.copytree("assets", stage / "assets", dirs_exist_ok=True)
-        for helper in ("Setup-VidOtter-MCP.ps1", "setup-mcp.sh",
-                       "Manage-VidOtter-MCP.ps1", "manage-mcp.sh",
-                       "Manage-VidOtter-Background.ps1", "Run-VidOtter-Bridge.ps1", "manage-background.sh"):
-            shutil.copy2(Path("scripts") / helper, stage / "scripts" / helper)
         print(f"PR preview: current source overlaid on verified {a.tag} dependency bundle")
 
     tools_root = a.tools_root.resolve()

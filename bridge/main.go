@@ -143,6 +143,14 @@ func logURLSummary(raw string) string {
 
 // Main runs the desktop command-line application.
 func Main() {
+	if len(os.Args) > 1 && (strings.HasPrefix(os.Args[1], "--mcp-") && os.Args[1] != "--mcp-stdio") {
+		if err := runMCPCommand(os.Args[1:]); err != nil {
+			fmt.Fprintln(os.Stderr, "VidOtter MCP:", err)
+			os.Exit(1)
+		}
+		return
+	}
+
 	if len(os.Args) >= 2 && os.Args[1] == "--bridge-service" {
 		// The OS owns one supervisor. In-app restart never spawns another supervisor.
 		for {

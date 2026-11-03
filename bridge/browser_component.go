@@ -22,7 +22,7 @@ import (
 	"time"
 )
 
-const remoteBrowserVersion = "v0.3.0"
+const remoteBrowserVersion = "v0.5.0"
 const remoteBrowserReleaseURL = "https://github.com/ThinkerQAQ/remote-browser-mcp/releases/download/" + remoteBrowserVersion
 const browserArchiveLimit = 24 << 20
 const browserExtractLimit = 32 << 20

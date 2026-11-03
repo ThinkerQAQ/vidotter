@@ -36,7 +36,7 @@ function request(action) {
 (async () => {
   const capabilities = await request({ action: "bridge.mcp.capabilities" });
   assert.equal(capabilities.ok, true);
-  assert.equal(capabilities.protocol, 5);
+  assert.equal(capabilities.protocol, 6);
   assert.ok(capabilities.actions.includes("replace-tunnel"));
   assert.ok(capabilities.actions.includes("install-client"));
   assert.ok(capabilities.actions.includes("inline-credentials"));
@@ -93,5 +93,10 @@ function request(action) {
   assert.equal(configPayload.saveOnly, true);
   assert.equal(configPayload.reuseKey, true);
   assert.equal(configPayload.runtimeApiKey, "");
+  await request({action:"bridge.tool.action",tool:"chatgpt-mcp",toolAction:"service",serviceAction:"disconnect"});
+  assert.equal(JSON.parse(calls.at(-1).options.body).action,"disconnect");
+  await request({action:"bridge.tool.action",tool:"chatgpt-mcp",toolAction:"setup",autostartEnabled:true,tunnelAutoConnect:false});
+  const preferences=JSON.parse(calls.at(-1).options.body);
+  assert.equal(preferences.autostartEnabled,true);assert.equal(preferences.tunnelAutoConnect,false);
   console.log("MCP extension routing integration tests passed");
 })().catch(error => { console.error(error); process.exitCode = 1; });

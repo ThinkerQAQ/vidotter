@@ -578,28 +578,48 @@ html[data-surface="side-panel"] .log-follow { grid-column: 1; }
 .mcp-field-help:hover, .mcp-field-help:focus-visible { border-color: var(--accent); color: var(--accent); }
 .mcp-service-actions button.primary:disabled { background: #d9dfe7; color: #7d8796; opacity: 1; }
 
-/* Two-step MCP setup: local Tunnel lifecycle, then ChatGPT plugin. */
-.mcp-overview-header .mcp-header-name { font-size: 13px; font-weight: 650; color: #263750; }
+/* Connection layout follows Remote Browser MCP v0.5.0 client/ui/style.css. */
+.connection-detail-card { max-width: 852px; margin: 0 auto; border-color: #e0e5ed; border-radius: 16px; box-shadow: 0 8px 30px #25365204; }
+.connection-detail-card .settings-tool-header { min-height: 70px; padding: 18px 28px; border-color: #edf0f5; }
+html[data-surface] .connection-detail-card .settings-detail-body { padding: 0; }
+.mcp-overview-header .mcp-header-name { font-size: 14px; font-weight: 600; color: #202a3a; }
 .mcp-overview-header .mcp-header-status {
-  margin-left: auto; padding: 6px 10px; border: 1px solid #dbe3ed; border-radius: 999px;
-  background: #f8fafc; font-weight: 600; color: #35465b;
+  margin-left: auto; padding: 7px 11px; gap: 8px; border: 1px solid #e2e7ef; border-radius: 999px;
+  background: #f9fafc; font-size: 12px; font-weight: 500; color: #67748a; line-height: 1.4;
 }
-.mcp-workflow { display: grid; gap: 16px; max-width: 760px; margin: 3px auto 0; }
-.mcp-workflow-panel { padding: 22px; border: 1px solid #dae1eb; border-radius: 12px; background: #fbfcff; }
-.mcp-workflow-panel h3 { font-size: 16px; margin: 0 0 8px; color: #233a56; }
-.mcp-workflow-intro { margin: 0 0 15px; font-size: 12px; line-height: 1.7; }
-.mcp-chatgpt-plugin { background: #fff; }
-.mcp-chatgpt-plugin .mcp-workflow-intro { margin-bottom: 12px; }
-.mcp-chatgpt-link { display: inline-flex; padding: 9px 0; font-size: 13px; text-decoration: underline; }
-.mcp-workflow .mcp-service-actions { margin: 16px 0 4px; }
-.mcp-workflow .mcp-info, .mcp-workflow .mcp-error { margin-top: 12px; }
+.mcp-header-status[data-kind=ready] { color: #18704e; background: #f4fbf7; border-color: #d2eadc; }
+.mcp-header-status[data-kind=pending] { color: #906316; background: #fffbf2; border-color: #f0dfba; }
+.mcp-header-status[data-kind=error] { color: #b43e47; background: #fff6f6; border-color: #f2d4d6; }
+.mcp-workflow { display: grid; gap: 0; max-width: none; margin: 0; }
+.mcp-workflow-panel { min-width: 0; padding: 30px 36px; border: 0; border-radius: 0; background: #fff; }
+.mcp-workflow-panel h3 { font-size: 17px; font-weight: 650; margin: 0 0 8px; color: #202a3a; letter-spacing: -.015em; }
+.mcp-workflow-intro { margin: 0 0 15px; font-size: 13px; line-height: 1.6; color: #748197; }
+.mcp-chatgpt-plugin { border-top: 1px solid #edf0f5; background: #fcfdff; }
+.mcp-chatgpt-plugin .mcp-section-heading { margin-bottom: 16px; }
+.mcp-chatgpt-link { display: inline-flex; margin-left: 48px; padding: 0; font-size: 13px; font-weight: 550; color: #315d96; text-decoration: none; }
+.mcp-chatgpt-link:hover { text-decoration: underline; }
+.mcp-workflow .mcp-service-actions { margin: 24px 0 4px; gap: 9px; }
+.mcp-service-actions button.primary { padding: 9px 15px; border: 1px solid #27354c; background: #27354c; font-size: 13px; font-weight: 550; line-height: 1.5; }
+.mcp-service-actions button.primary:disabled { background: #e8ecf2; border-color: #e8ecf2; color: #9aa6b8; opacity: 1; cursor: not-allowed; }
+.mcp-workflow .mcp-info, .mcp-workflow .mcp-error { margin: 12px 0 0 48px; }
+.mcp-workflow .mcp-id-field { gap: 8px; margin-top: 20px; color: #202a3a; }
+.mcp-workflow .mcp-id-field input { height: 46px; border-color: #cfd8e5; padding: 10px 13px; font-size: 14px; color: #24334c; }
+.mcp-workflow input[name=tunnelId] { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 13px; }
+.mcp-workflow .mcp-key-input input { padding-right: 48px; }
+.mcp-workflow .mcp-credential-state { min-height: 18px; margin-top: 6px; font-size: 12px; color: #8390a4; }
+.browser-component-note { margin: 0 0 0 48px; font-size: 13px; color: #748197; }
+.browser-workflow .tool-actions { justify-content: flex-start; margin: 20px 0 0 48px; padding: 0; flex-wrap: wrap; }
 @media (max-width: 600px) {
-  .mcp-workflow-panel { padding: 16px; }
-  .mcp-overview-header .mcp-header-name { font-size: 12px; }
-  .mcp-overview-header .mcp-header-status { font-size: 11px; }
+  .connection-detail-card .settings-tool-header { padding: 16px 20px; align-items: flex-start; gap: 10px; }
+  .mcp-workflow-panel { padding: 24px 20px; }
+  .mcp-overview-header .mcp-header-name { font-size: 13px; }
+  .mcp-overview-header .mcp-header-status { max-width: 65%; font-size: 11px; }
+  .mcp-workflow .mcp-info, .mcp-workflow .mcp-error, .browser-component-note,
+  .browser-workflow .tool-actions { margin-left: 0; }
+  .mcp-service-actions button { flex-grow: 1; }
 }
 
-/* PR17 connection form: numbered section headings and safe new-key reveal. */
+/* Numbered section headings and safe new-key reveal. */
 .mcp-section-heading { display: flex; align-items: flex-start; gap: 13px; margin: 0 0 20px; }
 .mcp-section-heading > div { min-width: 0; flex: 1; }
 .mcp-step-badge {
@@ -614,7 +634,7 @@ html[data-surface="side-panel"] .log-follow { grid-column: 1; }
 .mcp-workflow .mcp-local-service > .mcp-credential-state,
 .mcp-workflow .mcp-local-service > .mcp-service-actions,
 .mcp-workflow .mcp-local-service > label.settings-help {
-  margin-left: 47px;
+  margin-left: 48px;
 }
 .mcp-key-input { position: relative; width: 100%; }
 .mcp-key-input input { padding-right: 50px; }
@@ -634,3 +654,12 @@ html[data-surface="side-panel"] .log-follow { grid-column: 1; }
   .mcp-workflow .mcp-local-service > label.settings-help { margin-left: 0; }
   .mcp-step-badge { flex-basis: 30px; width: 30px; height: 30px; }
 }
+
+/* Independent login startup and Tunnel connection preferences (upstream #18). */
+.mcp-preferences { display: grid; gap: 16px; margin: 20px 0 0 48px; }
+.mcp-preference { display: flex; align-items: flex-start; gap: 12px; cursor: pointer; }
+.mcp-preference input { width: 18px; height: 18px; min-width: 18px; margin: 3px 0; accent-color: #2563eb; }
+.mcp-preference strong { font-size: 13px; font-weight: 600; }
+.mcp-preference small { display: block; margin-top: 4px; color: #748197; font-size: 12px; font-weight: 400; line-height: 1.5; }
+.mcp-tunnel-action { margin: 12px 0 0 48px; padding: 9px 15px; font-size: 13px; }
+@media (max-width: 600px) { .mcp-preferences, .mcp-tunnel-action { margin-left: 0; } }
