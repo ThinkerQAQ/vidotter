@@ -69,6 +69,25 @@ assert.equal(prepared.credentialsSaved, true);
 assert.equal(prepared.canStart, true); // No redundant Save after reopening.
 assert.equal(prepared.canAutoStart, true);
 assert.equal(prepared.canStop, false);
+assert.equal(prepared.canRestart, false);
+assert.equal(environment.mcpControlState({...savedTunnel, running:true}, form).canRestart, true);
+assert.equal(environment.mcpControlState({...savedTunnel, running:true},
+  {...form, draftKey:"new-key"}).canRestart, false);
+assert.equal(environment.mcpControlState({...savedTunnel, running:true, runtimeKeySaved:false},
+  form).canRestart, false);
+assert.equal(environment.mcpControlState({...savedTunnel, running:true},
+  {...form, busy:"restarting"}).canRestart, false);
+
+assert.deepEqual(environment.mcpHeaderStatus({...savedTunnel, running:false}, ""),
+  {label:"Tunnel 已配置 · 未启动", kind:"pending"});
+assert.deepEqual(environment.mcpHeaderStatus({...savedTunnel, ready:true, running:true}, ""),
+  {label:"Tunnel 服务 Ready", kind:"ready"});
+assert.deepEqual(environment.mcpHeaderStatus({...savedTunnel, running:true}, ""),
+  {label:"Tunnel 运行中 · 尚未就绪", kind:"pending"});
+assert.deepEqual(environment.mcpHeaderStatus({...savedTunnel, ready:true, running:true, restartRequired:true}, ""),
+  {label:"Tunnel 已连接 · 配置待重启", kind:"ready"});
+assert.deepEqual(environment.mcpHeaderStatus(savedTunnel, "restarting"),
+  {label:"正在重启 Tunnel", kind:"pending"});
 const noConfig = {tunnelID:"", configured:false, runtimeKeySaved:false};
 assert.equal(environment.mcpControlState(noConfig, form).canStart, false);
 assert.equal(environment.mcpControlState({...savedTunnel, runtimeKeySaved:false}, form).canStart, false);
@@ -192,6 +211,17 @@ const mcpSection = environmentSource.split("function renderChatGPTMCP(body, tool
 assert.match(mcpSection, /"Save"/);
 assert.match(mcpSection, /"Start Service"/);
 assert.match(mcpSection, /"Stop Service"/);
+assert.match(mcpSection, /"Restart Service"/);
+assert.match(mcpSection, /mcpAction\("restart", tool, shell\)/);
+assert.match(environmentSource, /serviceAction: action/);
+assert.match(mcpSection, /shell\.append\(localPanel, pluginPanel\)/);
+assert.match(mcpSection, /mcp-local-service/);
+assert.match(mcpSection, /mcp-chatgpt-plugin/);
+assert.match(mcpSection, /1\. 本地 Tunnel 服务/);
+assert.match(mcpSection, /2\. ChatGPT 插件/);
+assert.doesNotMatch(mcpSection, /Local Tunnel:/);
+assert.match(environmentSource, /mcp-overview-header/);
+assert.match(environmentSource, /mcpHeaderStatus\(mcpStatus\(tool\), mcpUI\.busy\)/);
 assert.doesNotMatch(mcpSection, /"Refresh Status"|refreshButton|mcpAction\("refresh"/);
 assert.match(mcpSection, /mcpFieldHeading\(/);
 assert.match(mcpSection, /mcpButton\(actions, "Save", .*true\)/);

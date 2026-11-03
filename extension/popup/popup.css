@@ -577,3 +577,24 @@ html[data-surface="side-panel"] .log-follow { grid-column: 1; }
 }
 .mcp-field-help:hover, .mcp-field-help:focus-visible { border-color: var(--accent); color: var(--accent); }
 .mcp-service-actions button.primary:disabled { background: #d9dfe7; color: #7d8796; opacity: 1; }
+
+/* Two-step MCP setup: local Tunnel lifecycle, then ChatGPT plugin. */
+.mcp-overview-header .mcp-header-name { font-size: 13px; font-weight: 650; color: #263750; }
+.mcp-overview-header .mcp-header-status {
+  margin-left: auto; padding: 6px 10px; border: 1px solid #dbe3ed; border-radius: 999px;
+  background: #f8fafc; font-weight: 600; color: #35465b;
+}
+.mcp-workflow { display: grid; gap: 16px; max-width: 760px; margin: 3px auto 0; }
+.mcp-workflow-panel { padding: 22px; border: 1px solid #dae1eb; border-radius: 12px; background: #fbfcff; }
+.mcp-workflow-panel h3 { font-size: 16px; margin: 0 0 8px; color: #233a56; }
+.mcp-workflow-intro { margin: 0 0 15px; font-size: 12px; line-height: 1.7; }
+.mcp-chatgpt-plugin { background: #fff; }
+.mcp-chatgpt-plugin .mcp-workflow-intro { margin-bottom: 12px; }
+.mcp-chatgpt-link { display: inline-flex; padding: 9px 0; font-size: 13px; text-decoration: underline; }
+.mcp-workflow .mcp-service-actions { margin: 16px 0 4px; }
+.mcp-workflow .mcp-info, .mcp-workflow .mcp-error { margin-top: 12px; }
+@media (max-width: 600px) {
+  .mcp-workflow-panel { padding: 16px; }
+  .mcp-overview-header .mcp-header-name { font-size: 12px; }
+  .mcp-overview-header .mcp-header-status { font-size: 11px; }
+}
