@@ -433,7 +433,7 @@
 
   // Credentials are submitted together; the Key stays only in transient form state
   // until the local service saves it in private OS storage.
-  const mcpUI = { draftID: "", idEdited: false, draftKey: "", busy: "", error: "", info: "", deadline: 0, timer: null, polling: false, advanced: false, workerOutdated: false,
+  const mcpUI = { draftID: "", idEdited: false, draftKey: "", confirmed: false, confirmedID: "", confirmedRevision: "", busy: "", error: "", info: "", deadline: 0, timer: null, polling: false, advanced: false, workerOutdated: false,
     editing: false, pendingID: "", pendingSetup: false, pendingRevision: "" };
   const mcpIDPattern = /^tunnel_(?:[a-z0-9]{32}|[a-z0-9]{4}_[a-z0-9]{32})$/;
   // Both fields start blank. Only explicit user input may replace a saved ID:
@@ -443,6 +443,28 @@
     const entered = String(field ? field.value : (draftID || "")).trim();
     return edited && entered ? entered : String(savedID || "").trim();
   }
+  // Service controls require an explicit Save/confirmation in this view.
+  // Empty inputs mean "reuse stored credentials" but NOT "ready to start".
+  // A running Tunnel can always be stopped even with an unconfirmed form.
+  function mcpControlState(state, form = {}) {
+    const running = Boolean(state.running || state.ready);
+    const changedID = Boolean(form.idEdited && String(form.draftID || "").trim() &&
+      String(form.draftID).trim() !== state.tunnelID);
+    const hasChanges = changedID || Boolean(String(form.draftKey || "").trim());
+    const credentialsSaved = Boolean(state.configured && state.runtimeKeySaved &&
+      mcpIDPattern.test(String(state.tunnelID || "")));
+    const confirmedCurrent = Boolean(form.confirmed && form.confirmedID === state.tunnelID &&
+      form.confirmedRevision === (state.revision || ""));
+    const usable = credentialsSaved && confirmedCurrent && !hasChanges && !form.busy;
+    return {
+      running, hasChanges, credentialsSaved,
+      canStart: !running && usable,
+      canStop: running && !form.busy,
+      canRefresh: !form.busy && (running || usable),
+      canAutoStart: !form.busy && (running || usable)
+    };
+  }
+
   const chatGPTSettingsURL = "https://chatgpt.com/settings/plugins-settings";
 
   function isOutdatedMcpWorkerError(error) {
@@ -521,7 +543,10 @@
         mcpUI.pendingID = "";
         mcpUI.draftID = "";
         mcpUI.idEdited = false;
-        mcpUI.info = "配置已保存。";
+        mcpUI.confirmed = Boolean(status.configured && status.runtimeKeySaved);
+        mcpUI.confirmedID = mcpUI.confirmed ? status.tunnelID : "";
+        mcpUI.confirmedRevision = mcpUI.confirmed ? (status.revision || "") : "";
+        mcpUI.info = "配置已保存，可启动服务。";
         changed = true;
       } else if (mcpUI.busy === "waiting" && mcpUI.pendingSetup && status.setupState === "failed") {
         mcpUI.busy = "";
@@ -555,6 +580,7 @@
     mcpUI.error = "";
     mcpUI.info = "";
     if (action === "refresh") {
+      if (!mcpControlState(state, mcpUI).canRefresh) return;
       await refresh();
       return;
     }
@@ -564,7 +590,14 @@
       const reuseKey = !runtimeApiKey && state.runtimeKeySaved;
       if (state.configured && state.runtimeKeySaved &&
           tunnelId === state.tunnelID && !runtimeApiKey) {
-        mcpUI.info = "配置未变化，无需保存。";
+        // Explicitly approve using the existing saved credentials. No backend
+        // write, service restart, or login-task modification is performed.
+        mcpUI.confirmed = true;
+        mcpUI.confirmedID = state.tunnelID;
+        mcpUI.confirmedRevision = state.revision || "";
+        mcpUI.draftID = "";
+        mcpUI.idEdited = false;
+        mcpUI.info = "已确认复用已保存的配置，现在可以启动服务。";
         renderTools(tools);
         return;
       }
@@ -579,6 +612,9 @@
         renderTools(tools);
         return;
       }
+      mcpUI.confirmed = false;
+      mcpUI.confirmedID = "";
+      mcpUI.confirmedRevision = "";
       mcpUI.busy = "saving";
       renderTools(tools);
       try {
@@ -618,6 +654,8 @@
       return;
     }
     if (action === "start" || action === "stop") {
+      const controls = mcpControlState(state, mcpUI);
+      if (action === "start" ? !controls.canStart : !controls.canStop) return;
       mcpUI.busy = action === "start" ? "starting" : "stopping";
       renderTools(tools);
       try {
@@ -645,7 +683,7 @@
     return control;
   }
 
-  function mcpKeyField(busy) {
+  function mcpKeyField(busy, onEdit = () => {}) {
     const label = document.createElement("label");
     label.className = "mcp-id-field";
     label.textContent = "Runtime API Key";
@@ -670,6 +708,11 @@
         return;
       }
       mcpUI.draftKey = input.value;
+      // Any manual edit invalidates the session's previous Save confirmation.
+      mcpUI.confirmed = false;
+      mcpUI.confirmedID = "";
+      mcpUI.confirmedRevision = "";
+      onEdit();
     });
     label.appendChild(input);
     return label;
@@ -697,6 +740,7 @@
       helpLinks.appendChild(link);
     }
     shell.appendChild(helpLinks);
+    let updateControls = () => {};
     const idLabel = document.createElement("label");
     idLabel.className = "mcp-id-field";
     idLabel.textContent = "Tunnel ID";
@@ -718,6 +762,11 @@
       }
       mcpUI.draftID = idInput.value;
       mcpUI.idEdited = true;
+      // Even if the user clears this field again, require Save to reconfirm.
+      mcpUI.confirmed = false;
+      mcpUI.confirmedID = "";
+      mcpUI.confirmedRevision = "";
+      updateControls();
     });
     idLabel.appendChild(idInput);
     shell.appendChild(idLabel);
@@ -725,7 +774,7 @@
     idState.className = "settings-help mcp-credential-state";
     idState.textContent = state.configured ? "已保存；留空则复用" : "尚未保存";
     shell.appendChild(idState);
-    const key = mcpKeyField(busy);
+    const key = mcpKeyField(busy, () => updateControls());
     shell.appendChild(key);
     const keyState = document.createElement("small");
     keyState.className = "settings-help mcp-credential-state";
@@ -734,20 +783,32 @@
     const actions = document.createElement("div");
     actions.className = "mcp-service-actions";
     mcpButton(actions, "Save", () => mcpAction("save", tool, shell), true);
-    const running = state.running || state.ready;
+    const running = Boolean(state.running || state.ready);
     const service = mcpButton(actions,
       running ? "Stop Service" : "Start Service",
       () => mcpAction(running ? "stop" : "start", tool, shell));
-    service.disabled = busy || !state.configured;
-    mcpButton(actions, "Refresh Status", () => mcpAction("refresh", tool, shell));
+    const refreshButton = mcpButton(actions, "Refresh Status",
+      () => mcpAction("refresh", tool, shell));
     shell.appendChild(actions);
+    let autoStartCheckbox = null;
+    updateControls = () => {
+      const controls = mcpControlState(state, mcpUI);
+      service.disabled = !(running ? controls.canStop : controls.canStart);
+      refreshButton.disabled = !controls.canRefresh;
+      service.title = running ? "停止正在运行的 MCP Tunnel" :
+        controls.canStart ? "启动已确认的 MCP 配置" : "请先点击 Save 保存或确认配置";
+      refreshButton.title = controls.canRefresh ? "刷新 Tunnel 状态" : "请先保存配置或启动服务";
+      if (autoStartCheckbox) autoStartCheckbox.disabled = backgroundBusy || !controls.canAutoStart;
+      const notice = shell.querySelector(".mcp-info");
+      if (notice && controls.hasChanges) notice.remove();
+    };
     if (background) {
       const toggleLabel = document.createElement("label");
       toggleLabel.className = "settings-help";
       const checkbox = document.createElement("input");
       checkbox.type = "checkbox";
       checkbox.checked = Boolean(background.tunnelEnabled);
-      checkbox.disabled = backgroundBusy || busy || !state.configured;
+      autoStartCheckbox = checkbox;
       checkbox.addEventListener("change", async () => {
         backgroundBusy = true;
         try {
@@ -764,6 +825,15 @@
       });
       toggleLabel.append(checkbox, document.createTextNode(" Auto-start MCP at login"));
       shell.appendChild(toggleLabel);
+    }
+    updateControls();
+    if (!running && state.configured && state.runtimeKeySaved &&
+        !(mcpUI.confirmed && mcpUI.confirmedID === state.tunnelID &&
+          mcpUI.confirmedRevision === (state.revision || ""))) {
+      const confirmHint = document.createElement("p");
+      confirmHint.className = "settings-help mcp-confirmation-hint";
+      confirmHint.textContent = "凭据已保存。请点击 Save 确认使用现有配置，之后才能启动或刷新状态。";
+      shell.appendChild(confirmHint);
     }
     const status = document.createElement("p");
     status.className = "mcp-description";
@@ -989,6 +1059,6 @@
   root.VidOtterEnvironment = { init, activate: refresh, renderTools };
 
   if (typeof module !== "undefined" && module.exports) {
-    module.exports = { mcpSetupIsComplete, mcpEffectiveTunnelID, cardState, normalizedKind, visibleConfigFields, editorValue, toggleMetadata, formatModelSize, modelOptionLabel, modelActionLabel, isOutdatedMcpWorkerError, mcpStatus };
+    module.exports = { mcpSetupIsComplete, mcpEffectiveTunnelID, mcpControlState, cardState, normalizedKind, visibleConfigFields, editorValue, toggleMetadata, formatModelSize, modelOptionLabel, modelActionLabel, isOutdatedMcpWorkerError, mcpStatus };
   }
 })(globalThis);

@@ -43,6 +43,51 @@ assert.doesNotMatch(mcpSource, /idInput\.value = mcpUI\.draftID \|\| state\.tunn
 assert.doesNotMatch(mcpSource, /keyInput\.placeholder =/);
 
 
+// A blank form must NOT unlock service controls merely because credentials
+// happen to be persisted on disk. Save explicitly confirms using them.
+const savedTunnel = {
+  tunnelID: validTestID, revision: "rev-001", configured: true,
+  runtimeKeySaved: true, running: false, ready: false
+};
+const confirmedForm = {
+  confirmed: true, confirmedID: validTestID, confirmedRevision: "rev-001",
+  draftID: "", draftKey: "", idEdited: false, busy: ""
+};
+const blankForm = { ...confirmedForm, confirmed: false };
+const inactive = environment.mcpControlState(savedTunnel, blankForm);
+assert.equal(inactive.credentialsSaved, true);
+assert.equal(inactive.canStart, false);
+assert.equal(inactive.canRefresh, false);
+assert.equal(inactive.canAutoStart, false);
+assert.equal(inactive.canStop, false);
+const confirmed = environment.mcpControlState(savedTunnel, confirmedForm);
+assert.equal(confirmed.canStart, true);
+assert.equal(confirmed.canRefresh, true);
+assert.equal(confirmed.canAutoStart, true);
+assert.equal(confirmed.canStop, false);
+for (const changed of [
+  { draftID: "tunnel_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", idEdited: true },
+  { draftKey: "new-key-entered" },
+  { busy: "waiting" },
+  { confirmedRevision: "previous-revision" },
+  { confirmedID: "tunnel_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" }
+]) {
+  const result = environment.mcpControlState(savedTunnel, {...confirmedForm, ...changed});
+  assert.equal(result.canStart, false, JSON.stringify(changed));
+  assert.equal(result.canRefresh, false, JSON.stringify(changed));
+}
+const runningTunnel = environment.mcpControlState(
+  {...savedTunnel, running: true}, blankForm);
+assert.equal(runningTunnel.canStop, true);
+assert.equal(runningTunnel.canRefresh, true);
+assert.equal(runningTunnel.canStart, false);
+assert.equal(environment.mcpControlState(
+  {...savedTunnel, runtimeKeySaved: false}, confirmedForm).canStart, false);
+assert.equal(environment.mcpControlState(
+  {tunnelID:"", configured:false, runtimeKeySaved:false}, confirmedForm).canRefresh, false);
+assert.equal(environment.mcpControlState(
+  {...savedTunnel, running:true}, {...blankForm, busy:"stopping"}).canStop, false);
+
 assert.equal(environment.cardState({ status: "ready", ok: true }), "ok");
 assert.equal(environment.cardState({ status: "disabled", ok: true }), "disabled");
 assert.equal(environment.cardState({ status: "missing", ok: false }), "error");
