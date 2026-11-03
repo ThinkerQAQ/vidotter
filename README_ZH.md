@@ -31,7 +31,7 @@ VidOtter 就是为了解决这个问题。它通过浏览器扩展检测 MP4、H
 
 ### 2.1. 安装
 
-从[最新 Release](https://github.com/ThinkerQAQ/vidotter/releases/latest)下载对应系统的安装包。图形安装器支持 Windows x64、Linux x64 和 Intel macOS；Apple Silicon 和 Linux ARM64 可使用 [2.1.3](#213-手动安装压缩包) 的压缩包。
+从[最新 Release](https://github.com/ThinkerQAQ/vidotter/releases/latest)下载对应系统的安装包。图形安装器支持 Windows x64、Linux x64 和 Intel macOS。
 
 #### 2.1.1. 图形界面
 
