@@ -31,7 +31,7 @@ Install VidOtter, enable the browser extension, and download a sample video.
 
 ### 2.1. Install
 
-Download the installer for your system from the [latest Release](https://github.com/ThinkerQAQ/vidotter/releases/latest). The graphical installers support Windows x64, Linux x64, and Intel macOS. Apple Silicon and Linux ARM64 users can use the archives in [2.1.3](#213-manual-archive-installation).
+Download the installer for your system from the [latest Release](https://github.com/ThinkerQAQ/vidotter/releases/latest). The graphical installers support Windows x64, Linux x64, and Intel macOS.
 
 #### 2.1.1. Graphical Interface
 
