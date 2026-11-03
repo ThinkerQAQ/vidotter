@@ -212,8 +212,16 @@ func TestPrepareInstallerFirstRunOnboarding(t *testing.T) {
 			if !strings.Contains(string(script), "/README.md") {
 				t.Fatal("installer finish must open root README for activation instructions")
 			}
-			if !strings.Contains(string(script), "!form.openGuideCheckBox.checked) return") || !strings.Contains(string(script), "VIDOTTER_LOCAL_GUIDE_REQUESTED") {
-				t.Fatal("installer finish must support opt-in local instructions")
+			if !strings.Contains(string(script), "form.openGuideCheckBox.checked") ||
+				!strings.Contains(string(script), "form.configureNowCheckBox.checked") ||
+				!strings.Contains(string(script), "if (!guide && !configure) return") ||
+				!strings.Contains(string(script), "VIDOTTER_LOCAL_GUIDE_REQUESTED") ||
+				!strings.Contains(string(script), "VIDOTTER_LOCAL_CONFIGURATION_REQUESTED") {
+				t.Fatal("installer finish must leave config and guide unopened unless checked")
+			}
+			if !strings.Contains(string(ui), "configureNowCheckBox") ||
+				strings.Count(string(ui), "<bool>false</bool>") < 2 {
+				t.Fatal("both first-run options must default to unchecked")
 			}
 			if strings.Contains(string(script), "Connect ChatGPT MCP.lnk") || strings.Contains(string(ui), "configureMcpCheckBox") {
 				t.Fatal("ChatGPT activation must be configured from VidOtter Settings")
@@ -227,13 +235,23 @@ func TestPrepareInstallerFirstRunOnboarding(t *testing.T) {
 				if _, err := os.Stat(powershell); err != nil {
 					t.Fatal(err)
 				}
-				for _, shortcut := range []string{"View Setup Instructions.lnk", "Uninstall VidOtter.lnk"} {
+				if strings.Contains(string(script), "powershell.exe") {
+					t.Fatal("Windows GUI config entrypoints must not use a PowerShell launcher")
+				}
+				for _, shortcut := range []string{"Configure VidOtter.lnk", "Manage VidOtter.lnk", "View Setup Instructions.lnk", "Uninstall VidOtter.lnk"} {
 					if !strings.Contains(string(script), shortcut) {
 						t.Fatalf("missing Start menu item %s", shortcut)
 					}
 				}
-			} else if _, err := os.Stat(powershell); !os.IsNotExist(err) {
-				t.Fatalf("unexpected Windows-specific script on %s", platform)
+			} else {
+				if _, err := os.Stat(powershell); !os.IsNotExist(err) {
+					t.Fatalf("unexpected Windows-specific script on %s", platform)
+				}
+				shell := filepath.Join(base, "data", "scripts", "Open-VidOtter-Settings.sh")
+				info, err := os.Stat(shell)
+				if err != nil || (runtime.GOOS != "windows" && info.Mode()&0o111 == 0) {
+					t.Fatalf("Unix GUI launcher missing or not executable: %v", err)
+				}
 			}
 		})
 	}

@@ -20,6 +20,10 @@
     <property name="wordWrap"><bool>true</bool></property>
    </widget></item>
 
+   <item><widget class="QCheckBox" name="configureNowCheckBox">
+    <property name="text"><string>Open VidOtter configuration / 打开配置页面</string></property>
+    <property name="checked"><bool>false</bool></property>
+   </widget></item>
    <item><widget class="QCheckBox" name="openGuideCheckBox">
     <property name="text"><string>View local setup instructions / 查看本地使用说明</string></property>
     <property name="checked"><bool>false</bool></property>

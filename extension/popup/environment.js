@@ -523,10 +523,10 @@
     if (busy === "starting") return { label: "正在启动 Tunnel", kind: "pending" };
     if (busy === "stopping") return { label: "正在停止 Tunnel", kind: "pending" };
     if (busy === "restarting") return { label: "正在重启 Tunnel", kind: "pending" };
-    if (state.ready) return {
-      label: state.restartRequired ? "Tunnel 已连接 · 配置待重启" : "Tunnel 服务 Ready",
-      kind: "ready"
-    };
+    if (state.running && state.restartRequired) {
+      return { label: "配置已保存 · 待重启", kind: "pending" };
+    }
+    if (state.ready) return { label: "Tunnel 服务 Ready", kind: "ready" };
     if (state.running) return {
       label: state.restartRequired ? "Tunnel 运行中 · 配置待重启" : "Tunnel 运行中 · 尚未就绪",
       kind: "pending"
@@ -766,12 +766,30 @@
     return heading;
   }
 
+  function mcpStepHeading(number, label, explanation) {
+    const heading = document.createElement("div");
+    heading.className = "mcp-section-heading";
+    const badge = document.createElement("span");
+    badge.className = "mcp-step-badge";
+    badge.textContent = number;
+    badge.setAttribute("aria-hidden", "true");
+    const details = document.createElement("div");
+    const title = document.createElement("h3");
+    title.textContent = label;
+    const intro = document.createElement("p");
+    intro.className = "settings-help mcp-workflow-intro";
+    intro.textContent = explanation;
+    details.append(title, intro);
+    heading.append(badge, details);
+    return heading;
+  }
+
   function mcpKeyField(busy, keySaved = false, onEdit = () => {}) {
     const label = document.createElement("label");
     label.className = "mcp-id-field";
     label.appendChild(mcpFieldHeading(
       "Runtime API Key",
-      "https://platform.openai.com/api-keys",
+      "https://platform.openai.com/settings/organization/api-keys",
       "创建 Runtime API Key"
     ));
     const input = document.createElement("input");
@@ -804,7 +822,48 @@
       // Any manual edit invalidates the session's previous Save confirmation.
       onEdit();
     });
-    label.appendChild(input);
+    const wrap = document.createElement("div");
+    wrap.className = "mcp-key-input";
+    const reveal = document.createElement("button");
+    reveal.type = "button";
+    reveal.className = "mcp-key-reveal";
+    reveal.disabled = busy || !input.value;
+    reveal.setAttribute("aria-label", "显示新输入的 Runtime API Key");
+    reveal.setAttribute("aria-pressed", "false");
+    reveal.title = "只显示本次新输入的密钥；已保存密钥不会返回页面";
+    const eye = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    eye.setAttribute("viewBox", "0 0 24 24");
+    eye.setAttribute("width", "19");
+    eye.setAttribute("height", "19");
+    eye.setAttribute("fill", "none");
+    eye.setAttribute("stroke", "currentColor");
+    eye.setAttribute("stroke-width", "1.6");
+    eye.setAttribute("aria-hidden", "true");
+    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    path.setAttribute("d", "M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z");
+    const pupil = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+    pupil.setAttribute("cx", "12");
+    pupil.setAttribute("cy", "12");
+    pupil.setAttribute("r", "3");
+    eye.append(path, pupil);
+    reveal.appendChild(eye);
+    reveal.addEventListener("click", () => {
+      if (!input.value || busy) return;
+      input.type = input.type === "password" ? "text" : "password";
+      reveal.setAttribute("aria-pressed", String(input.type === "text"));
+      reveal.setAttribute("aria-label", input.type === "text"
+        ? "隐藏新输入的 Runtime API Key" : "显示新输入的 Runtime API Key");
+    });
+    input.addEventListener("input", () => {
+      reveal.disabled = busy || !mcpUI.draftKey;
+      if (!mcpUI.draftKey) {
+        input.type = "password";
+        reveal.setAttribute("aria-pressed", "false");
+        reveal.setAttribute("aria-label", "显示新输入的 Runtime API Key");
+      }
+    });
+    wrap.append(input, reveal);
+    label.appendChild(wrap);
     return label;
   }
 
@@ -815,13 +874,10 @@
     shell.className = "mcp-guide mcp-workflow";
     const localPanel = document.createElement("section");
     localPanel.className = "mcp-connection-card mcp-workflow-panel mcp-local-service";
-    const title = document.createElement("h3");
-    title.textContent = "1. 本地 Tunnel 服务";
-    localPanel.appendChild(title);
-    const introduction = document.createElement("p");
-    introduction.className = "settings-help mcp-workflow-intro";
-    introduction.textContent = "配置保存在本机。Save 只保存配置，服务运行时修改配置后可用 Restart Service 应用。";
-    localPanel.appendChild(introduction);
+    localPanel.appendChild(mcpStepHeading(
+      "01", "本地 Tunnel 服务",
+      "配置保存在本机。Save 只保存配置；修改配置后可用 Restart Service 应用。"
+    ));
     let updateControls = () => {};
     const idLabel = document.createElement("label");
     idLabel.className = "mcp-id-field";
@@ -949,20 +1005,19 @@
     if (state.restartRequired && running) {
       const pending = document.createElement("p");
       pending.className = "settings-help";
-      pending.textContent = "配置已保存，当前服务仍使用旧配置。请 Stop Service 后再 Start Service。";
+      pending.textContent = "配置已保存，当前服务仍使用旧配置，请点击 Restart Service 应用。";
       localPanel.appendChild(pending);
     }
     const pluginPanel = document.createElement("section");
     pluginPanel.className = "mcp-workflow-panel mcp-chatgpt-plugin";
-    const pluginTitle = document.createElement("h3");
-    pluginTitle.textContent = "2. ChatGPT 插件";
-    pluginPanel.appendChild(pluginTitle);
-    const plugin = document.createElement("p");
-    plugin.className = "settings-help mcp-workflow-intro";
-    plugin.textContent = state.ready
-      ? "本地 Tunnel 已就绪。请在 ChatGPT 中创建或管理插件，授权结果以 ChatGPT 页面为准。"
-      : "请先启动本地 Tunnel 并等待就绪，再到 ChatGPT 中创建或管理插件。";
-    pluginPanel.appendChild(plugin);
+    const pluginNotice = state.running && state.restartRequired
+      ? "配置已经保存，请先点击 Restart Service 应用，再去 ChatGPT 验证插件。"
+      : state.ready
+        ? "本地 Tunnel 已就绪。请在 ChatGPT 中创建或管理插件，授权结果以 ChatGPT 页面为准。"
+        : "请先启动本地 Tunnel 并等待就绪，再到 ChatGPT 中创建或管理插件。";
+    pluginPanel.appendChild(mcpStepHeading(
+      "02", "ChatGPT 插件", pluginNotice
+    ));
     const link = document.createElement("a");
     link.className = "mcp-chatgpt-link";
     link.href = chatGPTSettingsURL;

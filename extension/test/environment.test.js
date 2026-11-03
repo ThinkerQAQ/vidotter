@@ -85,7 +85,7 @@ assert.deepEqual(environment.mcpHeaderStatus({...savedTunnel, ready:true, runnin
 assert.deepEqual(environment.mcpHeaderStatus({...savedTunnel, running:true}, ""),
   {label:"Tunnel 运行中 · 尚未就绪", kind:"pending"});
 assert.deepEqual(environment.mcpHeaderStatus({...savedTunnel, ready:true, running:true, restartRequired:true}, ""),
-  {label:"Tunnel 已连接 · 配置待重启", kind:"ready"});
+  {label:"配置已保存 · 待重启", kind:"pending"});
 assert.deepEqual(environment.mcpHeaderStatus(savedTunnel, "restarting"),
   {label:"正在重启 Tunnel", kind:"pending"});
 const noConfig = {tunnelID:"", configured:false, runtimeKeySaved:false};
@@ -217,8 +217,11 @@ assert.match(environmentSource, /serviceAction: action/);
 assert.match(mcpSection, /shell\.append\(localPanel, pluginPanel\)/);
 assert.match(mcpSection, /mcp-local-service/);
 assert.match(mcpSection, /mcp-chatgpt-plugin/);
-assert.match(mcpSection, /1\. 本地 Tunnel 服务/);
-assert.match(mcpSection, /2\. ChatGPT 插件/);
+assert.match(mcpSection, /"01", "本地 Tunnel 服务"/);
+assert.match(mcpSection, /"02", "ChatGPT 插件"/);
+assert.match(mcpSource, /mcp-key-reveal/);
+assert.match(mcpSource, /reveal\.disabled = busy \|\| !input\.value/);
+assert.match(mcpSource, /saved key never leaves the Bridge/i);
 assert.doesNotMatch(mcpSection, /Local Tunnel:/);
 assert.match(environmentSource, /mcp-overview-header/);
 assert.match(environmentSource, /mcpHeaderStatus\(mcpStatus\(tool\), mcpUI\.busy\)/);

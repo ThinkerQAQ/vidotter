@@ -88,6 +88,15 @@ func Installer(stage, targetOS, targetArch, binarycreator, output, updateURL str
 	if err := prepareInstallerWithUpdateURL(dir, stage, ver, targetOS, updateURL); err != nil {
 		return err
 	}
+	// The Qt installer itself was already converted to GUI subsystem.
+	// Bundle matching icon-branded WinExe configuration/management launchers
+	// so Start Menu and setup completion never flash PowerShell windows.
+	if targetOS == "windows" {
+		payload := filepath.Join(dir, "packages", "com.thinkerqaq.vidotter", "data")
+		if err := buildWindowsInstallerLaunchers(stage, payload, dir); err != nil {
+			return fmt.Errorf("build Windows native entrypoints: %w", err)
+		}
+	}
 	templateArgs := []string{}
 	if targetOS == "windows" {
 		template := filepath.Join(dir, "installerbase-gui.exe")
@@ -239,9 +248,15 @@ func prepareInstallerWithUpdateURL(destination, stage, ver, targetOS, updateURL 
 		shortcutOperations += `
     component.addOperation("Mkdir", "@UserStartMenuProgramsPath@/VidOtter");
     component.addOperation("CreateShortcut",
-        installer.environmentVariable("SystemRoot") + "/System32/WindowsPowerShell/v1.0/powershell.exe",
+        "@TargetDir@/bin/VidOtter-Configure.exe",
+        "@UserStartMenuProgramsPath@/VidOtter/Configure VidOtter.lnk");
+    component.addOperation("CreateShortcut",
+        "@TargetDir@/bin/VidOtter-Configure.exe",
         "@UserStartMenuProgramsPath@/VidOtter/View Setup Instructions.lnk",
-        "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File \"@TargetDir@/scripts/VidOtter-FirstRun.ps1\" -Mode extension");
+        "--guide");
+    component.addOperation("CreateShortcut",
+        "@TargetDir@/VidOtter-Manager.exe",
+        "@UserStartMenuProgramsPath@/VidOtter/Manage VidOtter.lnk");
     // Show a standard uninstall shortcut that launches Qt Maintenance Tool.
     // Removal is confirmed in the GUI; do not silently purge Data.
     component.addOperation("CreateShortcut",

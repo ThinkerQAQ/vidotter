@@ -286,6 +286,34 @@
     "未知": "Unknown"
   });
 
+  // RemoteBrowserMCP PR #17 connection settings copied into VidOtter's
+  // shared popup/side-panel/local Web UI locale system.
+  Object.assign(dictionary, {
+    "连接状态": "Connection status",
+    "本地 Tunnel 服务": "Local Tunnel service",
+    "ChatGPT 插件": "ChatGPT plugin",
+    "配置保存在本机。Save 只保存配置；修改配置后可用 Restart Service 应用。":
+      "Settings stay on this computer. Save only stores the configuration. Restart Service applies saved changes.",
+    "配置已经保存，请先点击 Restart Service 应用，再去 ChatGPT 验证插件。":
+      "Configuration saved. Click Restart Service to apply it before verifying the ChatGPT plugin.",
+    "本地 Tunnel 已就绪。请在 ChatGPT 中创建或管理插件，授权结果以 ChatGPT 页面为准。":
+      "The local Tunnel is ready. Create or manage the plugin in ChatGPT; authorization is managed there.",
+    "请先启动本地 Tunnel 并等待就绪，再到 ChatGPT 中创建或管理插件。":
+      "Start the local Tunnel and wait for it to be ready before configuring the plugin in ChatGPT.",
+    "配置已保存 · 待重启": "Saved changes · Restart required",
+    "Tunnel 服务 Ready": "Tunnel ready",
+    "登录后自动启动 MCP Tunnel": "Auto-start MCP at login",
+    "创建或管理 Tunnel ID": "Create or manage a Tunnel",
+    "创建 Runtime API Key": "Create a Runtime API Key",
+    "打开 ChatGPT 插件设置": "Open ChatGPT plugin settings",
+    "显示新输入的 Runtime API Key": "Show newly entered Runtime API Key",
+    "隐藏新输入的 Runtime API Key": "Hide newly entered Runtime API Key",
+    "只显示本次新输入的密钥；已保存密钥不会返回页面":
+      "Only the new key can be revealed. The saved key is never returned to this page.",
+    "新 Tunnel ID 尚未保存": "Tunnel ID has unsaved changes",
+    "新 Runtime API Key 尚未保存": "New Runtime API Key has not been saved"
+  });
+
   let locale = "zh-CN";
   const source = new WeakMap();
   const lastDisplay = new WeakMap();

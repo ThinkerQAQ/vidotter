@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-//go:embed assets/controller.qs assets/first-run.ui assets/first-run.ps1
+//go:embed assets/controller.qs assets/first-run.ui assets/first-run.ps1 assets/Open-VidOtter-Settings.sh
 var onboardingAssets embed.FS
 
 func writeInstallerAsset(from, to string) error {
@@ -37,6 +37,14 @@ func writeInstallerOnboarding(dir, meta, payload string, targetOS string) error 
 		if err := writeInstallerAsset("first-run.ps1", filepath.Join(payload, "scripts", "VidOtter-FirstRun.ps1")); err != nil {
 			return err
 		}
+	} else {
+		script := filepath.Join(payload, "scripts", "Open-VidOtter-Settings.sh")
+		if err := writeInstallerAsset("Open-VidOtter-Settings.sh", script); err != nil {
+			return err
+		}
+		if err := os.Chmod(script, 0o755); err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -50,24 +58,35 @@ Component.prototype.showFirstRunOptions = function() {
         }
     } catch (e) { console.log("VidOtter first-run options: " + e); }
 };
-
 Component.prototype.finishFirstRun = function() {
     try {
         if (!installer.isInstaller() || installer.isCommandLineInstance() ||
             installer.status != QInstaller.Success) return;
         var form = component.userInterface("VidOtterFirstRun");
-        if (!form || !form.openGuideCheckBox || !form.openGuideCheckBox.checked) return;
-        console.log("VIDOTTER_LOCAL_GUIDE_REQUESTED");
+        if (!form) return;
+        var guide = form.openGuideCheckBox && form.openGuideCheckBox.checked;
+        var configure = form.configureNowCheckBox && form.configureNowCheckBox.checked;
+        if (!guide && !configure) return;
         var target = installer.value("TargetDir");
         if ("__VIDOTTER_PLATFORM__" == "windows") {
-            var script = installer.toNativeSeparators(target + "/scripts/VidOtter-FirstRun.ps1");
-            installer.executeDetached("powershell.exe",
-                ["-NoProfile", "-ExecutionPolicy", "Bypass", "-WindowStyle", "Hidden",
-                 "-File", script, "-Mode", "extension"], target);
-
+            var launcher = installer.toNativeSeparators(target + "/bin/VidOtter-Configure.exe");
+            if (guide) {
+                console.log("VIDOTTER_LOCAL_GUIDE_REQUESTED");
+                installer.executeDetached(launcher, ["--guide"], target);
+            }
+            if (configure) {
+                console.log("VIDOTTER_LOCAL_CONFIGURATION_REQUESTED");
+                installer.executeDetached(launcher, [], target);
+            }
         } else {
-            QDesktopServices.openUrl("file:///" + target + "/README.md");
-
+            if (guide) {
+                console.log("VIDOTTER_LOCAL_GUIDE_REQUESTED");
+                QDesktopServices.openUrl("file:///" + target + "/README.md");
+            }
+            if (configure) {
+                console.log("VIDOTTER_LOCAL_CONFIGURATION_REQUESTED");
+                installer.executeDetached("/bin/sh", [target + "/scripts/Open-VidOtter-Settings.sh"], target);
+            }
         }
     } catch (e) { console.log("VidOtter setup helper: " + e); }
 };
