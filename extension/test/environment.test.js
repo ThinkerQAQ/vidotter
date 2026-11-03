@@ -41,8 +41,18 @@ assert.match(mcpSource, /document\.activeElement !== input/);
 assert.match(mcpSource, /mcpEffectiveTunnelID\(body, state\.tunnelID, mcpUI\.draftID, mcpUI\.idEdited\)/);
 assert.match(mcpSource, /mcpVisibleFieldChanges\(shell, state, mcpUI\)/);
 assert.match(mcpSource, /idInput\.placeholder = ""/);
-assert.match(mcpSource, /idInput\.value = mcpUI\.draftID/);
-assert.match(mcpSource, /input\.placeholder = ""/);
+assert.match(mcpSource, /idInput\.value = mcpDisplayedTunnelID\(state, mcpUI\)/);
+assert.match(mcpSource, /input\.placeholder = mcpSavedKeyMask\(keySaved, mcpUI\.draftKey\)/);
+// Saved Tunnel ID is public in the form; Runtime Key must not be sent back
+// to the page (the star mask is only a fixed placeholder, never a value).
+assert.equal(environment.mcpDisplayedTunnelID({tunnelID:validTestID}, {idEdited:false, draftID:""}), validTestID);
+assert.equal(environment.mcpDisplayedTunnelID({tunnelID:validTestID}, {idEdited:true, draftID:"tunnel_new"}), "tunnel_new");
+assert.equal(environment.mcpDisplayedTunnelID({tunnelID:validTestID}, {idEdited:false, draftID:"stale-value"}), validTestID);
+assert.equal(environment.mcpDisplayedTunnelID({tunnelID:""}, {idEdited:false, draftID:""}), "");
+assert.equal(environment.mcpSavedKeyMask(true, ""), "****************");
+assert.equal(environment.mcpSavedKeyMask(true, "new-secret"), "");
+assert.equal(environment.mcpSavedKeyMask(false, ""), "");
+assert.match(mcpSource, /input\.value = mcpUI\.draftKey/);
 assert.doesNotMatch(mcpSource, /idInput\.value = mcpUI\.draftID \|\| state\.tunnelID/);
 assert.doesNotMatch(mcpSource, /keyInput\.placeholder =/);
 

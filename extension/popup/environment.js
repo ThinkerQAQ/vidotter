@@ -443,6 +443,15 @@
   // The rendered field is authoritative at Save time. Password managers can
   // assign .value without emitting "input", leaving draftID and idEdited stale.
   // Blank means "reuse saved ID", even after the user clears an edited field.
+  function mcpDisplayedTunnelID(state, ui) {
+    return ui.idEdited ? ui.draftID : (state.tunnelID || "");
+  }
+
+  function mcpSavedKeyMask(saved, draftKey) {
+    // This is a visual indicator, not the real key or its length.
+    return saved && !draftKey ? "****************" : "";
+  }
+
   function mcpEffectiveTunnelID(form, savedID, draftID, edited = true) {
     const field = form?.querySelector?.('input[name="tunnelId"]');
     const entered = String(field ? field.value : (edited ? draftID : "") || "").trim();
@@ -475,7 +484,7 @@
       }
     };
     input.addEventListener("focus", () => {
-      // Restore the intended blank field before browser suggestions are shown.
+      // Restore the intended field value before browser suggestions are shown.
       const expected = String(intendedValue() || "");
       if (input.value !== expected) input.value = expected;
       const error = input.closest(".mcp-connection-card")?.querySelector(".mcp-error");
@@ -733,7 +742,7 @@
     return control;
   }
 
-  function mcpKeyField(busy, onEdit = () => {}) {
+  function mcpKeyField(busy, keySaved = false, onEdit = () => {}) {
     const label = document.createElement("label");
     label.className = "mcp-id-field";
     label.textContent = "Runtime API Key";
@@ -745,7 +754,9 @@
     mcpDiscourageAutofill(input, () => mcpUI.draftKey);
     input.spellcheck = false;
     input.maxLength = 512;
-    input.placeholder = "";
+    // The real saved key never leaves the Bridge. Show a masked visual
+    // indicator only; the input value remains empty and Save reuses the key.
+    input.placeholder = mcpSavedKeyMask(keySaved, mcpUI.draftKey);
     input.value = mcpUI.draftKey;
     input.disabled = busy;
     input.addEventListener("input", () => {
@@ -801,11 +812,13 @@
     const idInput = document.createElement("input");
     idInput.name = "tunnelId";
     idInput.type = "text";
-    mcpDiscourageAutofill(idInput, () => mcpUI.draftID);
+    mcpDiscourageAutofill(idInput, () => mcpDisplayedTunnelID(state, mcpUI));
     idInput.spellcheck = false;
     idInput.maxLength = 80;
     idInput.placeholder = "";
-    idInput.value = mcpUI.draftID;
+    // Tunnel IDs are not secrets. Display the persisted value after Save or
+    // reopening the page; preserve draft text only while actively editing.
+    idInput.value = mcpDisplayedTunnelID(state, mcpUI);
     idInput.disabled = busy;
     idInput.addEventListener("input", () => {
       if (document.activeElement !== idInput) {
@@ -833,9 +846,9 @@
     idState.className = "settings-help mcp-credential-state";
     idState.textContent = mcpIsExampleID(state.tunnelID)
       ? "检测到测试示例配置：请填写真实 Tunnel ID"
-      : state.configured ? "已保存；留空则复用" : "尚未保存";
+      : state.configured ? "已保存" : "尚未保存";
     shell.appendChild(idState);
-    const key = mcpKeyField(busy, () => updateControls());
+    const key = mcpKeyField(busy, state.runtimeKeySaved, () => updateControls());
     shell.appendChild(key);
     const keyState = document.createElement("small");
     keyState.className = "settings-help mcp-credential-state";
@@ -864,7 +877,7 @@
       idState.textContent = visible.draftID &&
         visible.draftID !== state.tunnelID ? "新 Tunnel ID 尚未保存" :
         mcpIsExampleID(state.tunnelID) ? "检测到测试示例配置：请填写真实 Tunnel ID" :
-        state.configured ? "已保存；留空则复用" : "尚未保存";
+        state.configured ? "已保存" : "尚未保存";
       keyState.textContent = mcpUI.draftKey ? "新 Runtime API Key 尚未保存" :
         state.runtimeKeySaved ? "已保存；留空则复用" : "尚未保存";
       const notice = shell.querySelector(".mcp-info");
@@ -1154,6 +1167,6 @@
   root.VidOtterEnvironment = { init, activate: refresh, renderTools };
 
   if (typeof module !== "undefined" && module.exports) {
-    module.exports = { mcpSetupIsComplete, mcpEffectiveTunnelID, mcpVisibleFieldChanges, mcpControlState, mcpIsExampleID, cardState, normalizedKind, visibleConfigFields, editorValue, toggleMetadata, formatModelSize, modelOptionLabel, modelActionLabel, isOutdatedMcpWorkerError, mcpStatus };
+    module.exports = { mcpSetupIsComplete, mcpDisplayedTunnelID, mcpSavedKeyMask, mcpEffectiveTunnelID, mcpVisibleFieldChanges, mcpControlState, mcpIsExampleID, cardState, normalizedKind, visibleConfigFields, editorValue, toggleMetadata, formatModelSize, modelOptionLabel, modelActionLabel, isOutdatedMcpWorkerError, mcpStatus };
   }
 })(globalThis);
