@@ -105,7 +105,7 @@ func defaultBridgeConfig() bridgeConfig {
 	}
 	disabled := false
 	return bridgeConfig{
-		OutputDir: dir, Concurrent: 12, ProxyEnabled: &disabled,
+		OutputDir: dir, Concurrent: 32, ProxyEnabled: &disabled,
 		OpenMode: "popup", UILanguage: "zh-CN", ShowLogs: false,
 		DetectHls: true, DetectDash: true, DetectMp4: true,
 		LogEnabled: true, LogMaxMB: 10,

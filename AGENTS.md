@@ -36,7 +36,7 @@ Use standard `git status/diff/log`, `rg`, and file reads/edits for repository wo
 - The Web UI may serve shared extension assets on loopback; privileged operations must cross the extension relay.
 - Keep tool configuration explicit. Separate read-only detection from downloading, file deletion and other side effects.
 - Interface locale, ASR language, subtitle language and downloaded media settings are separate.
-- Desktop Bridge and Android are different runtimes with different upstream capabilities.
+- Desktop Bridge and Android are different runtimes with different upstream capabilities. Android source and manual build tooling are retained, but APKs are excluded from public Releases until explicitly re-enabled.
 
 ## Source map
 

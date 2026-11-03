@@ -133,7 +133,7 @@ Linux/macOS 使用 `./bin/vidotterdev install --extension-id YOUR_32_CHARACTER_I
 ### 3.1. 常用配置
 
 - `download.output_dir`：下载目录，默认是 `Data/downloads/`。
-- `download.concurrent`：下载并发，默认 `12`，范围 `1–64`。
+- `download.concurrent`：下载并发，默认 `32`，范围 `1–64`。
 - `download.quality`：默认自动选择，也可指定 `best` 或来源支持的高度，例如 `720`。
 - `proxy.enabled`、`proxy.url`：默认关闭代理；支持 HTTP 代理，不支持代理凭据和 SOCKS。
 - `interface.language`：界面语言，默认 `zh-CN`，可改为 `en`。
@@ -186,40 +186,6 @@ MP4/HLS 使用内置下载器。解析其他受支持的网页时，在设置页
 
 需要由 VidOtter 操作浏览器时，在设置中安装 [Remote Browser MCP](https://github.com/ThinkerQAQ/remote-browser-mcp) 组件。它使用独立发行包，只操作受限后台标签页；自动点击需在本机显式开启，无需另建 Tunnel。
 
-### 4.5. Case 5：在 Android 使用
-
-Android 是独立原生客户端，支持 Android 8.0 / API 26 及以上，通过粘贴或分享 MP4/HLS 直链下载。它不接入桌面任务、Native Messaging、yt-dlp 或 ChatGPT Tunnel。
-
-先检查[最新 Release](https://github.com/ThinkerQAQ/vidotter/releases/latest) 是否提供匹配设备的 APK；若没有，再从源码构建：
-
-1. 按 [5.1](#51-打开项目并验证) 克隆仓库并准备 Go 环境，以下命令均在仓库根目录执行。
-2. 按 [Android 构建配置](mobile/android/app/build.gradle.kts)及[构建工具的环境检查](tools/vidotterdev/internal/maint/mobile_media.go)准备匹配的 JDK、Android SDK Platform、NDK 和 Platform-Tools。设置 `JAVA_HOME`、`ANDROID_SDK_ROOT` 为对应目录；需要指定 NDK 版本时，将 `ANDROID_NDK_HOME` 设为该版本目录。
-3. 安装与 `bridge/go.mod` 一致的两个 Go mobile 工具，再构建 APK：
-
-Linux/macOS：
-
-```bash
-vidotter_mobile_version="$(go -C bridge list -m -f '{{.Version}}' golang.org/x/mobile)"
-go install "golang.org/x/mobile/cmd/gomobile@$vidotter_mobile_version"
-go install "golang.org/x/mobile/cmd/gobind@$vidotter_mobile_version"
-go -C tools/vidotterdev run . android-build
-```
-
-Windows PowerShell：
-
-```powershell
-$vidotterMobileVersion = go -C bridge list -m -f '{{.Version}}' golang.org/x/mobile
-go install "golang.org/x/mobile/cmd/gomobile@$vidotterMobileVersion"
-go install "golang.org/x/mobile/cmd/gobind@$vidotterMobileVersion"
-go -C tools/vidotterdev run . android-build
-```
-
-`android-build` 会生成 Go 绑定，再调用仓库自带的 Gradle Wrapper。成功后：
-
-1. 找到 `.build/artifacts/android/vidotter-android-arm64-debug.apk`，将它传到 ARM64 Android 设备。
-2. 按系统提示允许从该来源安装 APK。
-3. 打开 VidOtter，粘贴前面的示例 MP4 地址并下载，检查任务和下载文件。
-
 ## 5. Development
 
 开发环境需要 Git、Go 和 Node.js。Go 工具链须满足 [`bridge/go.mod`](bridge/go.mod) 与 [`tools/vidotterdev/go.mod`](tools/vidotterdev/go.mod) 的声明；Node.js 版本与 [CI 配置](.github/workflows/ci.yml)保持一致。
@@ -269,7 +235,7 @@ Set-Location $vidotterDevDir
 
 统一使用 `tools/vidotterdev/` 构建、验证和打包。正式打包命令为 `go -C tools/vidotterdev run . package`，要求准备已校验的侧车工具、许可证及固定版本的 FFmpeg 源码包。`--allow-missing-tools` 仅用于不完整的开发包。
 
-[CI](.github/workflows/ci.yml) 在 Windows、macOS 和 Linux 执行测试、构建及 README 链接检查；真实浏览器下载、图形安装器操作及 Android 设备需要另外验收。协作约定见 [AGENTS.md](AGENTS.md)。
+[CI](.github/workflows/ci.yml) 在 Windows、macOS 和 Linux 执行测试、构建及 README 链接检查；真实浏览器下载和图形安装器操作需要另外验收。协作约定见 [AGENTS.md](AGENTS.md)。
 
 ## 6. License
 

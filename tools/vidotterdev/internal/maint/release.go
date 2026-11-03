@@ -15,6 +15,8 @@ import (
 
 type target struct{ OS, Name, Arch string }
 
+// Public releases intentionally contain only desktop targets. Keep Android
+// source and its manual build commands, but do not publish APK artifacts.
 func targets() []target {
 	return []target{{"windows", "windows", "amd64"}, {"linux", "linux", "amd64"}, {"linux", "linux", "arm64"}, {"darwin", "macos", "amd64"}, {"darwin", "macos", "arm64"}}
 }

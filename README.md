@@ -133,7 +133,7 @@ Edit and save settings in **VidOtter → Settings**. The configuration file is `
 ### 3.1. Common settings
 
 - `download.output_dir`: output directory; defaults to `Data/downloads/`.
-- `download.concurrent`: download concurrency; defaults to `12`, valid range `1–64`.
+- `download.concurrent`: download concurrency; defaults to `32`, valid range `1–64`.
 - `download.quality`: automatic by default; also accepts `best` or a source-supported height such as `720`.
 - `proxy.enabled`, `proxy.url`: proxy disabled by default; HTTP proxies are supported, proxy credentials and SOCKS are not.
 - `interface.language`: interface language; defaults to `zh-CN`, also accepts `en`.
@@ -186,40 +186,6 @@ If ChatGPT already has a Remote Browser Tool connection, reuse it for page actio
 
 To control the browser through VidOtter instead, install the [Remote Browser MCP](https://github.com/ThinkerQAQ/remote-browser-mcp) component in Settings. It uses an independent release package and is limited to controlled background tabs. Enable interactive clicking explicitly on the local machine if needed; no second Tunnel is required.
 
-### 4.5. Case 5: Android
-
-Android is an independent native client for Android 8.0 / API 26 and later. It downloads pasted/shared direct MP4/HLS URLs. It does not connect to desktop jobs, Native Messaging, yt-dlp, or ChatGPT Tunnel.
-
-First check the [latest Release](https://github.com/ThinkerQAQ/vidotter/releases/latest) for an APK matching your device. If none is provided, build it from source:
-
-1. Follow [5.1](#51-open-and-verify-the-project) to clone the repository and prepare Go. Run the following commands from the repository root.
-2. Prepare the JDK, Android SDK Platform, NDK, and Platform-Tools required by the [Android build configuration](mobile/android/app/build.gradle.kts) and [build tool environment checks](tools/vidotterdev/internal/maint/mobile_media.go). Set `JAVA_HOME` and `ANDROID_SDK_ROOT` to their directories. To select a specific NDK version, set `ANDROID_NDK_HOME` to that version's directory.
-3. Install both Go mobile tools at the version pinned in `bridge/go.mod`, then build the APK:
-
-Linux/macOS:
-
-```bash
-vidotter_mobile_version="$(go -C bridge list -m -f '{{.Version}}' golang.org/x/mobile)"
-go install "golang.org/x/mobile/cmd/gomobile@$vidotter_mobile_version"
-go install "golang.org/x/mobile/cmd/gobind@$vidotter_mobile_version"
-go -C tools/vidotterdev run . android-build
-```
-
-Windows PowerShell:
-
-```powershell
-$vidotterMobileVersion = go -C bridge list -m -f '{{.Version}}' golang.org/x/mobile
-go install "golang.org/x/mobile/cmd/gomobile@$vidotterMobileVersion"
-go install "golang.org/x/mobile/cmd/gobind@$vidotterMobileVersion"
-go -C tools/vidotterdev run . android-build
-```
-
-`android-build` generates the Go binding and runs the bundled Gradle Wrapper. After it succeeds:
-
-1. Find `.build/artifacts/android/vidotter-android-arm64-debug.apk` and transfer it to an ARM64 Android device.
-2. Permit installation from that source when prompted and install the APK.
-3. Open VidOtter, paste the sample MP4 URL above, download it, and check the job and downloaded file.
-
 ## 5. Development
 
 Development requires Git, Go, and Node.js. Use a Go toolchain satisfying [`bridge/go.mod`](bridge/go.mod) and [`tools/vidotterdev/go.mod`](tools/vidotterdev/go.mod), and the Node.js version in the [CI configuration](.github/workflows/ci.yml).
@@ -269,7 +235,7 @@ Follow [2.3](#23-install-the-browser-extension) to load this deployment's `exten
 
 Use `tools/vidotterdev/` for builds, verification, and packaging. Formal packaging uses `go -C tools/vidotterdev run . package` and requires verified sidecar tools, license materials, and the pinned FFmpeg source archive. `--allow-missing-tools` is for incomplete development bundles only.
 
-[CI](.github/workflows/ci.yml) runs tests, builds, and README link checks on Windows, macOS, and Linux. Real browser downloads, GUI installer interaction, and Android devices require separate acceptance testing. See [AGENTS.md](AGENTS.md) for contribution rules.
+[CI](.github/workflows/ci.yml) runs tests, builds, and README link checks on Windows, macOS, and Linux. Real browser downloads and GUI installer interaction require separate acceptance testing. See [AGENTS.md](AGENTS.md) for contribution rules.
 
 ## 6. License
 
