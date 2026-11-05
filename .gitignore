@@ -28,3 +28,8 @@ Thumbs.db
 
 # Optional Serena editor state
 /.serena/
+
+# Local Devbox and Python development state
+.devbox/
+.venv/
+__pycache__/
