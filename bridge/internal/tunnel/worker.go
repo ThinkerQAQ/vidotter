@@ -199,7 +199,11 @@ func runWorker(root string) error {
 func (b startupBackend) remove(root string, setup persistedSetup) error {
 	name := b.name(root, setup)
 	if b.platform == "windows" {
-		_, err := b.powershell("$t=Get-ScheduledTask -TaskPath '\\' -ErrorAction Stop | Where-Object TaskName -eq " + psQuote(name) + "; if($null -ne $t){$t | Unregister-ScheduledTask -Confirm:$false}")
+		exists, _, _, err := b.windowsLoginTask(root, setup)
+		if err != nil || !exists {
+			return err
+		}
+		_, err = b.run("schtasks.exe", "/delete", "/tn", name, "/f")
 		return err
 	}
 	file := b.file(root, setup)

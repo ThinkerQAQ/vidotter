@@ -4,7 +4,7 @@ package tunnel
 
 import (
 	"context"
-	"encoding/json"
+	"encoding/binary"
 	"encoding/xml"
 	"errors"
 	"fmt"
@@ -14,6 +14,7 @@ import (
 	"runtime"
 	"strings"
 	"time"
+	"unicode/utf16"
 )
 
 // Login registration is independent of the currently running worker. In
@@ -48,10 +49,6 @@ func systemStartup() startupBackend {
 	return startupBackend{runtime.GOOS, home, exe, fmt.Sprint(os.Getuid()), currentAccount(), startupCommand}
 }
 
-func psQuote(s string) string { return "'" + strings.ReplaceAll(s, "'", "''") + "'" }
-func (b startupBackend) powershell(script string) ([]byte, error) {
-	return b.run("powershell.exe", "-NoProfile", "-NonInteractive", "-Command", "$ErrorActionPreference='Stop'; [Console]::OutputEncoding=[Text.UTF8Encoding]::new($false); "+script)
-}
 func (b startupBackend) name(root string, setup persistedSetup) string {
 	if setup.Manager == "go-service" {
 		return serviceName(root)
@@ -88,24 +85,7 @@ func (b startupBackend) status(root string, setup persistedSetup) (bool, error) 
 	name := b.name(root, setup)
 	switch b.platform {
 	case "windows":
-		var script string
-		if setup.Manager == "go-service" {
-			script = "(Get-CimInstance Win32_Service -Filter " + psQuote("Name='"+name+"'") + " -ErrorAction Stop).StartMode | ConvertTo-Json -Compress"
-		} else {
-			script = "$t=Get-ScheduledTask -TaskPath '\\' -ErrorAction Stop | Where-Object TaskName -eq " + psQuote(name) + "; if ($null -eq $t) {'false'} else {$t.Settings.Enabled | ConvertTo-Json -Compress}"
-		}
-		out, err := b.powershell(script)
-		if err != nil {
-			return false, err
-		}
-		if setup.Manager == "go-service" {
-			return strings.TrimSpace(string(out)) == `"Auto"`, nil
-		}
-		var enabled bool
-		if json.Unmarshal([]byte(strings.TrimSpace(string(out))), &enabled) != nil {
-			return false, errors.New("invalid Task Scheduler status")
-		}
-		return enabled, nil
+		return b.windowsStartupStatus(root, setup)
 	case "linux":
 		out, err := b.systemctl(root, setup, "is-enabled", name+".service")
 		value := strings.TrimSpace(string(out))
@@ -159,29 +139,7 @@ func (b startupBackend) apply(root string, setup persistedSetup, enable bool) er
 		action = "enable"
 	}
 	if b.platform == "windows" {
-		if setup.Manager == "go-service" {
-			mode := "Manual"
-			if enable {
-				mode = "Automatic"
-			}
-			_, err := b.powershell("Set-Service -Name " + psQuote(name) + " -StartupType " + mode)
-			return err
-		}
-		if !enable {
-			_, err := b.powershell("$t=Get-ScheduledTask -TaskPath '\\' -ErrorAction Stop | Where-Object TaskName -eq " + psQuote(name) + "; if ($null -ne $t) { $t | Disable-ScheduledTask | Out-Null }")
-			return err
-		}
-		// Interactive, least-privilege logon task: no stored password and no
-		// unsupported Windows 'user service'. The hidden wrapper waits for the worker.
-		command := "& " + psQuote(b.executable) + " --mcp-worker; exit $LASTEXITCODE"
-		args := `-NoProfile -NonInteractive -WindowStyle Hidden -Command "` + strings.ReplaceAll(command, `"`, `\"`) + `"`
-		script := "$a=New-ScheduledTaskAction -Execute 'powershell.exe' -Argument " + psQuote(args) + " -WorkingDirectory " + psQuote(root) + "; " +
-			"$p=New-ScheduledTaskPrincipal -UserId " + psQuote(b.account) + " -LogonType Interactive -RunLevel Limited; " +
-			"$t=New-ScheduledTaskTrigger -AtLogOn -User " + psQuote(b.account) + "; " +
-			"$s=New-ScheduledTaskSettingsSet -ExecutionTimeLimit ([TimeSpan]::Zero) -MultipleInstances IgnoreNew -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries; " +
-			"Register-ScheduledTask -TaskName " + psQuote(name) + " -Action $a -Principal $p -Trigger $t -Settings $s -Force | Out-Null"
-		_, err := b.powershell(script)
-		return err
+		return b.windowsStartupApply(root, setup, enable)
 	}
 	file := b.file(root, setup)
 	if enable && setup.Manager == "go-client" {
@@ -323,4 +281,184 @@ func savePreferencesWith(b startupBackend, root, id, key string, startup, connec
 		return err
 	}
 	return writePrivate(filepath.Join(root, "runtime", "setup.json"), raw)
+}
+
+// windowsLoginTask is a small native schtasks.exe adapter; it never invokes a
+// scripting interpreter and refuses to take ownership of unrelated tasks.
+func (b startupBackend) windowsLoginTask(root string, setup persistedSetup) (bool, bool, bool, error) {
+	name := b.name(root, setup)
+	data, err := b.run("schtasks.exe", "/query", "/tn", name, "/xml")
+	if err != nil {
+		msg := strings.ToLower(string(data))
+		if strings.Contains(msg, "cannot find") || strings.Contains(msg, "does not exist") ||
+			strings.Contains(msg, "cannot be found") || strings.Contains(msg, "找不到") ||
+			strings.Contains(msg, "不存在") {
+			return false, false, false, nil
+		}
+		return false, false, false, err
+	}
+	xmlData := windowsUTF8TaskXML(data)
+	var task struct {
+		Actions struct {
+			Exec []struct {
+				Command   string `xml:"Command"`
+				Arguments string `xml:"Arguments"`
+			} `xml:"Exec"`
+		} `xml:"Actions"`
+		Settings struct {
+			Enabled string `xml:"Enabled"`
+		} `xml:"Settings"`
+	}
+	if err := xml.Unmarshal(xmlData, &task); err != nil {
+		return false, false, false, fmt.Errorf("invalid scheduled task XML: %w", err)
+	}
+	if len(task.Actions.Exec) != 1 {
+		return false, false, false, errors.New("scheduled task not owned by this installation")
+	}
+	a := task.Actions.Exec[0]
+	command := strings.Trim(a.Command, string(rune(34)))
+	args := strings.ToLower(a.Arguments)
+	worker := "serve-worker"
+	if true {
+		worker = "--mcp-worker"
+	}
+	owned := strings.EqualFold(command, b.executable) && strings.Contains(args, worker)
+	legacy := !owned && strings.HasSuffix(strings.ToLower(command), "powershell.exe") &&
+		strings.Contains(args, strings.ToLower(b.executable)) && strings.Contains(args, worker)
+	// Older Remote Desktop used a VBScript wrapper. Only migrate the
+	// exact launcher path from this installation, never another user's task.
+
+	if !owned && !legacy {
+		return false, false, false, errors.New("scheduled task not owned by this installation")
+	}
+	return true, !strings.EqualFold(strings.TrimSpace(task.Settings.Enabled), "false"), legacy, nil
+}
+func windowsUTF8TaskXML(data []byte) []byte {
+	if len(data) >= 2 && ((data[0] == 0xff && data[1] == 0xfe) || (data[0] == 0xfe && data[1] == 0xff)) {
+		little := data[0] == 0xff
+		units := make([]uint16, 0, (len(data)-2)/2)
+		for i := 2; i+1 < len(data); i += 2 {
+			if little {
+				units = append(units, binary.LittleEndian.Uint16(data[i:i+2]))
+			} else {
+				units = append(units, binary.BigEndian.Uint16(data[i:i+2]))
+			}
+		}
+		data = []byte(string(utf16.Decode(units)))
+	} else if len(data) >= 4 && data[1] == 0 && data[3] == 0 {
+		units := make([]uint16, 0, len(data)/2)
+		for i := 0; i+1 < len(data); i += 2 {
+			units = append(units, binary.LittleEndian.Uint16(data[i:i+2]))
+		}
+		data = []byte(string(utf16.Decode(units)))
+	}
+	return []byte(strings.Replace(string(data), "encoding=\"UTF-16\"", "encoding=\"UTF-8\"", 1))
+}
+
+const windowsRunKey = `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`
+
+func (b startupBackend) windowsRunCommand(root string) string {
+	executable := b.executable
+	// Prefer GUI-subsystem launcher for login; no console flashes.
+	if strings.EqualFold(filepath.Base(filepath.Dir(executable)), "bin") {
+		candidate := filepath.Join(filepath.Dir(executable), "vidotter-host.exe")
+		if _, err := os.Stat(candidate); err == nil {
+			executable = candidate
+		}
+	}
+	return fmt.Sprintf("\"%s\" %s", executable, "--mcp-worker")
+}
+
+func (b startupBackend) windowsRunPresent(root string, setup persistedSetup) (bool, error) {
+	name := b.name(root, setup)
+	out, err := b.run("reg.exe", "query", windowsRunKey, "/v", name)
+	if err != nil {
+		msg := strings.ToLower(string(out))
+		if strings.Contains(msg, "unable to find") ||
+			strings.Contains(msg, "cannot find") ||
+			strings.Contains(msg, "not found") ||
+			strings.Contains(msg, "找不到") ||
+			strings.Contains(msg, "无法找到") {
+			return false, nil
+		}
+		return false, fmt.Errorf("query HKCU Run entry: %w", err)
+	}
+	want := b.windowsRunCommand(root)
+	for _, line := range strings.Split(string(out), "\n") {
+		fields := strings.SplitN(strings.TrimSpace(line), "REG_SZ", 2)
+		if len(fields) != 2 || strings.TrimSpace(fields[0]) != name {
+			continue
+		}
+		value := strings.TrimSpace(fields[1])
+		if !strings.EqualFold(value, want) {
+			return false, errors.New("another installation owns the login startup entry")
+		}
+		return true, nil
+	}
+	return false, errors.New("unexpected registry Run entry data")
+}
+func (b startupBackend) windowsStartupStatus(root string, setup persistedSetup) (bool, error) {
+	name := b.name(root, setup)
+	if setup.Manager == "go-service" {
+		out, err := b.run("sc.exe", "qc", name)
+		if err != nil {
+			return false, err
+		}
+		text := strings.ToUpper(string(out))
+		if strings.Contains(text, "AUTO_START") {
+			return true, nil
+		}
+		if strings.Contains(text, "DEMAND_START") || strings.Contains(text, "DISABLED") {
+			return false, nil
+		}
+		return false, errors.New("unknown Windows service startup state")
+	}
+	present, err := b.windowsRunPresent(root, setup)
+	if err != nil {
+		return false, err
+	}
+	if present {
+		return true, nil
+	}
+	_, enabled, _, err := b.windowsLoginTask(root, setup)
+	return enabled, err
+}
+func (b startupBackend) windowsStartupApply(root string, setup persistedSetup, enable bool) error {
+	name := b.name(root, setup)
+	if setup.Manager == "go-service" {
+		mode := "demand"
+		if enable {
+			mode = "auto"
+		}
+		_, err := b.run("sc.exe", "config", name, "start=", mode)
+		return err
+	}
+	exists, enabled, _, err := b.windowsLoginTask(root, setup)
+	if err != nil {
+		return err
+	}
+	present, err := b.windowsRunPresent(root, setup)
+	if err != nil {
+		return err
+	}
+	// Disable an owned old Task Scheduler entry first, so upgrades cannot
+	// run a PowerShell/VBS task concurrently with the native Run entry.
+	if exists && enabled {
+		if _, err := b.run("schtasks.exe", "/change", "/tn", name, "/disable"); err != nil {
+			return fmt.Errorf("disable old login task before migration: %w", err)
+		}
+	}
+	if enable {
+		if present {
+			return nil
+		}
+		_, err := b.run("reg.exe", "add", windowsRunKey, "/v", name, "/t", "REG_SZ",
+			"/d", b.windowsRunCommand(root), "/f")
+		return err
+	}
+	if present {
+		_, err := b.run("reg.exe", "delete", windowsRunKey, "/v", name, "/f")
+		return err
+	}
+	return nil
 }

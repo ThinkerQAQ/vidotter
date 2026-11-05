@@ -53,11 +53,10 @@ VidOtter 就是为了解决这个问题。它通过浏览器扩展检测 MP4、H
 
 以下命令使用**同一份图形安装器**，但不显示安装向导。在安装包的下载目录打开终端。
 
-##### Windows（PowerShell）
+##### Windows（CMD）
 
-```powershell
-$installer = (Get-ChildItem .\VidOtter-Setup-v*-windows-amd64.exe | Select-Object -First 1).FullName
-Start-Process -FilePath $installer -ArgumentList '--accept-licenses --default-answer --confirm-command install' -Wait
+```cmd
+for %F in (VidOtter-Setup-v*-windows-amd64.exe) do "%~fF" --accept-licenses --default-answer --confirm-command install
 ```
 
 ##### macOS（Intel）
@@ -90,10 +89,10 @@ QT_QPA_PLATFORM=offscreen "$installer" --root "$HOME/VidOtter" --accept-licenses
 
 将压缩包完整解压到固定目录。安装根目录应直接包含 `bin/` 和 `extension/`。进入该目录，注册 Native Messaging Host：
 
-Windows PowerShell：
+Windows CMD：
 
-```powershell
-Set-Location 'C:\path\to\VidOtter'
+```cmd
+cd /d "C:\path\to\VidOtter"
 .\bin\vidotterdev.exe install
 ```
 
@@ -118,8 +117,8 @@ cd '/path/to/VidOtter'
 
 若提示找不到 Native Messaging Host，复制扩展管理页的 32 位扩展 ID，在安装根目录重新注册：
 
-```powershell
-# Windows：将占位符替换为实际扩展 ID
+```cmd
+rem 将占位符替换为实际扩展 ID
 .\bin\vidotterdev.exe install --extension-id YOUR_32_CHARACTER_ID
 ```
 
@@ -176,11 +175,11 @@ VidOtter 内置本地 MCP Server。只有连接网页版 ChatGPT 时才需要 Tu
 
 **Start local service at login** 和 **Connect Tunnel automatically** 是两个独立设置。保存配置不会改变正在运行的服务；修改连接后使用 **Restart Service** 生效。**Disconnect Tunnel** 只断开 Tunnel，保留本地服务；**Stop Service** 停止本次运行，不会关闭下次登录自启动。已保存的密钥会遮挡显示，无需重复填写。
 
-Windows 使用任务计划程序，Linux 使用 systemd 用户服务，macOS 使用 LaunchAgent，三者均由 Go 管理。v1.7.0 不导入旧版 PowerShell/Shell 管理的 MCP 连接配置，需要重新填写连接信息；已有下载文件和其他用户数据保留。
+Windows 使用当前用户的原生登录启动项（HKCU Run），Linux 使用 systemd 用户服务，macOS 使用 LaunchAgent，三者均由 Go 管理。v1.7.0 不导入旧版 PowerShell/Shell 管理的 MCP 连接配置，需要重新填写连接信息；已有下载文件和其他用户数据保留。
 
 命令行也可以查看和控制服务，使用安装目录中的 Bridge 执行 `--mcp-service status|start|stop|restart|connect|disconnect`。例如 Windows：
 
-```powershell
+```cmd
 .\bin\vidotter-windows-amd64.exe --mcp-service status
 ```
 
@@ -249,12 +248,12 @@ cd "$vidotter_dev_dir"
 ./bin/vidotterdev install
 ```
 
-Windows PowerShell：
+Windows CMD：
 
-```powershell
-$vidotterDevDir = Join-Path (Get-Location).Path '.build\dev-install'
-go -C tools/vidotterdev run . deploy --target $vidotterDevDir
-Set-Location $vidotterDevDir
+```cmd
+set "VIDOTTER_DEV_DIR=%CD%\.build\dev-install"
+go -C tools/vidotterdev run . deploy --target "%VIDOTTER_DEV_DIR%"
+cd /d "%VIDOTTER_DEV_DIR%"
 .\bin\vidotterdev.exe install
 ```
 
