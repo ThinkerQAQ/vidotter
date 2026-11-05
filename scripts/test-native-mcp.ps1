@@ -1,4 +1,4 @@
-# Real isolated Windows login-task and Go worker acceptance. No live credentials,
+# Real isolated Windows HKCU Run login-startup and Go worker acceptance. No live credentials,
 # global VidOtter tasks, browser, or OpenAI network access are used.
 param([switch]$UseBuiltBinary)
 $ErrorActionPreference='Stop'
@@ -18,6 +18,7 @@ $env:USERPROFILE=Join-Path $work 'home'
 $root=Join-Path $work 'Data/mcp'
 $hash=[Security.Cryptography.SHA256]::Create().ComputeHash([Text.Encoding]::UTF8.GetBytes($root))
 $taskName='VidOtter-MCP-'+([Convert]::ToHexString($hash).Substring(0,10).ToLowerInvariant())+'-Login'
+$runKey='HKCU:\Software\Microsoft\Windows\CurrentVersion\Run'
 function Invoke-Native([string[]]$Arguments){$text=& $executable @Arguments; if($LASTEXITCODE){throw "Native action failed: $Arguments"}; return $text}
 function Save-Config($config){$config | ConvertTo-Json -Compress | & $executable --mcp-configure; if($LASTEXITCODE){throw 'Native Save failed'}}
 function Read-State{(Invoke-Native -Arguments @('--mcp-service','status')) | ConvertFrom-Json}
@@ -29,10 +30,10 @@ try {
  $setup=Get-Content -LiteralPath $setupFile -Raw | ConvertFrom-Json
  $setup.tunnelArgs=@('-test.run=^TestTunnelChildHelper$','--')
  $setup | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $setupFile -Encoding utf8
- $task=Get-ScheduledTask -TaskName $taskName
- if($task.Principal.LogonType -ne 'Interactive' -or $task.Principal.RunLevel -ne 'Limited' -or $task.Settings.ExecutionTimeLimit -ne 'PT0S'){throw 'Unsafe login task identity/settings'}
+ $registration=(Get-ItemProperty -Path $runKey -Name $taskName -ErrorAction Stop).$taskName
+ if($registration -notlike ('*'+$executable+'*--mcp-worker')){throw 'Native HKCU Run startup path is not owned by synthetic test installation'}
  if((Read-State).managed_process_running){throw 'Save started the local worker'}
- Write-Host "Starting isolated task"; Start-ScheduledTask -TaskName $taskName
+ Write-Host "Starting isolated native worker"; Start-Process -FilePath $executable -ArgumentList '--mcp-worker' -WorkingDirectory $work -WindowStyle Hidden
  $state=Wait-State {param($s) $s.managed_process_running -and !$s.tunnel_connecting}
  Invoke-Native -Arguments @('--mcp-service','connect') | Out-Null
  $state=Wait-State {param($s) $s.tunnel_ready}
@@ -46,9 +47,8 @@ try {
  $state=Wait-State {param($s) $s.tunnel_ready -and !$s.restart_required -and $s.id -eq 'tunnel_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb'}
  Invoke-Native -Arguments @('--mcp-service','stop') | Out-Null
  $null=Wait-State {param($s) !$s.managed_process_running -and $s.autostart_enabled}
- $deadline=[DateTime]::UtcNow.AddSeconds(10)
- while((Get-ScheduledTask -TaskName $taskName).State -eq 'Running' -and [DateTime]::UtcNow -lt $deadline){Start-Sleep -Milliseconds 200}
- Write-Host "Starting isolated task"; Start-ScheduledTask -TaskName $taskName
+
+ Write-Host "Starting isolated native worker"; Start-Process -FilePath $executable -ArgumentList '--mcp-worker' -WorkingDirectory $work -WindowStyle Hidden
  $null=Wait-State {param($s) $s.tunnel_ready}
  Invoke-Native -Arguments @('--mcp-startup','disable') | Out-Null
  $state=Read-State
@@ -58,11 +58,10 @@ try {
  Write-Host 'PASS: real isolated login task -> standby -> connect -> rotation -> disconnect -> restart -> ready -> stop -> task relaunch -> disable startup while running; DPAPI protected.'
 } finally {
  try{& $executable --mcp-service stop | Out-Null}catch{}
- $task=Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
- if($task){
-  if(![string]::Equals($task.Actions[0].WorkingDirectory,$root,[StringComparison]::OrdinalIgnoreCase)){throw 'Refusing to clean up a task owned by another directory'}
-  $task | Stop-ScheduledTask -ErrorAction SilentlyContinue
-  $task | Unregister-ScheduledTask -Confirm:$false
+ $registered=(Get-ItemProperty -Path $runKey -Name $taskName -ErrorAction SilentlyContinue).$taskName
+ if($registered){
+   if($registered -notlike ('*'+$executable+'*--mcp-worker')){throw 'Refusing to clean up a Run entry owned by another installation'}
+   Remove-ItemProperty -Path $runKey -Name $taskName
  }
  $env:LOCALAPPDATA=$oldLocal
  $env:USERPROFILE=$oldHome
