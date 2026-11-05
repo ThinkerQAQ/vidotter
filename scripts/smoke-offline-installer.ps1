@@ -41,14 +41,10 @@ if (Test-Path (Join-Path $target 'docs')) { throw "Installed docs/ is forbidden 
 & (Join-Path $target 'bin/vidotter-windows-amd64.exe') --mcp-service status
 if($LASTEXITCODE){throw 'Native Go MCP management failed'}
 $firstRun = Join-Path $target "scripts/VidOtter-FirstRun.ps1"
-if (!(Test-Path $firstRun)) { throw "First-run helper missing from installation" }
-$parseErrors = $null
-[System.Management.Automation.Language.Parser]::ParseFile($firstRun, [ref]$null, [ref]$parseErrors) | Out-Null
-if ($parseErrors.Count -gt 0) { throw "Windows first-run PowerShell script has syntax errors: $parseErrors" }
-$helperText = Get-Content -Raw -Encoding UTF8 $firstRun
-if ($helperText -notmatch 'Start-Process -FilePath \$guide' -or $helperText -match 'Start-Process -FilePath explorer.exe') {
-    throw "First-run helper must open only the local guide"
-}
+if (Test-Path $firstRun) { throw "Obsolete PowerShell first-run helper is still installed" }
+$configureLauncher = Join-Path $target "bin/VidOtter-Configure.exe"
+if (!(Test-Path $configureLauncher)) { throw "Native first-run configuration launcher missing" }
+Assert-GUIExecutable $configureLauncher
 
 $startMenu = Join-Path ([Environment]::GetFolderPath('Programs')) 'VidOtter'
 foreach ($shortcut in @('View Setup Instructions.lnk', 'Uninstall VidOtter.lnk')) {
