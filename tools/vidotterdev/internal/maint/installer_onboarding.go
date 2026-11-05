@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-//go:embed assets/controller.qs assets/first-run.ui assets/first-run.ps1 assets/Open-VidOtter-Settings.sh
+//go:embed assets/controller.qs assets/first-run.ui assets/Open-VidOtter-Settings.sh
 var onboardingAssets embed.FS
 
 func writeInstallerAsset(from, to string) error {
@@ -33,11 +33,7 @@ func writeInstallerOnboarding(dir, meta, payload string, targetOS string) error 
 			return err
 		}
 	}
-	if targetOS == "windows" {
-		if err := writeInstallerAsset("first-run.ps1", filepath.Join(payload, "scripts", "VidOtter-FirstRun.ps1")); err != nil {
-			return err
-		}
-	} else {
+	if targetOS != "windows" {
 		script := filepath.Join(payload, "scripts", "Open-VidOtter-Settings.sh")
 		if err := writeInstallerAsset("Open-VidOtter-Settings.sh", script); err != nil {
 			return err
