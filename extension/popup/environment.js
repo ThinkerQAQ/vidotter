@@ -630,6 +630,21 @@
     const state = mcpStatus(tool);
     mcpUI.error = "";
     mcpUI.info = "";
+    if (action === "install-client") {
+      mcpUI.busy = "installing";
+      renderTools(tools);
+      try {
+        await api.send("bridge.tool.action", { tool: "chatgpt-mcp", toolAction: "install-client" });
+        mcpUI.busy = "";
+        mcpUI.info = "官方 Tunnel Client 已下载并校验；不会自动启动服务。";
+        await refresh();
+      } catch (error) {
+        mcpUI.busy = "";
+        mcpUI.error = error.message || String(error);
+        renderTools(tools);
+      }
+      return;
+    }
     if (action === "save") {
       const tunnelId = mcpEffectiveTunnelID(body, state.tunnelID, mcpUI.draftID, mcpUI.idEdited);
       const runtimeApiKey = mcpUI.draftKey.trim();
@@ -903,6 +918,15 @@
     keyState.className = "settings-help mcp-credential-state";
     keyState.textContent = state.runtimeKeySaved ? "已保存；留空则复用" : "尚未保存";
     localPanel.appendChild(keyState);
+    const clientStatus = document.createElement("div");
+    clientStatus.className = "settings-help mcp-credential-state";
+    clientStatus.textContent = state.clientInstalled ? "官方 Tunnel Client 已安装" : "官方 Tunnel Client 尚未安装（按需下载）";
+    localPanel.appendChild(clientStatus);
+    if (!state.clientInstalled) {
+      const installClient = mcpButton(localPanel, "安装官方 Tunnel Client",
+        () => mcpAction("install-client", tool, shell));
+      installClient.disabled = busy;
+    }
     const actions = document.createElement("div");
     actions.className = "mcp-service-actions";
     mcpButton(actions, "Save", () => mcpAction("save", tool, shell), true);

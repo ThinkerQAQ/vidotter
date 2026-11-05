@@ -240,3 +240,8 @@ assert.equal(environment.mcpControlState(standby,preferenceDraft).canStop,true);
 assert.equal(environment.mcpControlState({...standby,tunnelConnecting:true},preferenceDraft).canDisconnect,true);
 assert.equal(environment.mcpControlState(savedTunnel,{...form,available:false}).canStart,false);
 assert.deepEqual(environment.mcpHeaderStatus(standby),{label:"服务运行中 · Tunnel 未连接",kind:"pending"});
+
+// The optional MCP tunnel has a standalone recovery action in the component UI.
+assert.match(mcpSource, /if \(action === "install-client"\)/);
+assert.match(mcpSource, /mcpButton\(localPanel, "安装官方 Tunnel Client"/);
+assert.match(mcpSource, /toolAction: "install-client"/);
