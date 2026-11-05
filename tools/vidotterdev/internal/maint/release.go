@@ -21,6 +21,16 @@ func targets() []target {
 	return []target{{"windows", "windows", "amd64"}, {"linux", "linux", "amd64"}, {"linux", "linux", "arm64"}, {"darwin", "macos", "amd64"}, {"darwin", "macos", "arm64"}}
 }
 
+// releaseScriptFilter keeps development-only Windows automation out of all portable packages.
+func releaseScriptFilter(relative string, isDir bool) bool {
+    if isDir { return true }
+    switch strings.ToLower(filepath.Ext(relative)) {
+    case ".ps1", ".cmd", ".vbs":
+        return false
+    }
+    return true
+}
+
 func Package(root, requested string, allowMissing bool, source string) error {
 	current, err := version(root)
 	if err != nil {
@@ -82,7 +92,7 @@ func Package(root, requested string, allowMissing bool, source string) error {
 		} else if err != nil && !os.IsNotExist(err) {
 			return err
 		}
-		if err := copyTree(filepath.Join(root, "scripts"), filepath.Join(stage, "scripts"), nil); err != nil {
+		if err := copyTree(filepath.Join(root, "scripts"), filepath.Join(stage, "scripts"), releaseScriptFilter); err != nil {
 			return err
 		}
 		if err := copyTree(filepath.Join(root, ".build", "out", "licenses", t.OS+"-"+t.Arch), filepath.Join(stage, "THIRD_PARTY_LICENSES"), nil); err != nil {
