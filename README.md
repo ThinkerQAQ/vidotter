@@ -53,11 +53,10 @@ All three installers register the local Native Messaging host. Chrome or Edge st
 
 These commands run the **same graphical installers** without the wizard. Open a terminal in the directory where you downloaded the installer.
 
-##### Windows (PowerShell)
+##### Windows (CMD)
 
-```powershell
-$installer = (Get-ChildItem .\VidOtter-Setup-v*-windows-amd64.exe | Select-Object -First 1).FullName
-Start-Process -FilePath $installer -ArgumentList '--accept-licenses --default-answer --confirm-command install' -Wait
+```cmd
+for %F in (VidOtter-Setup-v*-windows-amd64.exe) do "%~fF" --accept-licenses --default-answer --confirm-command install
 ```
 
 ##### macOS (Intel)
@@ -90,10 +89,10 @@ If you prefer manual installation, download the matching archive from the same R
 
 Extract it to a permanent location. The installation root contains `bin/` and `extension/`. Register the Native Messaging host from that directory:
 
-Windows PowerShell:
+Windows CMD:
 
-```powershell
-Set-Location 'C:\path\to\VidOtter'
+```cmd
+cd /d "C:\path\to\VidOtter"
 .\bin\vidotterdev.exe install
 ```
 
@@ -118,8 +117,8 @@ If you move the installation, run the registration command again. On Linux, `una
 
 If the Native Messaging host cannot be found, copy the 32-character extension ID from the extensions page and register it again from the installation root:
 
-```powershell
-# Windows: replace the placeholder with the actual extension ID
+```cmd
+rem Replace the placeholder with the actual extension ID
 .\bin\vidotterdev.exe install --extension-id YOUR_32_CHARACTER_ID
 ```
 
@@ -176,11 +175,11 @@ VidOtter includes a local MCP server. The Tunnel is only needed for ChatGPT on t
 
 **Start local service at login** and **Connect Tunnel automatically** are independent settings. Saving does not change a running service; use **Restart Service** to apply saved connection changes. **Disconnect Tunnel** keeps the local service running, while **Stop Service** stops this run without disabling its next-login startup preference. Saved keys are masked and do not need to be entered again.
 
-The service is managed by Go on all three platforms: Windows Task Scheduler, Linux systemd user units, and macOS LaunchAgents. The old PowerShell/Shell-based MCP service settings are not imported; enter the connection details again after upgrading to v1.7.0. Downloads and other user data are retained.
+The service is managed by Go on all three platforms: Windows per-user native startup (HKCU Run), Linux systemd user units, and macOS LaunchAgents. The old PowerShell/Shell-based MCP service settings are not imported; enter the connection details again after upgrading to v1.7.0. Downloads and other user data are retained.
 
 For command-line status and service control, run the installed Bridge with `--mcp-service status|start|stop|restart|connect|disconnect`. For example:
 
-```powershell
+```cmd
 .\bin\vidotter-windows-amd64.exe --mcp-service status
 ```
 
@@ -249,12 +248,12 @@ cd "$vidotter_dev_dir"
 ./bin/vidotterdev install
 ```
 
-Windows PowerShell:
+Windows CMD:
 
-```powershell
-$vidotterDevDir = Join-Path (Get-Location).Path '.build\dev-install'
-go -C tools/vidotterdev run . deploy --target $vidotterDevDir
-Set-Location $vidotterDevDir
+```cmd
+set "VIDOTTER_DEV_DIR=%CD%\.build\dev-install"
+go -C tools/vidotterdev run . deploy --target "%VIDOTTER_DEV_DIR%"
+cd /d "%VIDOTTER_DEV_DIR%"
 .\bin\vidotterdev.exe install
 ```
 
