@@ -231,10 +231,10 @@ func TestPrepareInstallerFirstRunOnboarding(t *testing.T) {
 				t.Fatal("installer finish page lacks activation hook")
 			}
 			powershell := filepath.Join(base, "data", "scripts", "VidOtter-FirstRun.ps1")
+			if _, err := os.Stat(powershell); !os.IsNotExist(err) {
+				t.Fatalf("unused PowerShell script must not ship in any installer: %v", err)
+			}
 			if platform == "windows" {
-				if _, err := os.Stat(powershell); err != nil {
-					t.Fatal(err)
-				}
 				if strings.Contains(string(script), "powershell.exe") {
 					t.Fatal("Windows GUI config entrypoints must not use a PowerShell launcher")
 				}
@@ -244,9 +244,6 @@ func TestPrepareInstallerFirstRunOnboarding(t *testing.T) {
 					}
 				}
 			} else {
-				if _, err := os.Stat(powershell); !os.IsNotExist(err) {
-					t.Fatalf("unexpected Windows-specific script on %s", platform)
-				}
 				shell := filepath.Join(base, "data", "scripts", "Open-VidOtter-Settings.sh")
 				info, err := os.Stat(shell)
 				if err != nil || (runtime.GOOS != "windows" && info.Mode()&0o111 == 0) {
