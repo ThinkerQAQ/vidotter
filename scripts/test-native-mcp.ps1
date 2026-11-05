@@ -31,6 +31,8 @@ try {
  $setup.tunnelArgs=@('-test.run=^TestTunnelChildHelper$','--')
  $setup | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $setupFile -Encoding utf8
  $registration=(Get-ItemProperty -Path $runKey -Name $taskName -ErrorAction Stop).$taskName
+ Write-Host "Synthetic startup registration: $registration" # no credentials or secrets in command
+ Write-Host "Expected executable: $executable"
  if($registration -notlike ('*'+$executable+'*--mcp-worker')){throw 'Native HKCU Run startup path is not owned by synthetic test installation'}
  if((Read-State).managed_process_running){throw 'Save started the local worker'}
  Write-Host "Starting isolated native worker"; Start-Process -FilePath $executable -ArgumentList '--mcp-worker' -WorkingDirectory $work -WindowStyle Hidden
