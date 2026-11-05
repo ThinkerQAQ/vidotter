@@ -183,7 +183,7 @@ func simulatedNativeTask(executable, worker string, exists, enabled *bool, comma
 					return []byte("ERROR: The system cannot find the file specified."), errors.New("not found")
 				}
 				label := args[len(args)-1]
-				return []byte(fmt.Sprintf("    %s    REG_SZ    %q %s\n", label, executable, worker)), nil
+				return []byte(fmt.Sprintf("    %s    REG_SZ    \"%s\" %s\n", label, executable, worker)), nil
 			case "add":
 				*enabled = true
 				return nil, nil

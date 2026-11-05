@@ -366,7 +366,7 @@ func (b startupBackend) windowsRunCommand(root string) string {
 			executable = candidate
 		}
 	}
-	return fmt.Sprintf("%q %s", executable, "--mcp-worker")
+	return fmt.Sprintf("\"%s\" %s", executable, "--mcp-worker")
 }
 
 func (b startupBackend) windowsRunPresent(root string, setup persistedSetup) (bool, error) {
