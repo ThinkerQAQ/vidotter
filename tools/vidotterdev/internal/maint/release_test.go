@@ -25,3 +25,28 @@ func TestPublicReleaseTargetsRemainDesktopOnly(t *testing.T) {
         t.Fatalf("missing public release targets: %v", want)
     }
 }
+
+func TestReleaseScriptFilterExcludesWindowsAutomation(t *testing.T) {
+    for _, path := range []string{
+        "smoke-offline-installer.ps1",
+        "test-native-mcp.PS1",
+        "legacy.cmd",
+        "hidden.vbs",
+    } {
+        if releaseScriptFilter(path, false) {
+            t.Errorf("release must not ship obsolete Windows script %s", path)
+        }
+    }
+    for _, path := range []string{
+        "setup.sh",
+        "run.py",
+        "installer-gui-smoke.qs",
+    } {
+        if !releaseScriptFilter(path, false) {
+            t.Errorf("unexpectedly excluded %s", path)
+        }
+    }
+    if !releaseScriptFilter("scripts", true) {
+        t.Fatal("script directory must remain included")
+    }
+}
