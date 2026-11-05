@@ -17,11 +17,11 @@ func TestPreferencesPreserveConnectionAndApplyOnlyVerifiedStartup(t *testing.T) 
 		t.Fatal(err)
 	}
 	first, _ := readSetup(root)
-    enabled:=false
-    exists:=false
-    var commands []string
-    b:=startupBackend{platform:"windows",executable:`C:\Program Files\Example's App\client.exe`,account:`USER\example`}
-    b.run=simulatedNativeTask(b.executable,"--mcp-worker",&exists,&enabled,&commands)
+	enabled := false
+	exists := false
+	var commands []string
+	b := startupBackend{platform: "windows", executable: `C:\Program Files\Example's App\client.exe`, account: `USER\example`}
+	b.run = simulatedNativeTask(b.executable, "--mcp-worker", &exists, &enabled, &commands)
 	yes, no := true, false
 	if err := savePreferencesWith(b, root, first.ID, "", &yes, &no); err != nil {
 		t.Fatal(err)
@@ -65,11 +65,13 @@ func TestStartupFailureIsNotPersisted(t *testing.T) {
 	if err := saveNative(root, "tunnel_TEST", "synthetic-key"); err != nil {
 		t.Fatal(err)
 	}
-    b:=startupBackend{platform:"windows",executable:`C:	ools\client.exe`}
-    b.run=func(name string,args ...string)([]byte,error) {
-        if len(args)>0 && args[0]=="/create" {return nil,errors.New("denied")}
-        return []byte("ERROR: The system cannot find the file specified."),errors.New("not found")
-    }
+	b := startupBackend{platform: "windows", executable: `C:	ools\client.exe`}
+	b.run = func(name string, args ...string) ([]byte, error) {
+		if name == "reg.exe" && len(args) > 0 && args[0] == "add" {
+			return nil, errors.New("denied")
+		}
+		return []byte("ERROR: The system cannot find the file specified."), errors.New("not found")
+	}
 	yes := true
 	before, _ := os.ReadFile(filepath.Join(root, "runtime", "setup.json"))
 	if savePreferencesWith(b, root, "tunnel_CHANGED", "replacement-key", &yes, nil) == nil {
@@ -163,27 +165,57 @@ func TestManualLaunchdServiceStartPreservesDisabledLoginPreference(t *testing.T)
 	}
 }
 
-
-// simulatedNativeTask is a fake Windows task scheduler for unit tests.
-// It tracks the same executable and startup worker command as a real native task.
-func simulatedNativeTask(executable, worker string, exists, enabled *bool, commands *[]string) func(string, ...string) ([]byte,error) {
-    return func(name string, args ...string) ([]byte,error) {
-        command:=name+" "+strings.Join(args," ")
-        *commands=append(*commands,command)
-        if name!="schtasks.exe" { return nil,fmt.Errorf("unexpected executable %s",name)}
-        switch args[0] {
-        case "/query":
-            if !*exists {return []byte("ERROR: The system cannot find the file specified."),errors.New("not found")}
-            state:="false"
-            if *enabled {state="true"}
-            return []byte(fmt.Sprintf("<Task><Actions><Exec><Command>%s</Command><Arguments>%s</Arguments></Exec></Actions><Settings><Enabled>%s</Enabled></Settings></Task>",executable,worker,state)),nil
-        case "/create": *exists=true;*enabled=true;return nil,nil
-        case "/change":
-            if len(args)>3 && args[len(args)-1]=="/disable" {*enabled=false}
-            if len(args)>3 && args[len(args)-1]=="/enable" {*enabled=true}
-            return nil,nil
-        case "/delete": *exists=false;*enabled=false;return nil,nil
-        }
-        return nil,fmt.Errorf("unexpected task scheduler command: %s",command)
-    }
+// simulatedNativeTask models per-user registry Run and an owned legacy task.
+// No PowerShell or scripting interpreter is involved in the production path.
+func simulatedNativeTask(executable, worker string, exists, enabled *bool, commands *[]string) func(string, ...string) ([]byte, error) {
+	legacyEnabled := *exists
+	return func(name string, args ...string) ([]byte, error) {
+		command := name + " " + strings.Join(args, " ")
+		*commands = append(*commands, command)
+		if len(args) == 0 {
+			return nil, fmt.Errorf("missing command args")
+		}
+		switch name {
+		case "reg.exe":
+			switch strings.ToLower(args[0]) {
+			case "query":
+				if !*enabled {
+					return []byte("ERROR: The system cannot find the file specified."), errors.New("not found")
+				}
+				label := args[len(args)-1]
+				return []byte(fmt.Sprintf("    %s    REG_SZ    %q %s\n", label, executable, worker)), nil
+			case "add":
+				*enabled = true
+				return nil, nil
+			case "delete":
+				*enabled = false
+				return nil, nil
+			}
+		case "schtasks.exe":
+			switch strings.ToLower(args[0]) {
+			case "/query":
+				if !*exists {
+					return []byte("ERROR: The system cannot find the file specified."), errors.New("not found")
+				}
+				state := "false"
+				if legacyEnabled {
+					state = "true"
+				}
+				return []byte(fmt.Sprintf("<Task><Actions><Exec><Command>%s</Command><Arguments>%s</Arguments></Exec></Actions><Settings><Enabled>%s</Enabled></Settings></Task>", executable, worker, state)), nil
+			case "/change":
+				if strings.EqualFold(args[len(args)-1], "/disable") {
+					legacyEnabled = false
+				}
+				if strings.EqualFold(args[len(args)-1], "/enable") {
+					legacyEnabled = true
+				}
+				return nil, nil
+			case "/delete":
+				*exists = false
+				legacyEnabled = false
+				return nil, nil
+			}
+		}
+		return nil, fmt.Errorf("unexpected native startup command: %s", command)
+	}
 }
