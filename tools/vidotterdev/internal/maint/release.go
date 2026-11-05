@@ -69,6 +69,18 @@ func Package(root, requested string, allowMissing bool, source string) error {
 		if err := Build(root, t.OS, t.Arch, filepath.Join(stage, "bin", "vidotter-"+t.Name+"-"+t.Arch+ext)); err != nil {
 			return err
 		}
+        if t.OS == "windows" {
+            // Worker runs at login from HKCU Run. A Windows GUI-subsystem
+            // executable avoids flashing a console, while the normal CLI
+            // release executable retains interactive command-line output.
+            host := filepath.Join(stage, "bin", "vidotter-host.exe")
+            if err := run(filepath.Join(root, "bridge"),
+                []string{"CGO_ENABLED=0", "GOOS=" + t.OS, "GOARCH=" + t.Arch},
+                "go", "build", "-buildvcs=false", "-trimpath", "-ldflags", "-H windowsgui",
+                "-o", host, "./cmd/vidotter"); err != nil {
+                return err
+            }
+        }
 		maintOutput := filepath.Join(stage, "bin", "vidotterdev"+ext)
 		if err := run(filepath.Join(root, "tools", "vidotterdev"), []string{"CGO_ENABLED=0", "GOOS=" + t.OS, "GOARCH=" + t.Arch},
 			"go", "build", "-trimpath", "-o", maintOutput, "."); err != nil {
