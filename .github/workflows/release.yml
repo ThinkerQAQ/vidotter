@@ -1,0 +1,73 @@
+name: Publish VidOtter native Windows installer
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+jobs:
+  windows-release:
+    runs-on: windows-latest
+    timeout-minutes: 100
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.27.1'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify pinned FFmpeg Whisper llama runtime payload from prior release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p .build/base
+          # Resolve the most recent *published* release; no old tag is pinned,
+          # so deleting superseded Releases does not break future builds.
+          previous_tag=$(gh release view -R "$GITHUB_REPOSITORY" --json tagName --jq .tagName)
+          test -n "$previous_tag"
+          test "$previous_tag" != "$GITHUB_REF_NAME"
+          previous_archive="vidotter-${previous_tag}-windows-amd64.zip"
+          gh release download "$previous_tag" -R "$GITHUB_REPOSITORY" -p "$previous_archive" -p SHA256SUMS.txt -p FFmpeg-n8.1.2-source.tar.gz -D .build/base
+          (cd .build/base && sha256sum -c SHA256SUMS.txt --ignore-missing)
+          PREVIOUS_TAG="$previous_tag" python -c 'import os,zipfile; tag=os.environ["PREVIOUS_TAG"]; zipfile.ZipFile(f".build/base/vidotter-{tag}-windows-amd64.zip").extractall(".build/base/extracted")'
+          mkdir -p dist/tools .build/cache/source
+          cp -a ".build/base/extracted/vidotter-${previous_tag}-windows-amd64/tools/." dist/tools/
+          cp .build/base/FFmpeg-n8.1.2-source.tar.gz .build/cache/source/
+          test -s dist/tools/ffmpeg-slim.exe
+          test -s dist/tools/whisper/whisper-cli.exe
+          test -s dist/tools/llama/llama-server.exe
+      - name: Build current VidOtter binaries and five verified portable archives
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "v$(python -c 'import json;print(json.load(open("extension/manifest.json"))["version"])')" = "$GITHUB_REF_NAME"
+          go -C tools/vidotterdev run . package --version "$GITHUB_REF_NAME"
+          test -s ".build/artifacts/release/$GITHUB_REF_NAME/vidotter-$GITHUB_REF_NAME-windows-amd64.zip"
+          (cd ".build/artifacts/release/$GITHUB_REF_NAME" && sha256sum -c SHA256SUMS.txt)
+      - name: Create native Windows GUI installer and verify SHA256
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install aqtinstall==3.3.0
+          python scripts/build-offline-installer.py --tag "$GITHUB_REF_NAME" --tools-root "$RUNNER_TEMP/qtifw" --working-dir "$RUNNER_TEMP/work" --output-dir dist/installer --local-release-dir ".build/artifacts/release/$GITHUB_REF_NAME"
+          test -s "dist/installer/VidOtter-Setup-$GITHUB_REF_NAME-windows-amd64.exe"
+          (cd dist/installer && sha256sum VidOtter-Setup-*.exe > INSTALLER-SHA256SUMS.txt && sha256sum -c INSTALLER-SHA256SUMS.txt)
+      - name: Publish directly as GitHub Release (no Actions temporary artifacts)
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          directory=".build/artifacts/release/$GITHUB_REF_NAME"
+          test -s "dist/installer/VidOtter-Setup-$GITHUB_REF_NAME-windows-amd64.exe"
+          gh release create "$GITHUB_REF_NAME" dist/installer/*.exe dist/installer/INSTALLER-SHA256SUMS.txt "$directory"/*.zip "$directory"/*.tar.gz "$directory"/SHA256SUMS.txt -R "$GITHUB_REPOSITORY" --verify-tag --title "VidOtter $GITHUB_REF_NAME — Windows installer" --notes "Rebuilt VidOtter binaries and browser extension, bundling verified media tool binaries from the previous published release. Windows native Qt installer and portable archives are SHA256-verified."

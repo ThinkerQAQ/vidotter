@@ -4,8 +4,8 @@ on:
     inputs:
       release_tag:
         description: Existing release with complete native archives
-        required: true
-        default: v1.7.2
+        required: false
+        default: ''
   pull_request:
     paths:
       - '.github/workflows/installer-smoke.yml'
@@ -42,10 +42,25 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y libxkbcommon-x11-0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-render-util0 libxcb-xkb1 libxcb-util1 libxcb-shape0 libxcb-xinerama0 libxcb-cursor0
+      - name: Resolve last published Release for default acceptance
+        id: published_release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SELECTED_TAG: ${{ inputs.release_tag }}
+        run: |
+          set -euo pipefail
+          if [[ -n "$SELECTED_TAG" ]]; then
+            tag="$SELECTED_TAG"
+          else
+            tag=$(gh release view -R "$GITHUB_REPOSITORY" --json tagName --jq .tagName)
+          fi
+          test -n "$tag"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
       - name: Build verified release installer
         env:
           GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: ${{ inputs.release_tag || 'v1.7.2' }}
+          RELEASE_TAG: ${{ steps.published_release.outputs.tag }}
         shell: bash
         run: |
           preview=()
@@ -61,12 +76,12 @@ jobs:
         if: github.event_name == 'pull_request'
         shell: bash
         env:
-          RELEASE_TAG: ${{ inputs.release_tag || 'v1.7.2' }}
+          RELEASE_TAG: ${{ steps.published_release.outputs.tag }}
         run: python scripts/smoke-pr-extension-bundle.py "$RUNNER_TEMP/release-work/extracted/vidotter-$RELEASE_TAG-${{ matrix.slug }}/extension"
       - name: Build synthetic next-version update repository (CI only)
         shell: bash
         env:
-          RELEASE_TAG: ${{ inputs.release_tag || 'v1.7.2' }}
+          RELEASE_TAG: ${{ steps.published_release.outputs.tag }}
         run: |
           python scripts/make-synthetic-upgrade.py \
             --stage "$RUNNER_TEMP/release-work/extracted/vidotter-$RELEASE_TAG-${{ matrix.slug }}" \
@@ -77,24 +92,24 @@ jobs:
         shell: bash
         env:
           VIDOTTER_TEST_UPDATE_REPO: ${{ runner.temp }}/update-test-work/update-test-repo
-        run: bash scripts/smoke-offline-installer.sh "$RUNNER_TEMP/installer-output/VidOtter-Setup-${{ inputs.release_tag || 'v1.7.2' }}-linux-amd64.run"
+        run: bash scripts/smoke-offline-installer.sh "$RUNNER_TEMP/installer-output/VidOtter-Setup-${{ steps.published_release.outputs.tag }}-linux-amd64.run"
       - name: Linux GUI wizard and Finish options (virtual platform)
         if: runner.os == 'Linux'
         shell: bash
-        run: bash scripts/smoke-installer-gui.sh "$RUNNER_TEMP/installer-output/VidOtter-Setup-${{ inputs.release_tag || 'v1.7.2' }}-linux-amd64.run"
+        run: bash scripts/smoke-installer-gui.sh "$RUNNER_TEMP/installer-output/VidOtter-Setup-${{ steps.published_release.outputs.tag }}-linux-amd64.run"
       - name: Windows headless install/uninstall & Data preservation
         if: runner.os == 'Windows'
         shell: pwsh
         env:
           VIDOTTER_TEST_UPDATE_REPO: ${{ runner.temp }}/update-test-work/update-test-repo
-          RELEASE_TAG: ${{ inputs.release_tag || 'v1.7.2' }}
+          RELEASE_TAG: ${{ steps.published_release.outputs.tag }}
         run: ./scripts/smoke-offline-installer.ps1
       - name: macOS headless install/uninstall & Data preservation
         if: runner.os == 'macOS'
         shell: bash
         env:
           VIDOTTER_TEST_UPDATE_REPO: ${{ runner.temp }}/update-test-work/update-test-repo
-          RELEASE_TAG: ${{ inputs.release_tag || 'v1.7.2' }}
+          RELEASE_TAG: ${{ steps.published_release.outputs.tag }}
         run: bash scripts/smoke-offline-installer-macos.sh "$RUNNER_TEMP/installer-output/VidOtter-Setup-$RELEASE_TAG-macos-amd64.dmg"
       - uses: actions/upload-artifact@v4
         with:
