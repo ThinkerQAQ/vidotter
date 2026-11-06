@@ -55,7 +55,7 @@ def secure_extract(archive, outdir, expected_root):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--tag", default="v1.7.2")
+    parser.add_argument("--tag", default="v1.7.4")
     parser.add_argument("--tools-root", type=Path, required=True)
     parser.add_argument("--working-dir", type=Path, required=True)
     parser.add_argument("--output-dir", type=Path, required=True)

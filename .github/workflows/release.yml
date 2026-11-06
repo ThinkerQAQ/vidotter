@@ -31,11 +31,17 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p .build/base
-          gh release download v1.7.2 -R ThinkerQAQ/vidotter -p vidotter-v1.7.2-windows-amd64.zip -p SHA256SUMS.txt -p FFmpeg-n8.1.2-source.tar.gz -D .build/base
+          # Resolve the most recent *published* release; no old tag is pinned,
+          # so deleting superseded Releases does not break future builds.
+          previous_tag=$(gh release view -R "$GITHUB_REPOSITORY" --json tagName --jq .tagName)
+          test -n "$previous_tag"
+          test "$previous_tag" != "$GITHUB_REF_NAME"
+          previous_archive="vidotter-${previous_tag}-windows-amd64.zip"
+          gh release download "$previous_tag" -R "$GITHUB_REPOSITORY" -p "$previous_archive" -p SHA256SUMS.txt -p FFmpeg-n8.1.2-source.tar.gz -D .build/base
           (cd .build/base && sha256sum -c SHA256SUMS.txt --ignore-missing)
-          python -c 'import zipfile; zipfile.ZipFile(".build/base/vidotter-v1.7.2-windows-amd64.zip").extractall(".build/base/extracted")'
+          PREVIOUS_TAG="$previous_tag" python -c 'import os,zipfile; tag=os.environ["PREVIOUS_TAG"]; zipfile.ZipFile(f".build/base/vidotter-{tag}-windows-amd64.zip").extractall(".build/base/extracted")'
           mkdir -p dist/tools .build/cache/source
-          cp -a .build/base/extracted/vidotter-v1.7.2-windows-amd64/tools/. dist/tools/
+          cp -a ".build/base/extracted/vidotter-${previous_tag}-windows-amd64/tools/." dist/tools/
           cp .build/base/FFmpeg-n8.1.2-source.tar.gz .build/cache/source/
           test -s dist/tools/ffmpeg-slim.exe
           test -s dist/tools/whisper/whisper-cli.exe
@@ -64,4 +70,4 @@ jobs:
           set -euo pipefail
           directory=".build/artifacts/release/$GITHUB_REF_NAME"
           test -s "dist/installer/VidOtter-Setup-$GITHUB_REF_NAME-windows-amd64.exe"
-          gh release create "$GITHUB_REF_NAME" dist/installer/*.exe dist/installer/INSTALLER-SHA256SUMS.txt "$directory"/*.zip "$directory"/*.tar.gz "$directory"/SHA256SUMS.txt -R "$GITHUB_REPOSITORY" --verify-tag --title "VidOtter $GITHUB_REF_NAME — Windows installer" --notes "Rebuilt VidOtter binaries and browser extension, bundling verified pinned media tools reused from v1.7.2. Windows native Qt installer and portable archives are SHA256-verified. Existing releases retained."
+          gh release create "$GITHUB_REF_NAME" dist/installer/*.exe dist/installer/INSTALLER-SHA256SUMS.txt "$directory"/*.zip "$directory"/*.tar.gz "$directory"/SHA256SUMS.txt -R "$GITHUB_REPOSITORY" --verify-tag --title "VidOtter $GITHUB_REF_NAME — Windows installer" --notes "Rebuilt VidOtter binaries and browser extension, bundling verified media tool binaries from the previous published release. Windows native Qt installer and portable archives are SHA256-verified."
