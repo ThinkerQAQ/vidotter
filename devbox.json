@@ -1,0 +1,13 @@
+{
+  "$schema": "https://raw.githubusercontent.com/jetify-com/devbox/0.19.0/.schema/devbox.schema.json",
+  "packages": [
+    "go@1.25.0",
+    "python@3.12"
+  ],
+  "shell": {
+    "scripts": {
+      "test": "cd bridge && go test ./...",
+      "build": "cd bridge && go build ./..."
+    }
+  }
+}
