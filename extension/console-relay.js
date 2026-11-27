@@ -11,7 +11,7 @@
     "media.list", "media.clear", "media.download", "media.playlist.probe",
     "bridge.environment", "bridge.tools", "bridge.tool.action", "bridge.mcp.capabilities", "bridge.config.save",
     "tool.config.save", "bridge.jobs.list", "bridge.jobs.clear",
-    "bridge.job.retry", "bridge.job.resume", "bridge.job.pause", "bridge.job.open",
+    "bridge.job.export-partial", "bridge.job.retry", "bridge.job.resume", "bridge.job.pause", "bridge.job.open",
     "bridge.job.reveal", "bridge.job.delete", "bridge.output.open"
   ]);
   window.addEventListener("message", event => {

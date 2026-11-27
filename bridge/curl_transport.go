@@ -165,15 +165,18 @@ func (d *goDownloader) downloadSegmentWithCurl(s segment) error {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), downloadRequestTimeout)
 	defer cancel()
+	// A rejected transfer may contain an HTML error page. Isolate it from resumable Go downloads.
+	partPath = s.path + ".curl.tmp"
+	defer os.Remove(partPath)
 	status, err := d.app.runCurlRequest(ctx, s.url, partPath, byteRange, false)
 	if err != nil {
 		return err
 	}
+	if status < 200 || status >= 300 {
+		return &downloadHTTPError{status: status, text: fmt.Sprintf("HTTP %d", status)}
+	}
 	if s.rangeLength > 0 && status != http.StatusPartialContent {
 		return fmt.Errorf("Range 请求返回 HTTP %d，预期 206", status)
-	}
-	if s.rangeLength == 0 && (status < 200 || status >= 300) {
-		return fmt.Errorf("HTTP %d", status)
 	}
 	info, err := os.Stat(partPath)
 	if err != nil {
