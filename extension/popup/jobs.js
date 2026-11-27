@@ -6,6 +6,7 @@
   let active = false;
   let renderDeferredForSelection = false;
   let lastRenderedJobs = "";
+  const pendingExports = new Set();
   const fileExpansionPreferences = new Map();
   const stateLabels = {
     queued: "等待中",
@@ -101,18 +102,28 @@
 
   async function runAction(button, job, action, payload) {
     button.disabled = true;
+    const partial = action === "export-partial";
+    if (partial) {
+      pendingExports.add(job.id);
+      if (lastRenderedJobs) render(JSON.parse(lastRenderedJobs));
+    }
     try {
       const result = await api.send(`bridge.job.${action}`, { taskId: job.id, job, ...(payload || {}) });
       const messages = {
-        pause: "任务已暂停", resume: "任务已继续", retry: "任务已从原断点重新开始",
+        "export-partial": "已导出不完整 MP4", pause: "任务已暂停", resume: "任务已继续", retry: "任务已从原断点重新开始",
         open: "已打开文件", reveal: "已打开文件所在位置",
         delete: payload && payload.deleteFiles ? "下载记录和本地文件已删除" : "下载记录已删除，本地文件已保留"
       };
       api.setMessage("jobsMessage", messages[action], "ok");
-      await refresh();
+      if (!partial) await refresh();
     } catch (error) {
       api.setMessage("jobsMessage", error.message || String(error), "error");
     } finally {
+      if (partial) {
+        pendingExports.delete(job.id);
+        if (lastRenderedJobs) render(JSON.parse(lastRenderedJobs));
+        await refresh();
+      }
       button.disabled = false;
     }
   }
@@ -197,6 +208,8 @@
 
     for (const job of jobs) {
       const node = template.content.firstElementChild.cloneNode(true);
+      const exporting = job.exporting || pendingExports.has(job.id);
+      const muxing = exporting || (job.status === "running" && job.phase === "processing" && job.detail === "正在封装 MP4");
       const progress = Math.max(0, Math.min(100, Number(job.progress) || 0));
       node.querySelector(".job-title").textContent = job.title || job.sourceUrl || job.id;
       node.querySelector(".job-title").title = job.sourceUrl || "";
@@ -204,18 +217,19 @@
       state.textContent = job.status === "running" && phaseLabels[job.phase]
         ? phaseLabels[job.phase]
         : stateLabels[job.status] || job.status;
-      state.classList.add(job.status || "queued");
+      if (muxing) state.textContent = "正在封装 MP4";
+      state.classList.add(exporting ? "running" : job.status || "queued");
       node.querySelector(".job-meta").textContent = `${job.id} · ${api.formatTime(job.updatedAt || job.createdAt)}`;
 
       const percent = node.querySelector(".job-percent");
-      const indeterminate = job.status === "running" && job.phase === "loading-translator";
+      const indeterminate = muxing || (job.status === "running" && job.phase === "loading-translator");
       percent.textContent = indeterminate ? "进行中" : `${progress}%`;
       const bar = node.querySelector(".job-progress-value");
       bar.style.width = indeterminate ? "35%" : `${progress}%`;
       bar.parentElement.classList.toggle("indeterminate", indeterminate);
       if (indeterminate) {
         bar.parentElement.removeAttribute("aria-valuenow");
-        bar.parentElement.setAttribute("aria-valuetext", "翻译模型正在加载，无法计算百分比");
+        bar.parentElement.setAttribute("aria-valuetext", muxing ? "正在封装 MP4" : "翻译模型正在加载，无法计算百分比");
       } else {
         bar.parentElement.setAttribute("aria-valuenow", String(progress));
         bar.parentElement.removeAttribute("aria-valuetext");
@@ -229,9 +243,9 @@
 		? ` · ${downloadedText} / ${formatBytes(job.totalBytes)}`
 		: (downloadedText ? ` · 已下载 ${downloadedText}` : "");
       const phasePrefix = postResolvePhases.has(job.phase) ? "解析 100% · " : "";
-      node.querySelector(".job-detail").textContent = `${phasePrefix}${job.detail || stateLabels[job.status] || ""}${byteText}`;
+      node.querySelector(".job-detail").textContent = exporting ? "正在合并已下载的分片" : `${phasePrefix}${job.detail || stateLabels[job.status] || ""}${byteText}`;
 
-      if (job.error) {
+      if (job.error && !exporting) {
         const error = node.querySelector(".job-error");
         error.hidden = false;
         error.textContent = job.error;
@@ -246,14 +260,22 @@
         primaryAction.hidden = false;
         primaryAction.textContent = job.status === "needs-session" ? "重新授权并继续" : "继续";
         primaryAction.addEventListener("click", () => runAction(primaryAction, job, "resume"));
-      } else if (job.status === "failed" && job.phase !== "waiting-for-media") {
+      } else if (!exporting && job.status === "failed" && job.phase !== "waiting-for-media") {
         primaryAction.hidden = false;
         primaryAction.textContent = "重试";
         primaryAction.addEventListener("click", () => runAction(primaryAction, job, "retry"));
       }
 
+      if (!exporting && job.status === "failed" && job.downloadedBytes > 0 && job.error?.includes("下载不完整")) {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.textContent = "跳过缺片，导出 MP4";
+        button.addEventListener("click", () => runAction(button, job, "export-partial"));
+        primaryAction.after(button);
+      }
       renderJobFiles(node, job);
       const remove = node.querySelector(".job-delete");
+      remove.disabled = Boolean(exporting);
       remove.addEventListener("click", async () => {
         const deleteFiles = await chooseDelete(job);
         if (deleteFiles === null) return;

@@ -883,7 +883,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
-  if (["pause", "open", "reveal", "delete"].includes(message.action.replace("bridge.job.", "")) && message.action.startsWith("bridge.job.")) {
+  if (["export-partial", "pause", "open", "reveal", "delete"].includes(message.action.replace("bridge.job.", "")) && message.action.startsWith("bridge.job.")) {
     const action = message.action.slice("bridge.job.".length);
     const body = action === "delete"
       ? { deleteFiles: Boolean(message.deleteFiles) }

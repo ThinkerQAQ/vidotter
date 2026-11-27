@@ -3,6 +3,7 @@ package vidotter
 import (
 	"context"
 	"encoding/json"
+	"encoding/xml"
 	"errors"
 	"fmt"
 	"io"
@@ -306,12 +307,29 @@ func (d *goDownloader) downloadSegment(s segment) error {
 	return lastErr
 }
 
+func isStoredErrorDocument(data []byte) bool {
+	var doc struct {
+		XMLName xml.Name
+		Code    string
+	}
+	return xml.Unmarshal(data, &doc) == nil && doc.XMLName.Local == "Error" && doc.Code != ""
+}
+
 func (d *goDownloader) downloadSegmentOnce(s segment) error {
 	if d.app.useCurlHTTP {
 		return d.downloadSegmentWithCurl(s)
 	}
 	partPath := s.path + ".part"
 	partSize := fileSize(partPath)
+	// Older curl workers saved small XML error documents as resumable bytes.
+	if partSize > 0 && partSize <= 4096 {
+		if data, err := os.ReadFile(partPath); err == nil && isStoredErrorDocument(data) {
+			if err := os.Remove(partPath); err != nil {
+				return err
+			}
+			partSize = 0
+		}
+	}
 	if s.rangeLength > 0 && partSize > s.rangeLength {
 		_ = os.Remove(partPath)
 		partSize = 0

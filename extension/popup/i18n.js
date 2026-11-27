@@ -5,6 +5,10 @@
 // and user download-language preferences stay independent of UI locale.
 (function (root) {
   const dictionary = {
+    "跳过缺片，导出 MP4": "Skip missing segments and export MP4",
+    "正在封装 MP4": "Muxing MP4",
+    "正在合并已下载的分片": "Merging downloaded segments",
+    "已导出不完整 MP4": "Partial MP4 exported",
     "本地服务登录后自启动": "Start local service at login",
     "下次登录系统时启动。保存不会启动或停止当前服务。": "Applies at your next login. Save does not start or stop the service.",
     "Tunnel 自动连接": "Connect Tunnel automatically",

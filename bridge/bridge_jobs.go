@@ -47,6 +47,7 @@ type bridgeJob struct {
 	UpdatedAt            time.Time       `json:"updatedAt"`
 	task                 bridgeTask
 	worker               *exec.Cmd
+	Exporting            bool `json:"exporting,omitempty"`
 	workerToken          string
 	runID                uint64
 }
@@ -107,6 +108,10 @@ func (s *bridgeServer) startJob(jobID string) error {
 	if job == nil {
 		s.mu.Unlock()
 		return errors.New("task not found")
+	}
+	if job.Exporting {
+		s.mu.Unlock()
+		return errors.New("任务正在导出")
 	}
 	if job.RequiresFreshSession {
 		s.mu.Unlock()
@@ -222,7 +227,9 @@ func (s *bridgeServer) listJobs() []bridgeJob {
 	defer s.mu.Unlock()
 	jobs := make([]bridgeJob, 0, len(s.jobs))
 	for _, job := range s.jobs {
-		jobs = append(jobs, publicBridgeJob(job))
+		view := publicBridgeJob(job)
+		view.Exporting = job.Exporting
+		jobs = append(jobs, view)
 	}
 	sort.Slice(jobs, func(i, j int) bool { return jobs[i].CreatedAt.After(jobs[j].CreatedAt) })
 	if len(jobs) > 50 {
@@ -297,6 +304,10 @@ func (s *bridgeServer) setJobStatusReason(jobID, status, message, reason string)
 	}
 	if status == "failed" {
 		job.Detail = "下载失败"
+		if job.Phase == "downloading" && job.PageURL != "" && reason == "media_access_denied" {
+			job.RequiresFreshSession = true
+			job.Detail = "请在原播放页检查权限，重新播放后从扩展重试"
+		}
 	}
 	job.SpeedBytesPerSecond = 0
 	job.UpdatedAt = time.Now()
@@ -540,6 +551,10 @@ func (s *bridgeServer) deleteJob(jobID string, deleteFiles bool) error {
 		s.mu.Unlock()
 		return errors.New("task not found")
 	}
+	if job.Exporting {
+		s.mu.Unlock()
+		return errors.New("任务正在导出")
+	}
 	command := job.worker
 	delete(s.pending, job.workerToken)
 	outputDir := s.config.OutputDir
@@ -637,7 +652,7 @@ func (s *bridgeServer) handleJobs(response http.ResponseWriter, request *http.Re
 		s.mu.Lock()
 		cleared := 0
 		for id, job := range s.jobs {
-			if job.Status == "completed" || job.Status == "failed" {
+			if !job.Exporting && (job.Status == "completed" || job.Status == "failed") {
 				delete(s.jobs, id)
 				cleared++
 			}
@@ -723,6 +738,14 @@ func (s *bridgeServer) handleJobs(response http.ResponseWriter, request *http.Re
 		writeJSON(response, http.StatusOK, map[string]any{"ok": true})
 		return
 	}
+	if action == "export-partial" && request.Method == http.MethodPost {
+		if err := s.exportPartial(jobID); err != nil {
+			writeJSON(response, http.StatusBadRequest, map[string]any{"ok": false, "error": err.Error()})
+			return
+		}
+		writeJSON(response, http.StatusOK, map[string]any{"ok": true})
+		return
+	}
 	if action == "retry" && request.Method == http.MethodPost {
 		refreshed, err := decodeRefreshedJobCredentials(response, request)
 		if err != nil {
@@ -731,6 +754,16 @@ func (s *bridgeServer) handleJobs(response http.ResponseWriter, request *http.Re
 		s.mu.Lock()
 		job := s.jobs[jobID]
 		canRetry := job != nil && job.Status == "failed" && job.Phase != "waiting-for-media"
+		if canRetry && job.task.URL == "" && job.PageURL != "" {
+			s.mu.Unlock()
+			writeJSON(response, http.StatusConflict, map[string]any{"ok": false, "error": "原媒体地址已失效，请重新播放并提交，或导出现有分片"})
+			return
+		}
+		if canRetry && job.RequiresFreshSession && refreshed.UserAgent == "" {
+			s.mu.Unlock()
+			writeJSON(response, http.StatusConflict, map[string]any{"ok": false, "error": "请在原播放页重新播放后从扩展重试"})
+			return
+		}
 		if canRetry {
 			if err := applyRefreshedJobCredentials(&job.task, refreshed); err != nil {
 				s.mu.Unlock()

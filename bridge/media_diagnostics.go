@@ -37,6 +37,10 @@ func mediaFailureReason(err error) string {
 	if errors.As(err, &access) {
 		return access.reason
 	}
+	var httpErr *downloadHTTPError
+	if errors.As(err, &httpErr) && (httpErr.status == 401 || httpErr.status == 403) {
+		return "media_access_denied"
+	}
 	return ""
 }
 
